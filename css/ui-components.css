@@ -1,0 +1,371 @@
+/* ======================
+   UI Components
+   ====================== */
+
+/* Buttons */
+.btn {
+    padding: 15px 30px;
+    font-size: var(--font-size-lg);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: var(--panel-bg);
+    color: var(--cyber-blue);
+    border: 2px solid var(--cyber-blue);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(0, 243, 255, 0.2),
+        transparent
+    );
+    transition: left var(--transition-slow);
+}
+
+.btn:hover {
+    background: rgba(0, 243, 255, 0.1);
+    box-shadow: var(--glow-blue);
+    transform: translateY(-2px);
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn:disabled:hover {
+    background: var(--panel-bg);
+    box-shadow: none;
+}
+
+/* Button Variants */
+.btn-primary {
+    border-color: var(--cyber-pink);
+    color: var(--cyber-pink);
+    font-weight: bold;
+}
+
+.btn-primary:hover {
+    background: rgba(255, 0, 110, 0.1);
+    box-shadow: var(--glow-pink);
+}
+
+.btn-success {
+    border-color: var(--cyber-green);
+    color: var(--cyber-green);
+}
+
+.btn-danger {
+    border-color: var(--cyber-orange);
+    color: var(--cyber-orange);
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: var(--font-size-sm);
+    letter-spacing: 1px;
+}
+
+/* Back Button */
+.back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background: var(--panel-bg);
+    border: 2px solid var(--text-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    z-index: 1000;
+    transition: all var(--transition-fast);
+}
+
+.back-btn:hover {
+    border-color: var(--cyber-blue);
+    color: var(--cyber-blue);
+    transform: translateX(-3px);
+}
+
+/* Panels */
+.panel {
+    background: var(--panel-bg);
+    border: 2px solid var(--cyber-purple);
+    padding: var(--spacing-md);
+    backdrop-filter: blur(10px);
+}
+
+.panel-title {
+    color: var(--cyber-pink);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: var(--spacing-sm);
+}
+
+/* Progress Bars */
+.progress-container {
+    margin-bottom: var(--spacing-md);
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--darker-bg);
+    border: 1px solid var(--cyber-blue);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--cyber-blue),
+        var(--cyber-pink)
+    );
+    transition: width var(--transition-normal);
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+/* Input Fields */
+input[type="text"],
+input[type="password"],
+textarea {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--cyber-pink);
+    box-shadow: var(--glow-pink);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+/* Select Dropdown */
+select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--cyber-blue);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal.active {
+    display: flex;
+    animation: fadeIn var(--transition-normal);
+}
+
+.modal-content {
+    background: var(--panel-bg);
+    border: 3px solid var(--cyber-pink);
+    padding: var(--spacing-xl);
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    text-align: center;
+    animation: modalSlideIn 0.4s ease;
+    box-shadow: var(--shadow-lg), var(--glow-pink);
+}
+
+.modal-title {
+    font-size: var(--font-size-3xl);
+    color: var(--cyber-green);
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+}
+
+.modal-title.failure {
+    color: var(--cyber-pink);
+}
+
+/* Badge */
+.badge {
+    display: inline-block;
+    padding: 5px 10px;
+    font-size: var(--font-size-sm);
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.badge-success {
+    background: rgba(0, 255, 65, 0.2);
+    color: var(--cyber-green);
+    border-color: var(--cyber-green);
+}
+
+.badge-warning {
+    background: rgba(255, 107, 53, 0.2);
+    color: var(--cyber-orange);
+    border-color: var(--cyber-orange);
+}
+
+.badge-danger {
+    background: rgba(255, 0, 110, 0.2);
+    color: var(--cyber-pink);
+    border-color: var(--cyber-pink);
+}
+
+.badge-info {
+    background: rgba(0, 243, 255, 0.2);
+    color: var(--cyber-blue);
+    border-color: var(--cyber-blue);
+}
+
+/* Notification Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--panel-bg);
+    border: 2px solid var(--cyber-blue);
+    border-radius: 4px;
+    box-shadow: var(--shadow-md);
+    z-index: 3000;
+    animation: slideInRight 0.3s ease;
+    max-width: 400px;
+}
+
+.toast.success {
+    border-color: var(--cyber-green);
+}
+
+.toast.error {
+    border-color: var(--cyber-pink);
+}
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-sm);
+    background: var(--darker-bg);
+    border: 1px solid var(--cyber-blue);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+    margin-bottom: 5px;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+}
+
+/* Loading Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--panel-border);
+    border-top-color: var(--cyber-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--cyber-blue),
+        transparent
+    );
+    margin: var(--spacing-md) 0;
+}

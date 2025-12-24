@@ -1,0 +1,345 @@
+/* ======================
+   Screen Layouts
+   ====================== */
+
+/* Main Menu */
+#main-menu {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.logo {
+    font-size: 4rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 8px;
+    background: linear-gradient(
+        135deg,
+        var(--cyber-blue),
+        var(--cyber-pink)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(0, 243, 255, 0.5);
+    margin-bottom: var(--spacing-xl);
+    animation: glitch 3s infinite;
+}
+
+
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 300px;
+}
+
+/* Mission Select */
+#mission-select {
+    flex-direction: column;
+    padding: var(--spacing-xl);
+}
+
+.mission-header {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.mission-header h2 {
+    font-size: var(--font-size-2xl);
+    color: var(--cyber-blue);
+    margin-bottom: var(--spacing-sm);
+}
+
+.mission-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+.mission-card {
+    background: var(--panel-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    min-height: 150px;
+}
+
+.mission-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 30px rgba(0, 243, 255, 0.3);
+    border-color: var(--cyber-pink);
+}
+
+.mission-card.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--text-secondary);
+}
+
+.mission-card.locked:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.mission-card.completed::after {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: var(--cyber-green);
+    font-size: 1.5rem;
+}
+
+.mission-title {
+    font-size: var(--font-size-lg);
+    color: var(--cyber-pink);
+    margin-bottom: var(--spacing-sm);
+    text-transform: uppercase;
+}
+
+.mission-desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+.mission-difficulty {
+    display: inline-block;
+    padding: 5px 10px;
+    font-size: var(--font-size-sm);
+    background: rgba(0, 255, 65, 0.2);
+    color: var(--cyber-green);
+    border: 1px solid var(--cyber-green);
+    text-transform: uppercase;
+}
+
+.mission-difficulty.medium {
+    background: rgba(255, 107, 53, 0.2);
+    color: var(--cyber-orange);
+    border-color: var(--cyber-orange);
+}
+
+.mission-difficulty.hard {
+    background: rgba(255, 0, 110, 0.2);
+    color: var(--cyber-pink);
+    border-color: var(--cyber-pink);
+}
+
+/* Game Screen */
+#game-screen {
+    flex-direction: column;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--panel-bg);
+    border-bottom: 2px solid var(--cyber-blue);
+    flex-shrink: 0;
+}
+
+.game-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.stat-value {
+    color: var(--cyber-blue);
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+}
+
+.game-content {
+    flex: 1;
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    overflow: hidden;
+}
+
+.puzzle-area {
+    flex: 1;
+    background: var(--panel-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+.side-panel {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+/* Objectives List */
+.objectives-list {
+    list-style: none;
+}
+
+.objective {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    background: var(--darker-bg);
+    border-left: 3px solid var(--text-secondary);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+}
+
+.objective.completed {
+    border-left-color: var(--cyber-green);
+    color: var(--cyber-green);
+}
+
+.objective.completed::before {
+    content: '✓ ';
+    font-weight: bold;
+}
+
+/* AI Opponent Panel */
+.ai-status {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-sm);
+}
+
+#ai-name {
+    color: var(--cyber-pink);
+    font-weight: bold;
+}
+
+/* Hints Panel */
+.hints-display {
+    color: var(--cyber-green);
+    font-size: var(--font-size-2xl);
+    text-align: center;
+    margin: var(--spacing-md) 0;
+}
+
+#hint-btn {
+    width: 100%;
+}
+
+/* Results Modal */
+.modal-stats {
+    margin: var(--spacing-lg) 0;
+    text-align: left;
+}
+
+.modal-stat {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-size-lg);
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.modal-stat:last-child {
+    border-bottom: none;
+}
+
+.modal-stat span:first-child {
+    color: var(--text-secondary);
+}
+
+.modal-stat span:last-child {
+    color: var(--cyber-blue);
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .side-panel {
+        width: 250px;
+    }
+    
+    .game-stats {
+        gap: var(--spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .logo {
+        font-size: 2.5rem;
+        letter-spacing: 4px;
+    }
+    
+    .menu-buttons {
+        min-width: 250px;
+    }
+    
+    .game-content {
+        flex-direction: column;
+    }
+    
+    .side-panel {
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+    }
+    
+    .side-panel .panel {
+        min-width: 250px;
+    }
+    
+    .game-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .mission-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        font-size: 2rem;
+    }
+    
+    .game-header {
+        padding: var(--spacing-sm);
+    }
+    
+    .game-stats {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        width: 100%;
+    }
+    
+    .stat {
+        justify-content: space-between;
+        width: 100%;
+    }
+}

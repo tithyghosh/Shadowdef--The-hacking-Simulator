@@ -1,0 +1,366 @@
+/* ======================
+   Puzzle-Specific Styles
+   ====================== */
+
+/* Common Puzzle Elements */
+.puzzle-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.puzzle-title {
+    color: var(--cyber-pink);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.puzzle-instructions {
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.puzzle-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    margin-top: var(--spacing-md);
+}
+
+/* Password Cracking Puzzle */
+.password-puzzle {
+    width: 100%;
+    max-width: 600px;
+}
+
+.password-display {
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-green);
+    padding: var(--spacing-md);
+    font-size: var(--font-size-2xl);
+    text-align: center;
+    letter-spacing: 10px;
+    margin-bottom: var(--spacing-lg);
+    color: var(--cyber-green);
+    font-family: var(--font-mono);
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-hints {
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.password-hints strong {
+    color: var(--cyber-blue);
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.hint {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-size: var(--font-size-sm);
+    padding-left: var(--spacing-md);
+}
+
+.hint::before {
+    content: '→ ';
+    color: var(--cyber-blue);
+    margin-right: var(--spacing-xs);
+}
+
+.password-input {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.char-input {
+    width: 50px;
+    height: 60px;
+    font-size: var(--font-size-2xl);
+    text-align: center;
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    color: var(--cyber-blue);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    transition: all var(--transition-fast);
+}
+
+.char-input:focus {
+    border-color: var(--cyber-pink);
+    box-shadow: var(--glow-pink);
+}
+
+.char-input.correct {
+    border-color: var(--cyber-green);
+    color: var(--cyber-green);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.char-input.incorrect {
+    border-color: var(--cyber-pink);
+    animation: shake 0.5s;
+}
+
+/* Firewall Bypass Puzzle */
+.firewall-puzzle {
+    width: 100%;
+    max-width: 700px;
+}
+
+.firewall-grid {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.firewall-node {
+    aspect-ratio: 1;
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.firewall-node:hover:not(.blocked):not(.start):not(.end) {
+    background: rgba(0, 243, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.firewall-node.start {
+    border-color: var(--cyber-green);
+    background: rgba(0, 255, 65, 0.2);
+    color: var(--cyber-green);
+    font-size: 0.7rem;
+}
+
+.firewall-node.end {
+    border-color: var(--cyber-pink);
+    background: rgba(255, 0, 110, 0.2);
+    color: var(--cyber-pink);
+    font-size: 0.8rem;
+}
+
+.firewall-node.blocked {
+    background: rgba(255, 0, 110, 0.3);
+    border-color: var(--cyber-pink);
+    opacity: 0.7;
+    cursor: not-allowed;
+    font-size: 1.5rem;
+}
+
+.firewall-node.blocked:hover {
+    transform: none;
+}
+
+.firewall-node.current {
+    background: var(--cyber-blue);
+    color: var(--darker-bg);
+    animation: pulse 1s infinite;
+}
+
+.firewall-node.path {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: var(--cyber-purple);
+}
+
+/* Network Navigation Puzzle */
+.network-puzzle {
+    width: 100%;
+    max-width: 800px;
+}
+
+.network-canvas {
+    width: 100%;
+    height: 400px;
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-purple);
+    margin-bottom: var(--spacing-md);
+}
+
+.network-controls {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+}
+
+/* Malware Detection Puzzle */
+.malware-puzzle {
+    width: 100%;
+    max-width: 700px;
+}
+
+.file-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.file-item:hover {
+    border-color: var(--cyber-blue);
+    transform: translateX(5px);
+}
+
+.file-item.selected {
+    border-color: var(--cyber-pink);
+    background: rgba(255, 0, 110, 0.1);
+}
+
+.file-item.infected {
+    border-color: var(--cyber-pink);
+}
+
+.file-item.safe {
+    border-color: var(--cyber-green);
+}
+
+.file-name {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.file-size {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.file-hash {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* Phishing Detection Puzzle */
+.phishing-puzzle {
+    width: 100%;
+    max-width: 800px;
+}
+
+.email-viewer {
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.email-header {
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.email-field {
+    display: flex;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.email-label {
+    color: var(--text-secondary);
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.email-value {
+    color: var(--text-primary);
+}
+
+.email-body {
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+.phishing-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.indicator-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    cursor: pointer;
+}
+
+.indicator-checkbox:hover {
+    border-color: var(--cyber-blue);
+}
+
+.indicator-checkbox.selected {
+    border-color: var(--cyber-pink);
+    background: rgba(255, 0, 110, 0.1);
+}
+
+/* Responsive Puzzle Adjustments */
+@media (max-width: 768px) {
+    .password-input {
+        gap: 5px;
+    }
+    
+    .char-input {
+        width: 40px;
+        height: 50px;
+        font-size: var(--font-size-xl);
+    }
+    
+    .firewall-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .network-canvas {
+        height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .char-input {
+        width: 35px;
+        height: 45px;
+        font-size: var(--font-size-lg);
+    }
+    
+    .firewall-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

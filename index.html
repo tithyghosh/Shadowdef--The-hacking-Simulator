@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SHADOWDEF - Cybersecurity Training Simulator">
+    <title>SHADOWDEF - Elite Cyber Operations</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/puzzles.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="game-container">
+        <!-- Screens will be injected here -->
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="logo">SHADOWDEF</div>
+
+            <div class="menu-buttons">
+                <button class="btn btn-primary" data-action="new-game">NEW GAME</button>
+                <button class="btn" data-action="mission-select">LOAD MISSION</button>
+                <button class="btn" data-action="settings">SETTINGS</button>
+                <button class="btn" data-action="credits">CREDITS</button>
+            </div>
+        </div>
+
+        <!-- Mission Select Screen -->
+        <div id="mission-select" class="screen">
+            <button class="back-btn" data-action="back">← BACK</button>
+            <div class="mission-header">
+                <h2>SELECT MISSION</h2>
+                <p class="subtitle">Choose your operation</p>
+            </div>
+            <div class="mission-grid" id="mission-grid"></div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="stat-label">TIME:</span>
+                        <span class="stat-value" id="timer">00:00</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">SCORE:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">ATTEMPTS:</span>
+                        <span class="stat-value" id="attempts">0</span>
+                    </div>
+                </div>
+                <button class="btn" data-action="pause">PAUSE</button>
+            </div>
+
+            <div class="game-content">
+                <div class="puzzle-area" id="puzzle-area">
+                    <!-- Active puzzle loads here -->
+                </div>
+
+                <div class="side-panel">
+                    <div class="panel">
+                        <div class="panel-title">Objectives</div>
+                        <ul class="objectives-list" id="objectives"></ul>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">AI Opponent</div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span id="ai-name">CYBER-THREAT</span>
+                                <span id="ai-progress-text">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ai-progress"></div>
+                            </div>
+                        </div>
+                        <p class="ai-status" id="ai-status">
+                            Beat them before they crack the system!
+                        </p>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Hints Available</div>
+                        <p class="hints-display">
+                            <span id="hints-remaining">3</span> / 3
+                        </p>
+                        <button class="btn" id="hint-btn" data-action="hint">
+                            REQUEST HINT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="/css/js/main.js"></script>
+</body>
+
+</html>
