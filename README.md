@@ -57,14 +57,6 @@ npx http-server -p 8000
 - ⏳ Background.js (canvas animation)
 - ⏳ UIManager.js (modals & notifications)
 
-### **📋 To Do (Phase 1)**
-
-- [ ] Complete all core modules
-- [ ] Implement password puzzle fully
-- [ ] Add basic sound effects
-- [ ] Create 3 missions
-- [ ] Test save/load system
-
 ---
 
 ## 🎯 **Development Roadmap**
