@@ -8,6 +8,9 @@ import { Timer } from '../systems/Timer.js';
 import { AIOpponent } from '../systems/AIOpponent.js';
 import { PasswordCrack } from '../puzzles/PasswordCrack.js';
 import { FirewallBypass } from '../puzzles/FirewallBypass.js';
+import { NetworkNav } from '../puzzles/NetworkNav.js';       
+import { MalwareDetect } from '../puzzles/MalwareDetect.js'; 
+import { PhishingID } from '../puzzles/PhishingID.js';
 
 export class GameScreen {
     constructor(game) {
@@ -193,7 +196,6 @@ export class GameScreen {
 
 
 
-//  loadPuzzle() method:
 loadPuzzle() {
     const puzzleArea = document.getElementById('puzzle-area');
     if (!puzzleArea) {
@@ -211,8 +213,17 @@ loadPuzzle() {
         case 'password':
             this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this);
             break;
-        case 'firewall':  // ADD THIS CASE
+        case 'firewall':
             this.activePuzzle = new FirewallBypass(this.currentMission.puzzle, this);
+            break;
+        case 'network':  
+            this.activePuzzle = new NetworkNav(this.currentMission.puzzle, this);
+            break;
+        case 'malware':  
+            this.activePuzzle = new MalwareDetect(this.currentMission.puzzle, this);
+            break;
+        case 'phishing': 
+            this.activePuzzle = new PhishingID(this.currentMission.puzzle, this);
             break;
         default:
             console.error(`Unknown puzzle type: ${this.currentMission.type}`);

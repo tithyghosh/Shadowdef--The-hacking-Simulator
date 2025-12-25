@@ -185,12 +185,14 @@
     flex: 1;
     background: var(--panel-bg);
     border: 2px solid var(--cyber-blue);
-    padding: var(--spacing-lg);
+    padding: 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    overflow-y: auto;
+    justify-content: flex-start; 
+    overflow-y: auto;             
+    overflow-x: hidden;            
+    min-height: 0;                 
 }
 
 .side-panel {
