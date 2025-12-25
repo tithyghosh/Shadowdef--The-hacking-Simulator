@@ -176,21 +176,42 @@
 .game-content {
     flex: 1;
     display: flex;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
+    gap: 20px;
+    padding: 20px;
     overflow: hidden;
+    min-height: 0; 
 }
 
 .puzzle-area {
     flex: 1;
     background: var(--panel-bg);
     border: 2px solid var(--cyber-blue);
-    padding: var(--spacing-lg);
+    padding: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;  
     overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;  
+}
+
+/* Make puzzle scrollable with custom scrollbar */
+.puzzle-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.puzzle-area::-webkit-scrollbar-track {
+    background: var(--darker-bg);
+}
+
+.puzzle-area::-webkit-scrollbar-thumb {
+    background: var(--cyber-blue);
+    border-radius: 4px;
+}
+
+.puzzle-area::-webkit-scrollbar-thumb:hover {
+    background: var(--cyber-pink);
 }
 
 .side-panel {

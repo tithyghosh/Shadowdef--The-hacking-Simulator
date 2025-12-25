@@ -174,57 +174,163 @@ export const missions = [
         locked: true,
         bestScore: 0
     },
-    {
-        id: 7,
-        title: "SOCIAL: Phishing Analysis",
-        desc: "Identify phishing attempts in email messages",
-        difficulty: "hard",
-        type: "phishing",
-        estimatedTime: "10-12 min",
-        objectives: [
-            "Review suspicious email",
-            "Identify phishing indicators",
-            "Report accurate findings"
-        ],
-        puzzle: {
-            emails: 1,
-            indicators: 6,
-            correctIndicators: 4
-        },
-        aiSpeed: 1.3,
-        rewards: {
-            xp: 450,
-            credits: 225
-        },
-        completed: false,
-        locked: true,
-        bestScore: 0
+{
+    id: 7,
+    title: "NETWORK: Router Navigation",
+    desc: "Navigate through interconnected network nodes",
+    difficulty: "medium",
+    type: "network",
+    estimatedTime: "6-10 min",
+    objectives: [
+        "Analyze network topology",
+        "Find efficient route",
+        "Reach target server"
+    ],
+    puzzle: {
+        nodeCount: 8,
+        startNode: 0,
+        endNode: 7,
+        maxHops: 10
     },
-    {
-        id: 8,
-        title: "ADVANCED: Multi-Layer Defense",
-        desc: "Combine multiple techniques to breach security",
-        difficulty: "hard",
-        type: "mixed",
-        estimatedTime: "20-25 min",
-        objectives: [
-            "Crack authentication",
-            "Navigate network",
-            "Evade detection systems"
-        ],
-        puzzle: {
-            stages: 3,
-            types: ["password", "firewall", "malware"]
-        },
-        aiSpeed: 1.5,
-        rewards: {
-            xp: 600,
-            credits: 300
-        },
-        completed: false,
-        locked: true,
-        bestScore: 0
-    }
+    aiSpeed: 1.0,
+    rewards: {
+        xp: 200,
+        credits: 100
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+},
+{
+    id: 8,
+    title: "DETECTION: System Scan",
+    desc: "Identify infected files in a compromised system",
+    difficulty: "medium",
+    type: "malware",
+    estimatedTime: "8-12 min",
+    objectives: [
+        "Scan file system",
+        "Identify infected files",
+        "Minimize false positives"
+    ],
+    puzzle: {
+        totalFiles: 15,
+        infectedFiles: 4,
+        timeLimit: 180
+    },
+    aiSpeed: 1.1,
+    rewards: {
+        xp: 250,
+        credits: 125
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+},
+
+{
+    id: 9,
+    title: "SOCIAL: Email Analysis",
+    desc: "Identify phishing attempts in suspicious emails",
+    difficulty: "easy",
+    type: "phishing",
+    estimatedTime: "5-8 min",
+    objectives: [
+        "Review suspicious email",
+        "Identify red flags",
+        "Submit accurate analysis"
+    ],
+    puzzle: {
+        correctIndicators: [0, 1, 2, 3, 5],
+        minCorrect: 3
+    },
+    aiSpeed: 0.9,
+    rewards: {
+        xp: 180,
+        credits: 90
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+},
+{
+    id: 10,
+    title: "ADVANCED: Complex Network",
+    desc: "Navigate large-scale network infrastructure",
+    difficulty: "hard",
+    type: "network",
+    estimatedTime: "10-15 min",
+    objectives: [
+        "Map complex network",
+        "Optimize route selection",
+        "Minimize hop count"
+    ],
+    puzzle: {
+        nodeCount: 12,
+        startNode: 0,
+        endNode: 11,
+        maxHops: 12
+    },
+    aiSpeed: 1.3,
+    rewards: {
+        xp: 350,
+        credits: 175
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+},
+{
+    id: 11,
+    title: "ADVANCED: Outbreak Response",
+    desc: "Contain malware outbreak with precision",
+    difficulty: "hard",
+    type: "malware",
+    estimatedTime: "12-15 min",
+    objectives: [
+        "Rapid system scan",
+        "Identify all threats",
+        "Zero false positives"
+    ],
+    puzzle: {
+        totalFiles: 20,
+        infectedFiles: 6,
+        timeLimit: 240
+    },
+    aiSpeed: 1.2,
+    rewards: {
+        xp: 400,
+        credits: 200
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+},
+{
+    id: 12,
+    title: "ADVANCED: Spear Phishing",
+    desc: "Analyze sophisticated targeted phishing attack",
+    difficulty: "hard",
+    type: "phishing",
+    estimatedTime: "8-12 min",
+    objectives: [
+        "Analyze complex phishing attempt",
+        "Identify subtle indicators",
+        "High accuracy required"
+    ],
+    puzzle: {
+        correctIndicators: [0, 1, 2, 3, 4, 6],
+        minCorrect: 5
+    },
+    aiSpeed: 1.1,
+    rewards: {
+        xp: 380,
+        credits: 190
+    },
+    completed: false,
+    locked: true,
+    bestScore: 0
+}
 ];
 
 /**
