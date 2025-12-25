@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Screen Test - SHADOWDEF</title>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-container">
+            <div class="logo-container">
+                <div class="logo-text">SHADOWDEF</div>
+                <div class="logo-subtitle">Hack the Invisible</div>
+            </div>
+            
+            <div class="loading-progress">
+                <div class="progress-label">Loading Game Assets...</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="loading-progress-fill"></div>
+                </div>
+                <div class="progress-percentage" id="loading-percentage">0%</div>
+            </div>
+            
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu (hidden initially) -->
+    <div id="main-menu" class="screen" style="display: none;">
+        <div class="main-menu-header">
+            <div class="logo">SHADOWDEF</div>
+            <div class="logo-subtitle">Loading Complete!</div>
+        </div>
+        <div style="text-align: center; color: var(--cyber-green); font-size: 2rem;">
+            ✅ Loading screen worked successfully!
+        </div>
+    </div>
+
+    <!-- Test Controls -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+        <button class="btn btn-small" onclick="testLoading()">Test Loading</button>
+        <button class="btn btn-small" onclick="skipLoading()">Skip Loading</button>
+        <button class="btn btn-small" onclick="resetTest()">Reset</button>
+    </div>
+
+    <script type="module">
+        import { LoadingManager } from './css/js/core/LoadingManager.js';
+        import { Background } from './css/js/ui/Background.js';
+
+        let loadingManager;
+        let background;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Initialize background
+                background = new Background('bg-canvas');
+                background.start();
+
+                // Initialize loading manager
+                loadingManager = new LoadingManager();
+                
+                console.log('✅ Loading test initialized');
+                updateStatus('Loading test ready. Click "Test Loading" to start.');
+                
+            } catch (error) {
+                console.error('❌ Loading test failed:', error);
+                updateStatus('Loading test failed: ' + error.message);
+            }
+        });
+
+        // Test functions
+        window.testLoading = () => {
+            if (!loadingManager) {
+                updateStatus('Loading manager not initialized');
+                return;
+            }
+
+            updateStatus('Starting loading test...');
+            
+            // Reset and start loading
+            loadingManager.reset();
+            loadingManager.startLoading(() => {
+                updateStatus('Loading completed successfully!');
+                console.log('✅ Loading test completed');
+            });
+        };
+
+        window.skipLoading = () => {
+            if (loadingManager) {
+                loadingManager.skipLoading();
+                updateStatus('Loading skipped');
+            }
+        };
+
+        window.resetTest = () => {
+            if (loadingManager) {
+                loadingManager.reset();
+                updateStatus('Test reset. Ready to test again.');
+            }
+        };
+
+        function updateStatus(message) {
+            console.log('📊 Status:', message);
+        }
+
+        // Global access for debugging
+        window.loadingManager = loadingManager;
+    </script>
+</body>
+</html>

@@ -600,6 +600,87 @@ input[type="checkbox"] {
     font-size: var(--font-size-sm);
 }
 
+/* Credits Store Modal */
+.credits-store {
+    text-align: center;
+    max-width: 500px;
+}
+
+.current-credits {
+    background: var(--darker-bg);
+    border: 2px solid var(--cyber-pink);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
+    border-radius: 8px;
+}
+
+.credits-display-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+.credits-display-large .credits-icon {
+    font-size: 3rem;
+}
+
+.credits-display-large .credits-amount {
+    font-size: 3rem;
+    color: var(--cyber-pink);
+    font-weight: bold;
+}
+
+.credits-display-large .credits-label {
+    font-size: var(--font-size-xl);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.credits-info {
+    text-align: left;
+}
+
+.credits-info h3 {
+    color: var(--cyber-blue);
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+}
+
+.earning-methods {
+    display: grid;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.earning-method {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--darker-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+}
+
+.method-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    text-align: center;
+}
+
+.method-text {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.method-reward {
+    color: var(--cyber-green);
+    font-weight: bold;
+    font-size: var(--font-size-sm);
+}
+
 /* Responsive Modal */
 @media (max-width: 768px) {
     .modal-content {
@@ -619,5 +700,15 @@ input[type="checkbox"] {
         right: var(--spacing-md);
         left: var(--spacing-md);
         max-width: none;
+    }
+    
+    .credits-display-large {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .credits-display-large .credits-icon,
+    .credits-display-large .credits-amount {
+        font-size: 2rem;
     }
 }

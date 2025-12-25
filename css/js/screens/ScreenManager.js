@@ -121,6 +121,10 @@ export class ScreenManager {
         switch (screenId) {
             case 'main-menu':
                 this.audio.playMusic('menu');
+                // Update main menu status
+                if (window.updateMainMenuStatus) {
+                    window.updateMainMenuStatus();
+                }
                 break;
             case 'game-screen':
                 this.audio.crossfade('gameplay');

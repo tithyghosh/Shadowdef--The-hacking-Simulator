@@ -95,6 +95,35 @@ export class Game {
             if (nextMission) {
                 nextMission.locked = false;
             }
+
+            // Award user experience and credits if authenticated
+            if (window.authManager && window.authManager.isUserAuthenticated()) {
+                // Award XP based on mission difficulty and performance
+                const baseXP = 100;
+                const difficultyMultiplier = this.currentMission.difficulty === 'hard' ? 1.5 : 
+                                           this.currentMission.difficulty === 'easy' ? 0.8 : 1.0;
+                const performanceBonus = stats.hintsUsed === 0 ? 1.2 : 1.0;
+                const xpAwarded = Math.floor(baseXP * difficultyMultiplier * performanceBonus);
+                
+                // Award credits based on score
+                const creditsAwarded = Math.floor(finalScore * 0.1);
+                
+                // Update user stats
+                window.updateUserStats({
+                    totalScore: (window.authManager.getUserStats().totalScore || 0) + finalScore,
+                    highScore: Math.max(window.authManager.getUserStats().highScore || 0, finalScore),
+                    missionsCompleted: (window.authManager.getUserStats().missionsCompleted || 0) + 1,
+                    totalPlayTime: (window.authManager.getUserStats().totalPlayTime || 0) + stats.timeElapsed,
+                    lastPlayed: Date.now()
+                });
+                
+                // Award XP and credits
+                window.awardExperience(xpAwarded, `Mission: ${this.currentMission.title}`);
+                window.awardCredits(creditsAwarded, 'Mission completion');
+                
+                // Check for achievements
+                this.checkAchievements(stats, finalScore);
+            }
         }
 
         // Save progress
@@ -361,9 +390,99 @@ export class Game {
     }
 
     /**
+     * Check for achievements after mission completion
+     */
+    checkAchievements(stats, finalScore) {
+        if (!window.authManager || !window.authManager.isUserAuthenticated()) return;
+        
+        const userStats = window.authManager.getUserStats();
+        const achievements = userStats.achievements || [];
+        const newAchievements = [];
+
+        // First mission achievement
+        if (!achievements.includes('first_mission') && userStats.missionsCompleted >= 1) {
+            newAchievements.push('first_mission');
+            window.awardCredits(100, 'First Steps achievement');
+        }
+
+        // Speed demon achievement (complete mission in under 2 minutes)
+        if (!achievements.includes('speed_demon') && stats.timeElapsed < 120) {
+            newAchievements.push('speed_demon');
+            window.awardCredits(250, 'Speed Demon achievement');
+        }
+
+        // Perfectionist achievement (no hints used)
+        if (!achievements.includes('perfectionist') && stats.hintsUsed === 0) {
+            newAchievements.push('perfectionist');
+            window.awardCredits(200, 'Perfectionist achievement');
+        }
+
+        // High scorer achievement
+        if (!achievements.includes('high_scorer') && finalScore >= 10000) {
+            newAchievements.push('high_scorer');
+            window.awardCredits(500, 'High Scorer achievement');
+        }
+
+        // Dedicated player achievement (5 hours total play time)
+        if (!achievements.includes('dedicated') && userStats.totalPlayTime >= 300) {
+            newAchievements.push('dedicated');
+            window.awardCredits(300, 'Dedicated Player achievement');
+        }
+
+        // Credit collector achievement
+        if (!achievements.includes('collector') && userStats.credits >= 5000) {
+            newAchievements.push('collector');
+            window.awardCredits(1000, 'Credit Collector achievement');
+        }
+
+        // Update achievements if any new ones were earned
+        if (newAchievements.length > 0) {
+            window.authManager.updateGameStats({
+                achievements: [...achievements, ...newAchievements]
+            });
+
+            // Show achievement notifications
+            newAchievements.forEach(achievement => {
+                const achievementNames = {
+                    'first_mission': 'First Steps',
+                    'speed_demon': 'Speed Demon',
+                    'perfectionist': 'Perfectionist',
+                    'high_scorer': 'High Scorer',
+                    'dedicated': 'Dedicated Player',
+                    'collector': 'Credit Collector'
+                };
+                
+                this.ui.showNotification(
+                    `🏆 Achievement Unlocked: ${achievementNames[achievement]}!`, 
+                    'success', 
+                    5000
+                );
+            });
+        }
+    }
+
+    /**
      * Load game progress
      */
     loadProgress() {
+        // Load from authenticated user first, then fallback to local storage
+        if (window.authManager && window.authManager.isUserAuthenticated()) {
+            const userStats = window.authManager.getUserStats();
+            
+            // Apply user preferences to game
+            const userPrefs = window.authManager.getUserPreferences();
+            if (userPrefs.musicEnabled !== undefined) {
+                this.audio.setMusicEnabled(userPrefs.musicEnabled);
+            }
+            if (userPrefs.sfxEnabled !== undefined) {
+                this.audio.setSfxEnabled(userPrefs.sfxEnabled);
+            }
+            
+            console.log('📂 User progress loaded from cloud');
+            return;
+        }
+        
+        // Fallback to local storage for guest users
         const data = this.state.loadData('progress');
         
         if (data && data.missions) {
@@ -377,7 +496,7 @@ export class Game {
                 }
             });
 
-            console.log('📂 Progress loaded');
+            console.log('📂 Local progress loaded');
         } else {
             console.log('📭 No saved progress found');
         }

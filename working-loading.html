@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working Loading - SHADOWDEF</title>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="game-container">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen active">
+            <div class="loading-container">
+                <div class="logo-container">
+                    <div class="logo-text">SHADOWDEF</div>
+                    <div class="logo-subtitle">Hack the Invisible</div>
+                </div>
+                
+                <div class="loading-progress">
+                    <div class="progress-label" id="progress-label">Loading Game Assets...</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="loading-progress-fill"></div>
+                    </div>
+                    <div class="progress-percentage" id="loading-percentage">0%</div>
+                </div>
+                
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen" style="display: none;">
+            <div class="main-menu-header">
+                <div class="logo">SHADOWDEF</div>
+                <div class="logo-subtitle">Cybersecurity Training Hub</div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-category">
+                    <h3 class="category-title">Training Missions</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card missions-card" onclick="alert('Missions clicked!')">
+                            <div class="card-icon">🎯</div>
+                            <div class="card-content">
+                                <div class="card-title">MISSIONS</div>
+                                <div class="card-subtitle">Start your cybersecurity training</div>
+                                <div class="card-progress">0/20 Completed</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">Player Hub</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card profile-card" onclick="alert('Profile clicked!')">
+                            <div class="card-icon">👤</div>
+                            <div class="card-content">
+                                <div class="card-title">PROFILE</div>
+                                <div class="card-subtitle">View stats and achievements</div>
+                                <div class="card-stats">Level 1 • 0 Credits</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card credits-card" onclick="alert('Credits clicked!')">
+                            <div class="card-icon">💰</div>
+                            <div class="card-content">
+                                <div class="card-title">CREDITS</div>
+                                <div class="card-subtitle">Manage your gaming credits</div>
+                                <div class="card-credits">1000 Credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">System</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card settings-card" onclick="alert('Settings clicked!')">
+                            <div class="card-icon">⚙️</div>
+                            <div class="card-content">
+                                <div class="card-title">SETTINGS</div>
+                                <div class="card-subtitle">Audio, preferences & account</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card about-card" onclick="alert('About clicked!')">
+                            <div class="card-icon">ℹ️</div>
+                            <div class="card-content">
+                                <div class="card-title">ABOUT</div>
+                                <div class="card-subtitle">Game info and credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Status Bar -->
+            <div class="user-status-bar">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name">Guest Player</div>
+                        <div class="user-status">Not logged in</div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-small" onclick="alert('Login clicked!')">LOGIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div style="position: fixed; bottom: 20px; left: 20px; background: var(--panel-bg); border: 2px solid var(--cyber-green); padding: 15px; z-index: 9999; max-width: 300px;">
+        <h4 style="color: var(--cyber-green); margin: 0 0 10px 0;">✅ Working Loading</h4>
+        <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0;">
+            This version uses simple JavaScript and should work perfectly. 
+            Loading will start automatically and progress to 100%.
+        </p>
+    </div>
+
+    <script>
+        // Simple, guaranteed-to-work loading system
+        console.log('🎮 Starting working loading system...');
+        
+        const progressFill = document.getElementById('loading-progress-fill');
+        const progressPercentage = document.getElementById('loading-percentage');
+        const progressLabel = document.getElementById('progress-label');
+        const loadingScreen = document.getElementById('loading-screen');
+        const mainMenu = document.getElementById('main-menu');
+        
+        const steps = [
+            { text: 'Initializing Core Systems...', progress: 15, duration: 800 },
+            { text: 'Loading Game Assets...', progress: 35, duration: 1000 },
+            { text: 'Preparing Audio Systems...', progress: 50, duration: 600 },
+            { text: 'Loading Mission Data...', progress: 70, duration: 800 },
+            { text: 'Initializing Security Protocols...', progress: 85, duration: 600 },
+            { text: 'Finalizing Setup...', progress: 100, duration: 500 }
+        ];
+        
+        let currentStep = 0;
+        let currentProgress = 0;
+        
+        function animateToProgress(targetProgress, duration, callback) {
+            const startProgress = currentProgress;
+            const progressDiff = targetProgress - startProgress;
+            const startTime = Date.now();
+            
+            function updateFrame() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                currentProgress = startProgress + (progressDiff * progress);
+                
+                progressFill.style.width = currentProgress + '%';
+                progressPercentage.textContent = Math.floor(currentProgress) + '%';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateFrame);
+                } else {
+                    currentProgress = targetProgress;
+                    if (callback) callback();
+                }
+            }
+            
+            requestAnimationFrame(updateFrame);
+        }
+        
+        function executeStep() {
+            if (currentStep >= steps.length) {
+                // Loading complete
+                progressLabel.textContent = 'Loading Complete!';
+                console.log('✅ Loading completed successfully!');
+                
+                setTimeout(() => {
+                    // Fade out loading screen
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.transition = 'opacity 1s ease';
+                    
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        loadingScreen.classList.remove('active');
+                        
+                        // Show main menu
+                        mainMenu.style.display = 'flex';
+                        mainMenu.classList.add('active');
+                        mainMenu.style.opacity = '0';
+                        mainMenu.style.transition = 'opacity 1s ease';
+                        
+                        setTimeout(() => {
+                            mainMenu.style.opacity = '1';
+                        }, 50);
+                        
+                        console.log('🎮 Main menu displayed');
+                    }, 1000);
+                }, 1000);
+                return;
+            }
+            
+            const step = steps[currentStep];
+            progressLabel.textContent = step.text;
+            
+            console.log(`📋 Step ${currentStep + 1}/${steps.length}: ${step.text} -> ${step.progress}%`);
+            
+            animateToProgress(step.progress, step.duration, () => {
+                currentStep++;
+                setTimeout(executeStep, 200);
+            });
+        }
+        
+        // Start loading when page is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM loaded, starting loading in 1 second...');
+            setTimeout(() => {
+                executeStep();
+            }, 1000);
+        });
+        
+        // Skip loading with Enter key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                console.log('⏭️ Skipping to main menu...');
+                loadingScreen.style.display = 'none';
+                mainMenu.style.display = 'flex';
+                mainMenu.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>

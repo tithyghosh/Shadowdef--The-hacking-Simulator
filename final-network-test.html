@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Network Test - SHADOWDEF</title>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    
+    <style>
+        /* Override to ensure visibility */
+        #bg-canvas {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 1 !important;
+            pointer-events: none !important;
+            opacity: 1 !important;
+            background: rgba(10, 14, 39, 1) !important;
+        }
+        
+        .test-content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #00f3ff;
+            font-family: 'Orbitron', monospace;
+            text-align: center;
+        }
+        
+        .test-panel {
+            background: rgba(10, 14, 39, 0.9);
+            padding: 30px;
+            border: 2px solid rgba(0, 243, 255, 0.5);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #00f3ff, #8b5cf6);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .status {
+            margin-top: 15px;
+            color: #8b5cf6;
+            font-size: 14px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Network Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Test Content -->
+    <div class="test-content">
+        <div class="test-panel">
+            <h1>🌐 Final Network Background Test</h1>
+            <p>This should show animated network lines behind this panel</p>
+            <div class="controls">
+                <button class="btn" onclick="startNetwork()">Start Network</button>
+                <button class="btn" onclick="stopNetwork()">Stop Network</button>
+                <button class="btn" onclick="debugInfo()">Debug Info</button>
+                <button class="btn" onclick="testDraw()">Test Draw</button>
+            </div>
+            <div class="status" id="status">
+                Status: Initializing...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let networkBackground = null;
+        let debugMessages = [];
+
+        function log(message) {
+            console.log(message);
+            debugMessages.push(message);
+            if (debugMessages.length > 10) debugMessages.shift();
+            updateStatus();
+        }
+
+        function updateStatus() {
+            document.getElementById('status').innerHTML = debugMessages.join('<br>');
+        }
+
+        // Simplified Network Background
+        class FinalNetworkBackground {
+            constructor(canvasId) {
+                log(`Creating network background: ${canvasId}`);
+                
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) {
+                    log(`❌ Canvas not found: ${canvasId}`);
+                    return;
+                }
+
+                log(`✅ Canvas found: ${this.canvas.width}x${this.canvas.height}`);
+
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) {
+                    log('❌ Could not get 2D context');
+                    return;
+                }
+
+                log('✅ 2D context obtained');
+
+                this.nodes = [];
+                this.connections = [];
+                this.animationId = null;
+                this.isRunning = false;
+                
+                this.config = {
+                    nodeCount: 20,
+                    maxConnections: 3,
+                    connectionDistance: 200,
+                    nodeSpeed: 0.3,
+                    nodeSize: 2
+                };
+                
+                this.resize();
+                this.createNodes();
+                this.createConnections();
+                
+                log(`✅ Network created: ${this.nodes.length} nodes, ${this.connections.length} connections`);
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                log(`Canvas resized: ${this.canvas.width}x${this.canvas.height}`);
+            }
+
+            createNodes() {
+                this.nodes = [];
+                
+                for (let i = 0; i < this.config.nodeCount; i++) {
+                    this.nodes.push({
+                        id: i,
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        vy: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        size: this.config.nodeSize + Math.random() * 2,
+                        opacity: 0.6 + Math.random() * 0.4
+                    });
+                }
+            }
+
+            createConnections() {
+                this.connections = [];
+                
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node1 = this.nodes[i];
+                    let connectionCount = 0;
+                    
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        if (connectionCount >= this.config.maxConnections) break;
+                        
+                        const node2 = this.nodes[j];
+                        const distance = this.getDistance(node1, node2);
+                        
+                        if (distance < this.config.connectionDistance) {
+                            this.connections.push({
+                                node1: i,
+                                node2: j,
+                                strength: 1 - (distance / this.config.connectionDistance)
+                            });
+                            connectionCount++;
+                        }
+                    }
+                }
+            }
+
+            getDistance(node1, node2) {
+                const dx = node1.x - node2.x;
+                const dy = node1.y - node2.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            updateNodes() {
+                this.nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+
+                    if (node.x < 0 || node.x > this.canvas.width) {
+                        node.vx *= -1;
+                        node.x = Math.max(0, Math.min(this.canvas.width, node.x));
+                    }
+                    if (node.y < 0 || node.y > this.canvas.height) {
+                        node.vy *= -1;
+                        node.y = Math.max(0, Math.min(this.canvas.height, node.y));
+                    }
+                });
+            }
+
+            draw() {
+                // Clear with dark background
+                this.ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw connections
+                this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.6)';
+                this.ctx.lineWidth = 1.5;
+                
+                this.connections.forEach(connection => {
+                    const node1 = this.nodes[connection.node1];
+                    const node2 = this.nodes[connection.node2];
+                    
+                    if (!node1 || !node2) return;
+
+                    this.ctx.globalAlpha = connection.strength * 0.8;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node1.x, node1.y);
+                    this.ctx.lineTo(node2.x, node2.y);
+                    this.ctx.stroke();
+                });
+
+                // Draw nodes
+                this.ctx.fillStyle = 'rgba(0, 243, 255, 0.9)';
+                
+                this.nodes.forEach(node => {
+                    this.ctx.globalAlpha = node.opacity;
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Glow effect
+                    this.ctx.globalAlpha = node.opacity * 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, node.size * 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                this.ctx.globalAlpha = 1;
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+
+                this.updateNodes();
+                this.draw();
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            start() {
+                if (this.isRunning) {
+                    log('⚠️ Already running');
+                    return;
+                }
+                
+                log('🚀 Starting animation...');
+                this.isRunning = true;
+                this.animate();
+                log('✅ Animation started');
+            }
+
+            stop() {
+                log('⏹️ Stopping animation...');
+                this.isRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                log('✅ Animation stopped');
+            }
+        }
+
+        function startNetwork() {
+            if (!networkBackground) {
+                networkBackground = new FinalNetworkBackground('bg-canvas');
+            }
+            networkBackground.start();
+        }
+
+        function stopNetwork() {
+            if (networkBackground) {
+                networkBackground.stop();
+            }
+        }
+
+        function debugInfo() {
+            const canvas = document.getElementById('bg-canvas');
+            log(`Canvas: ${canvas ? 'Found' : 'Not found'}`);
+            if (canvas) {
+                log(`Size: ${canvas.width}x${canvas.height}`);
+                log(`Style: ${canvas.style.cssText}`);
+                log(`Computed style: ${getComputedStyle(canvas).position}`);
+            }
+        }
+
+        function testDraw() {
+            const canvas = document.getElementById('bg-canvas');
+            if (!canvas) {
+                log('❌ No canvas for test draw');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Draw test pattern
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.8)';
+            ctx.fillRect(100, 100, 200, 100);
+            
+            ctx.fillStyle = 'rgba(255, 0, 110, 0.8)';
+            ctx.beginPath();
+            ctx.arc(300, 300, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            log('✅ Test pattern drawn');
+        }
+
+        // Auto-start
+        document.addEventListener('DOMContentLoaded', () => {
+            log('📄 DOM loaded');
+            setTimeout(() => {
+                debugInfo();
+                startNetwork();
+            }, 1000);
+        });
+
+        window.networkBackground = networkBackground;
+    </script>
+</body>
+</html>

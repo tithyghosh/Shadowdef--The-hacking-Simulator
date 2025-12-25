@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test - SHADOWDEF</title>
+    
+    <!-- Social Login Scripts -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+        <h1 style="color: var(--cyber-blue); text-align: center;">Authentication System Test</h1>
+        
+        <!-- Login Screen Test -->
+        <div id="login-screen" class="screen active" style="position: relative; height: auto; display: block;">
+            <!-- Content will be rendered by LoginScreen.js -->
+        </div>
+        
+        <!-- Profile Screen Test -->
+        <div id="profile-screen" class="screen" style="position: relative; height: auto; display: none;">
+            <!-- Content will be rendered by ProfileScreen.js -->
+        </div>
+        
+        <!-- Test Controls -->
+        <div style="text-align: center; margin: 20px 0; padding: 20px; border: 2px solid var(--cyber-blue);">
+            <h3 style="color: var(--cyber-pink);">Test Controls</h3>
+            <button class="btn" onclick="showLogin()">Show Login</button>
+            <button class="btn" onclick="showProfile()">Show Profile</button>
+            <button class="btn" onclick="testGoogleLogin()">Test Google Login</button>
+            <button class="btn" onclick="testEmailLogin()">Test Email Login</button>
+            <button class="btn" onclick="testLogout()">Test Logout</button>
+        </div>
+        
+        <!-- Status Display -->
+        <div id="status" style="background: var(--panel-bg); padding: 20px; margin: 20px 0; border: 1px solid var(--panel-border);">
+            <h4 style="color: var(--cyber-green);">System Status:</h4>
+            <div id="auth-status">Not initialized</div>
+            <div id="user-info">No user logged in</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { AuthManager } from './css/js/core/AuthManager.js';
+        import { LoginScreen } from './css/js/screens/LoginScreen.js';
+        import { ProfileScreen } from './css/js/screens/ProfileScreen.js';
+        import { ScreenManager } from './css/js/screens/ScreenManager.js';
+
+        let authManager, loginScreen, profileScreen, screenManager;
+
+        // Mock game object for testing
+        const mockGame = {
+            screens: {
+                showScreen: (screenId) => {
+                    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                    document.getElementById(screenId).style.display = 'block';
+                    updateStatus();
+                }
+            },
+            ui: {
+                showNotification: (message, type) => {
+                    console.log(`${type.toUpperCase()}: ${message}`);
+                    alert(`${type.toUpperCase()}: ${message}`);
+                }
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                authManager = AuthManager.getInstance();
+                screenManager = new ScreenManager();
+                loginScreen = new LoginScreen(mockGame);
+                profileScreen = new ProfileScreen(mockGame);
+                
+                // Setup auth event listeners
+                document.addEventListener('shadowdef:auth:login', (e) => {
+                    console.log('User logged in:', e.detail);
+                    updateStatus();
+                    showProfile();
+                });
+
+                document.addEventListener('shadowdef:auth:logout', () => {
+                    console.log('User logged out');
+                    updateStatus();
+                    showLogin();
+                });
+
+                // Initial render
+                showLogin();
+                updateStatus();
+                
+                updateStatus('Authentication system initialized');
+                
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                updateStatus('Initialization failed: ' + error.message);
+            }
+        });
+
+        // Test functions
+        window.showLogin = () => {
+            mockGame.screens.showScreen('login-screen');
+            loginScreen.render();
+        };
+
+        window.showProfile = () => {
+            mockGame.screens.showScreen('profile-screen');
+            profileScreen.render();
+        };
+
+        window.testGoogleLogin = async () => {
+            try {
+                updateStatus('Testing Google login...');
+                // This will fail without proper Google client ID
+                await authManager.loginWithGoogle();
+            } catch (error) {
+                console.error('Google login test failed:', error);
+                updateStatus('Google login test failed: ' + error.message);
+            }
+        };
+
+        window.testEmailLogin = async () => {
+            try {
+                updateStatus('Testing email login...');
+                const userData = await authManager.loginWithEmail('test@example.com', 'password123');
+                console.log('Email login successful:', userData);
+            } catch (error) {
+                console.error('Email login test failed:', error);
+                updateStatus('Email login test failed: ' + error.message);
+            }
+        };
+
+        window.testLogout = async () => {
+            try {
+                updateStatus('Testing logout...');
+                await authManager.logout();
+            } catch (error) {
+                console.error('Logout test failed:', error);
+                updateStatus('Logout test failed: ' + error.message);
+            }
+        };
+
+        function updateStatus(message) {
+            const authStatus = document.getElementById('auth-status');
+            const userInfo = document.getElementById('user-info');
+            
+            if (message) {
+                authStatus.textContent = message;
+            }
+            
+            if (authManager) {
+                const isAuth = authManager.isUserAuthenticated();
+                const user = authManager.getCurrentUser();
+                
+                authStatus.textContent = `Authentication: ${isAuth ? 'Logged In' : 'Not Logged In'}`;
+                
+                if (user) {
+                    userInfo.innerHTML = `
+                        <strong>User:</strong> ${user.name}<br>
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Provider:</strong> ${user.provider}<br>
+                        <strong>Credits:</strong> ${user.gameStats?.credits || 0}<br>
+                        <strong>Level:</strong> ${user.gameStats?.level || 1}
+                    `;
+                } else {
+                    userInfo.textContent = 'No user logged in';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

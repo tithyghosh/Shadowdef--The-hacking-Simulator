@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Canvas Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0e27;
+            font-family: Arial, sans-serif;
+        }
+        
+        #bg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid red; /* Visible border to see canvas */
+            background: rgba(0, 255, 0, 0.1); /* Green tint */
+        }
+        
+        .content {
+            position: relative;
+            z-index: 10;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-top: 100px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="content">
+        <h1>Canvas Test</h1>
+        <p>You should see a green-tinted canvas with red border behind this text</p>
+        <button onclick="drawTest()">Draw Test Rectangle</button>
+        <button onclick="drawCircles()">Draw Moving Circles</button>
+        <div id="info" style="margin-top: 20px; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        let animationId = null;
+        
+        function updateInfo(message) {
+            document.getElementById('info').innerHTML = message;
+        }
+        
+        function drawTest() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            updateInfo(`Canvas size: ${canvas.width}x${canvas.height}`);
+            
+            // Clear canvas
+            ctx.fillStyle = '#0a0e27';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw test rectangle
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.8)';
+            ctx.fillRect(100, 100, 200, 150);
+            
+            // Draw test circle
+            ctx.fillStyle = 'rgba(255, 0, 110, 0.8)';
+            ctx.beginPath();
+            ctx.arc(400, 200, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            updateInfo(`Canvas size: ${canvas.width}x${canvas.height}<br>Drew rectangle and circle`);
+        }
+        
+        function drawCircles() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            let circles = [];
+            for (let i = 0; i < 10; i++) {
+                circles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    radius: 10 + Math.random() * 20,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`
+                });
+            }
+            
+            function animate() {
+                // Clear canvas
+                ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Update and draw circles
+                circles.forEach(circle => {
+                    circle.x += circle.vx;
+                    circle.y += circle.vy;
+                    
+                    if (circle.x < 0 || circle.x > canvas.width) circle.vx *= -1;
+                    if (circle.y < 0 || circle.y > canvas.height) circle.vy *= -1;
+                    
+                    ctx.fillStyle = circle.color;
+                    ctx.beginPath();
+                    ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            animate();
+            updateInfo(`Canvas size: ${canvas.width}x${canvas.height}<br>Animating ${circles.length} circles`);
+        }
+        
+        // Auto-test when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(drawTest, 500);
+            setTimeout(drawCircles, 2000);
+        });
+    </script>
+</body>
+</html>

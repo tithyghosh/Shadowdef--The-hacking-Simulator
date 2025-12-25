@@ -49,6 +49,16 @@ export const CONFIG = {
         STARTER_AMOUNT: 100
     },
     
+    // Authentication
+    AUTH: {
+        GOOGLE_CLIENT_ID: 'your-google-client-id-here',
+        FACEBOOK_APP_ID: 'your-facebook-app-id-here',
+        SESSION_DURATION: 24 * 60 * 60 * 1000, // 24 hours
+        AUTO_SYNC_INTERVAL: 5 * 60 * 1000, // 5 minutes
+        ENABLE_GUEST_MODE: true,
+        REQUIRE_EMAIL_VERIFICATION: false
+    },
+    
     // Difficulty Modifiers
     DIFFICULTY: {
         EASY: {

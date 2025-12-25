@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Menu Test - SHADOWDEF</title>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div style="padding: 20px;">
+        <h1 style="color: var(--cyber-blue); text-align: center; margin-bottom: 20px;">New Main Menu Layout</h1>
+        
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active" style="position: relative; display: flex !important;">
+            <div class="main-menu-header">
+                <div class="logo">SHADOWDEF</div>
+                <div class="logo-subtitle">Cybersecurity Training Hub</div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-category">
+                    <h3 class="category-title">Training Missions</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card missions-card" onclick="alert('Missions clicked!')">
+                            <div class="card-icon">🎯</div>
+                            <div class="card-content">
+                                <div class="card-title">MISSIONS</div>
+                                <div class="card-subtitle">Start your cybersecurity training</div>
+                                <div class="card-progress">5/20 Completed</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">Player Hub</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card profile-card" onclick="alert('Profile clicked!')">
+                            <div class="card-icon">👤</div>
+                            <div class="card-content">
+                                <div class="card-title">PROFILE</div>
+                                <div class="card-subtitle">View stats and achievements</div>
+                                <div class="card-stats">Level 3 • 2,450 Credits</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card credits-card" onclick="alert('Credits clicked!')">
+                            <div class="card-icon">💰</div>
+                            <div class="card-content">
+                                <div class="card-title">CREDITS</div>
+                                <div class="card-subtitle">Manage your gaming credits</div>
+                                <div class="card-credits">2,450 Credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">System</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card settings-card" onclick="alert('Settings clicked!')">
+                            <div class="card-icon">⚙️</div>
+                            <div class="card-content">
+                                <div class="card-title">SETTINGS</div>
+                                <div class="card-subtitle">Audio, preferences & account</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card about-card" onclick="alert('About clicked!')">
+                            <div class="card-icon">ℹ️</div>
+                            <div class="card-content">
+                                <div class="card-title">ABOUT</div>
+                                <div class="card-subtitle">Game info and credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Status Bar -->
+            <div class="user-status-bar">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <img src="https://www.gravatar.com/avatar/example?d=identicon&s=200" alt="User Avatar">
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">CyberAgent_007</div>
+                        <div class="user-status">Logged in</div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-small" onclick="alert('Logout clicked!')">LOGOUT</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Controls -->
+        <div style="text-align: center; margin: 20px 0; padding: 20px; border: 2px solid var(--cyber-blue);">
+            <h3 style="color: var(--cyber-pink);">Test Different States</h3>
+            <button class="btn" onclick="showGuestState()">Show Guest State</button>
+            <button class="btn" onclick="showLoggedInState()">Show Logged In State</button>
+            <button class="btn" onclick="showHighStatsState()">Show High Stats</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Background } from './css/js/ui/Background.js';
+
+        // Initialize background
+        const background = new Background('bg-canvas');
+        background.start();
+
+        // Test functions
+        window.showGuestState = () => {
+            document.getElementById('user-name').textContent = 'Guest Player';
+            document.getElementById('user-status').textContent = 'Not logged in';
+            document.querySelector('.user-avatar').innerHTML = '👤';
+            document.querySelector('.card-stats').textContent = 'Level 1 • 0 Credits';
+            document.querySelector('.card-credits').textContent = '0 Credits';
+            document.querySelector('.card-progress').textContent = '0/20 Completed';
+            document.querySelector('.quick-actions button').textContent = 'LOGIN';
+        };
+
+        window.showLoggedInState = () => {
+            document.getElementById('user-name').textContent = 'CyberAgent_007';
+            document.getElementById('user-status').textContent = 'Logged in';
+            document.querySelector('.user-avatar').innerHTML = '<img src="https://www.gravatar.com/avatar/example?d=identicon&s=200" alt="User Avatar">';
+            document.querySelector('.card-stats').textContent = 'Level 3 • 2,450 Credits';
+            document.querySelector('.card-credits').textContent = '2,450 Credits';
+            document.querySelector('.card-progress').textContent = '5/20 Completed';
+            document.querySelector('.quick-actions button').textContent = 'LOGOUT';
+        };
+
+        window.showHighStatsState = () => {
+            document.getElementById('user-name').textContent = 'EliteHacker_99';
+            document.getElementById('user-status').textContent = 'Logged in';
+            document.querySelector('.user-avatar').innerHTML = '<img src="https://www.gravatar.com/avatar/elite?d=identicon&s=200" alt="User Avatar">';
+            document.querySelector('.card-stats').textContent = 'Level 15 • 25,000 Credits';
+            document.querySelector('.card-credits').textContent = '25,000 Credits';
+            document.querySelector('.card-progress').textContent = '18/20 Completed';
+            document.querySelector('.quick-actions button').textContent = 'LOGOUT';
+        };
+    </script>
+</body>
+</html>
