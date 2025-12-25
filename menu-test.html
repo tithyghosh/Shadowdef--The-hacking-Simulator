@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/puzzles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .test-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 300px;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            font-size: 12px;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #00f3ff, #ff006e);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="game-container">
+        <!-- Main Menu (Direct Display) -->
+        <div id="main-menu" class="screen active">
+            <div class="logo">SHADOWDEF</div>
+            <div class="menu-buttons">
+                <button class="btn btn-primary" data-action="new-game">NEW GAME</button>
+                <button class="btn" data-action="mission-select">LOAD MISSION</button>
+                <button class="btn" data-action="settings">SETTINGS</button>
+                <button class="btn" data-action="credits">CREDITS</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-info">
+        <h4>🎮 Menu Test</h4>
+        <p>Testing clean menu page without loading elements</p>
+        <button class="test-button" onclick="location.href='index.html'">Full Game</button>
+        <button class="test-button" onclick="checkElements()">Check Elements</button>
+        <div id="status" style="margin-top: 10px; font-size: 10px; color: #00f3ff;"></div>
+    </div>
+
+    <script type="module">
+        import { Background } from './css/js/ui/Background.js';
+        
+        // Initialize background
+        const background = new Background('bg-canvas');
+        background.start();
+        
+        // Global function to check for unwanted elements
+        window.checkElements = function() {
+            const status = document.getElementById('status');
+            const unwantedElements = [];
+            
+            // Check for loading screen elements
+            if (document.querySelector('.loading-container')) unwantedElements.push('loading-container');
+            if (document.querySelector('.logo-subtitle')) unwantedElements.push('logo-subtitle');
+            if (document.querySelector('.progress-bar-bg')) unwantedElements.push('progress-bar');
+            if (document.querySelector('#loading-network-canvas')) unwantedElements.push('network-canvas');
+            if (document.querySelector('.loading-dots')) unwantedElements.push('loading-dots');
+            
+            if (unwantedElements.length === 0) {
+                status.innerHTML = '✅ Clean menu page!<br>No loading elements found.';
+                status.style.color = '#00ff41';
+            } else {
+                status.innerHTML = '❌ Found unwanted elements:<br>' + unwantedElements.join(', ');
+                status.style.color = '#ff006e';
+            }
+        };
+        
+        // Auto-check on load
+        setTimeout(() => {
+            checkElements();
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
  */
 
 import { Game } from './core/Game.js';
+import { LoadingManager } from './core/LoadingManager.js';
 import { Background } from './ui/Background.js';
 import { UIManager } from './ui/UIManager.js';
 import { AudioManager } from './core/AudioManager.js';
@@ -11,13 +12,33 @@ import { AudioManager } from './core/AudioManager.js';
 // Global game instance
 let game = null;
 let background = null;
+let loadingManager = null;
 
 /**
- * Initialize the game
+ * Initialize the loading screen first
  */
-function init() {
-    console.log('🎮 SHADOWDEF Initializing...');
+function initLoading() {
+    console.log('🎮 SHADOWDEF Starting...');
+    
+    // Initialize loading manager
+    loadingManager = new LoadingManager();
+    
+    // Start loading process
+    loadingManager.startLoading(() => {
+        // Loading complete - game is ready
+        console.log('🎯 Game ready for interaction');
+    });
+    
+    // Initialize game systems during loading
+    setTimeout(() => {
+        initGameSystems();
+    }, 500);
+}
 
+/**
+ * Initialize the game systems
+ */
+function initGameSystems() {
     try {
         // Initialize animated background
         background = new Background('bg-canvas');
@@ -34,6 +55,7 @@ function init() {
 
         // Attach game to window for debugging (remove in production)
         window.game = game;
+        window.loadingManager = loadingManager;
 
         // Setup event listeners
         setupEventListeners();
@@ -41,7 +63,7 @@ function init() {
         // Load saved data if exists
         game.loadProgress();
 
-        console.log('✅ SHADOWDEF Ready!');
+        console.log('✅ SHADOWDEF Systems Initialized!');
 
     } catch (error) {
         console.error('❌ Initialization failed:', error);
@@ -66,13 +88,19 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         // ESC to pause/back
         if (e.key === 'Escape') {
-            game.handleEscape();
+            if (game) game.handleEscape();
         }
         
         // F11 for fullscreen
         if (e.key === 'F11') {
             e.preventDefault();
             toggleFullscreen();
+        }
+        
+        // Skip loading screen (development shortcut)
+        if (e.key === 'Enter' && loadingManager && loadingManager.isLoadingInProgress()) {
+            console.log('⏭️ Skipping loading screen...');
+            loadingManager.skipLoading();
         }
     });
 
@@ -102,7 +130,10 @@ function setupEventListeners() {
  * Handle button actions
  */
 function handleAction(action, event) {
-    if (!game) return;
+    if (!game) {
+        console.warn('Game not initialized yet');
+        return;
+    }
 
     switch (action) {
         case 'new-game':
@@ -175,10 +206,10 @@ function showLoadingScreen() {
 
 // Start the game when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initLoading);
 } else {
-    init();
+    initLoading();
 }
 
 // Export for debugging
-export { game };
+export { game, loadingManager };

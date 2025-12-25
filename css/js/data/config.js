@@ -85,12 +85,14 @@ export const CONFIG = {
     
     // Background
     BACKGROUND: {
-        PARTICLE_COUNT: 50,
-        PARTICLE_SPEED: 0.5,
-        CONNECTION_DISTANCE: 150,
+        PARTICLE_COUNT: 80,
+        PARTICLE_SPEED: 0.3,
+        CONNECTION_DISTANCE: 200,
         PARTICLE_SIZE_MIN: 1,
-        PARTICLE_SIZE_MAX: 3,
-        FPS_TARGET: 60
+        PARTICLE_SIZE_MAX: 4,
+        FPS_TARGET: 60,
+        NETWORK_DENSITY: 1.2,
+        GLOW_INTENSITY: 0.6
     },
     
     // Puzzle Settings

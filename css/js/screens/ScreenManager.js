@@ -67,7 +67,18 @@ export class ScreenManager {
      * @param {boolean} addToHistory - Add to history
      */
     showNewScreen(newScreen, screenId, addToHistory) {
+        // Clean up previous screen
+        this.onScreenHide(this.currentScreen);
+        
+        // Hide ALL screens first
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+            screen.style.display = 'none';
+        });
+        
+        // Show only the target screen
         newScreen.classList.add('active');
+        newScreen.style.display = 'flex';
         
         // Update state
         this.previousScreen = this.currentScreen;
@@ -88,6 +99,21 @@ export class ScreenManager {
     }
 
     /**
+     * Screen cleanup when hiding
+     * @param {string} screenId - Screen that was hidden
+     */
+    onScreenHide(screenId) {
+        switch (screenId) {
+            case 'game-screen':
+                // Clean up music control panel
+                if (window.game && window.game.ui) {
+                    window.game.ui.cleanupMusicControlPanel();
+                }
+                break;
+        }
+    }
+
+    /**
      * Screen-specific initialization
      * @param {string} screenId - Screen that was shown
      */
@@ -97,11 +123,27 @@ export class ScreenManager {
                 this.audio.playMusic('menu');
                 break;
             case 'game-screen':
-                this.audio.crossfade('gameplay1');
+                this.audio.crossfade('gameplay');
+                // Initialize music control panel for game screen
+                this.initializeMusicControlPanel();
                 break;
             case 'mission-select':
-                // Keep current music
+                // Keep current music or play menu music
+                if (!this.audio.currentMusic || this.audio.currentMusic === 'loading') {
+                    this.audio.playMusic('menu');
+                }
                 break;
+        }
+    }
+
+    /**
+     * Initialize music control panel for game screen
+     */
+    initializeMusicControlPanel() {
+        // Get UI manager from global game instance
+        if (window.game && window.game.ui) {
+            window.game.ui.setupMusicControlPanel(this.audio);
+            window.game.ui.updateMusicPanel(this.audio);
         }
     }
 
@@ -172,17 +214,21 @@ export class ScreenManager {
      * @param {string} screenId - Screen ID to show
      */
     forceShowScreen(screenId) {
-        // Hide all screens
+        // Hide all screens completely
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
+            screen.style.display = 'none';
         });
 
         // Show target screen
         const targetScreen = document.getElementById(screenId);
         if (targetScreen) {
             targetScreen.classList.add('active');
+            targetScreen.style.display = 'flex';
             this.currentScreen = screenId;
             this.onScreenShow(screenId);
+            
+            console.log(`🎯 Force showing screen: ${screenId}`);
         }
     }
 

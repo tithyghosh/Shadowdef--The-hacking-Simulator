@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SHADOWDEF - Cybersecurity Training Simulator">
-    <title>SHADOWDEF - Elite Cyber Operations</title>
+    <title>SHADOWDEF - Hack the Invisible</title>
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
     <link rel="stylesheet" href="css/ui-components.css">
     <link rel="stylesheet" href="css/screens.css">
     <link rel="stylesheet" href="css/puzzles.css">
@@ -22,12 +23,33 @@
 
     <!-- Main Game Container -->
     <div id="game-container" class="game-container">
-        <!-- Screens will be injected here -->
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen active">
+            <div class="loading-container">
+                <div class="logo-container">
+                    <div class="logo-text">SHADOWDEF</div>
+                    <div class="logo-subtitle">Hack the Invisible</div>
+                </div>
+                
+                <div class="loading-progress">
+                    <div class="progress-label">Loading Game Assets...</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="loading-progress-fill"></div>
+                    </div>
+                    <div class="progress-percentage" id="loading-percentage">0%</div>
+                </div>
+                
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Menu -->
-        <div id="main-menu" class="screen active">
+        <div id="main-menu" class="screen">
             <div class="logo">SHADOWDEF</div>
-
             <div class="menu-buttons">
                 <button class="btn btn-primary" data-action="new-game">NEW GAME</button>
                 <button class="btn" data-action="mission-select">LOAD MISSION</button>
@@ -63,7 +85,19 @@
                         <span class="stat-value" id="attempts">0</span>
                     </div>
                 </div>
-                <button class="btn" data-action="pause">PAUSE</button>
+                <div class="header-controls">
+                    <div class="music-panel" id="music-panel">
+                        <div class="music-info">
+                            <span class="music-status" id="music-status">♪ Music</span>
+                            <span class="music-volume" id="music-volume-indicator">30%</span>
+                        </div>
+                        <div class="music-buttons">
+                            <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">⏸️</button>
+                            <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
+                        </div>
+                    </div>
+                    <button class="btn" data-action="pause">PAUSE</button>
+                </div>
             </div>
 
             <div class="game-content">

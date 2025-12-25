@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music File Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .audio-controls {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .control-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 5px;
+        }
+        
+        .control-group h3 {
+            color: #00f3ff;
+            margin-bottom: 15px;
+        }
+        
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .audio-btn {
+            background: linear-gradient(135deg, #00f3ff, #ff006e);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .audio-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .volume-control {
+            margin: 15px 0;
+        }
+        
+        .volume-control input {
+            width: 200px;
+            margin: 0 10px;
+        }
+        
+        .status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 12px;
+            color: #00ff41;
+        }
+        
+        .file-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="audio-controls">
+        <h1>🎵 Music File Test</h1>
+        <p>Testing Halloween bells music from /assets/music</p>
+        
+        <div class="file-info">
+            <strong>Music File:</strong> creepy-halloween-bells-loop-408748.mp3<br>
+            <strong>Location:</strong> /assets/music/<br>
+            <strong>Type:</strong> Looping background music
+        </div>
+        
+        <div class="control-group">
+            <h3>Music Tracks (Halloween Bells)</h3>
+            <div class="button-grid">
+                <button class="audio-btn" onclick="playMusic('menu')">Menu Music</button>
+                <button class="audio-btn" onclick="playMusic('loading')">Loading Music</button>
+                <button class="audio-btn" onclick="playMusic('gameplay')">Gameplay Music</button>
+                <button class="audio-btn" onclick="stopMusic()">Stop Music</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Playback Controls</h3>
+            <div class="button-grid">
+                <button class="audio-btn" onclick="pauseMusic()">Pause</button>
+                <button class="audio-btn" onclick="resumeMusic()">Resume</button>
+                <button class="audio-btn" onclick="toggleMusic()">Toggle On/Off</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Volume Control</h3>
+            <div class="volume-control">
+                <label>Volume:</label>
+                <input type="range" id="volume" min="0" max="1" step="0.1" value="0.3" onchange="setVolume(this.value)">
+                <span id="vol-display">30%</span>
+            </div>
+        </div>
+        
+        <div class="status" id="status">
+            Click a music track to play the Halloween bells music file
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <a href="index.html" class="audio-btn">Back to Game</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { AudioManager } from './css/js/core/AudioManager.js';
+        
+        let audioManager = null;
+        
+        // Initialize audio manager
+        function initAudio() {
+            audioManager = AudioManager.getInstance();
+            audioManager.setMusicVolume(0.3); // Start with moderate volume
+            updateStatus('Music system ready - will play Halloween bells music');
+        }
+        
+        // Global functions for buttons
+        window.playMusic = function(trackName) {
+            if (!audioManager) initAudio();
+            audioManager.playMusic(trackName);
+            updateStatus(`Playing Halloween bells music: ${trackName} track`);
+        };
+        
+        window.stopMusic = function() {
+            if (!audioManager) return;
+            audioManager.stopMusic();
+            updateStatus('Music stopped');
+        };
+        
+        window.pauseMusic = function() {
+            if (!audioManager) return;
+            audioManager.pauseMusic();
+            updateStatus('Music paused');
+        };
+        
+        window.resumeMusic = function() {
+            if (!audioManager) return;
+            audioManager.resumeMusic();
+            updateStatus('Music resumed');
+        };
+        
+        window.toggleMusic = function() {
+            if (!audioManager) initAudio();
+            const settings = audioManager.getSettings();
+            audioManager.setMusicEnabled(!settings.musicEnabled);
+            updateStatus(`Music ${settings.musicEnabled ? 'disabled' : 'enabled'}`);
+        };
+        
+        window.setVolume = function(volume) {
+            if (!audioManager) initAudio();
+            audioManager.setMusicVolume(parseFloat(volume));
+            document.getElementById('vol-display').textContent = Math.round(volume * 100) + '%';
+            updateStatus(`Volume: ${Math.round(volume * 100)}%`);
+        };
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+        
+        // Initialize on first click
+        document.addEventListener('click', initAudio, { once: true });
+    </script>
+</body>
+</html>

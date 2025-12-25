@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Isolation Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/puzzles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .test-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 250px;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            font-size: 12px;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #00f3ff, #ff006e);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 3px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            width: 100%;
+        }
+        .current-screen {
+            background: rgba(0, 255, 65, 0.2);
+            color: #00ff41;
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 3px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="game-container">
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="logo">SHADOWDEF</div>
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="showScreen('mission-select')">NEW GAME (Mission Select)</button>
+                <button class="btn" onclick="showScreen('mission-select')">LOAD MISSION</button>
+                <button class="btn" onclick="showScreen('game-screen')">GAME SCREEN</button>
+                <button class="btn" onclick="alert('Credits')">CREDITS</button>
+            </div>
+        </div>
+
+        <!-- Mission Select Screen -->
+        <div id="mission-select" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu')">← BACK</button>
+            <div class="mission-header">
+                <h2>SELECT MISSION</h2>
+                <p class="subtitle">Choose your operation</p>
+            </div>
+            <div class="mission-grid">
+                <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;">
+                    <p>Mission grid would be here</p>
+                    <button class="btn btn-primary" onclick="showScreen('game-screen')">START MISSION</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="stat-label">TIME:</span>
+                        <span class="stat-value">00:00</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">SCORE:</span>
+                        <span class="stat-value">0</span>
+                    </div>
+                </div>
+                <button class="btn" onclick="showScreen('main-menu')">BACK TO MENU</button>
+            </div>
+            <div class="game-content">
+                <div class="puzzle-area">
+                    <div style="text-align: center; color: var(--text-secondary); margin-top: 100px;">
+                        <h3>Game Screen</h3>
+                        <p>Puzzle would be here</p>
+                        <p>Notice: No SHADOWDEF logo visible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-controls">
+        <h4>🎮 Screen Test</h4>
+        <div class="current-screen" id="current-screen">main-menu</div>
+        <button class="test-button" onclick="showScreen('main-menu')">Main Menu</button>
+        <button class="test-button" onclick="showScreen('mission-select')">Mission Select</button>
+        <button class="test-button" onclick="showScreen('game-screen')">Game Screen</button>
+        <button class="test-button" onclick="checkScreens()">Check Screens</button>
+        <div id="status" style="margin-top: 10px; font-size: 10px; color: #00f3ff;"></div>
+    </div>
+
+    <script type="module">
+        import { Background } from './css/js/ui/Background.js';
+        
+        // Initialize background
+        const background = new Background('bg-canvas');
+        background.start();
+        
+        let currentScreen = 'main-menu';
+        
+        // Global function to show screens
+        window.showScreen = function(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+                screen.style.display = 'none';
+            });
+            
+            // Show target screen
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                targetScreen.style.display = 'flex';
+                currentScreen = screenId;
+                document.getElementById('current-screen').textContent = screenId;
+            }
+        };
+        
+        // Check screen isolation
+        window.checkScreens = function() {
+            const status = document.getElementById('status');
+            const activeScreens = document.querySelectorAll('.screen.active');
+            const visibleScreens = [];
+            
+            document.querySelectorAll('.screen').forEach(screen => {
+                const style = window.getComputedStyle(screen);
+                if (style.display !== 'none' && screen.classList.contains('active')) {
+                    visibleScreens.push(screen.id);
+                }
+            });
+            
+            if (visibleScreens.length === 1) {
+                status.innerHTML = `✅ Perfect isolation!<br>Only ${visibleScreens[0]} visible`;
+                status.style.color = '#00ff41';
+            } else {
+                status.innerHTML = `❌ Multiple screens visible:<br>${visibleScreens.join(', ')}`;
+                status.style.color = '#ff006e';
+            }
+        };
+        
+        // Auto-check on load
+        setTimeout(() => {
+            checkScreens();
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Background Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0e27;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #test-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+        
+        .test-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 10;
+            max-width: 300px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #00f3ff, #ff006e);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 243, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="test-canvas"></canvas>
+    
+    <div class="test-overlay">
+        <h3>🌐 Network Background Test</h3>
+        <p>Testing the fixed NetworkBackground.js</p>
+        <button class="test-button" onclick="startNetwork()">Start Network</button>
+        <button class="test-button" onclick="stopNetwork()">Stop Network</button>
+        <button class="test-button" onclick="addBurst()">Add Burst</button>
+        <button class="test-button" onclick="clearNetwork()">Clear</button>
+        <div id="status" style="margin-top: 10px; font-size: 12px; color: #00f3ff;"></div>
+    </div>
+
+    <script type="module">
+        import { NetworkBackground } from './css/js/ui/NetworkBackground.js';
+        
+        let networkBg = null;
+        const status = document.getElementById('status');
+        
+        function updateStatus(message) {
+            status.textContent = message;
+            console.log(message);
+        }
+        
+        // Initialize network background
+        try {
+            networkBg = new NetworkBackground('test-canvas');
+            updateStatus('✅ NetworkBackground initialized successfully');
+        } catch (error) {
+            updateStatus('❌ Error: ' + error.message);
+            console.error(error);
+        }
+        
+        // Global functions for buttons
+        window.startNetwork = function() {
+            if (networkBg) {
+                networkBg.start();
+                updateStatus('🚀 Network animation started');
+            }
+        };
+        
+        window.stopNetwork = function() {
+            if (networkBg) {
+                networkBg.stop();
+                updateStatus('⏹️ Network animation stopped');
+            }
+        };
+        
+        window.addBurst = function() {
+            if (networkBg) {
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                networkBg.createBurst(x, y);
+                updateStatus(`💥 Burst added at (${Math.floor(x)}, ${Math.floor(y)})`);
+            }
+        };
+        
+        window.clearNetwork = function() {
+            if (networkBg) {
+                networkBg.clear();
+                updateStatus('🧹 Network cleared');
+            }
+        };
+        
+        // Auto-start the network
+        if (networkBg) {
+            networkBg.start();
+            updateStatus('🌐 Network auto-started');
+        }
+    </script>
+</body>
+</html>

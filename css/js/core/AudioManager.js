@@ -19,6 +19,8 @@ export class AudioManager {
         this.sfxVolume = CONFIG.AUDIO.SFX_VOLUME;
         
         this.currentMusic = null;
+        this.currentAudioElement = null;
+        this.softToneNodes = [];
         this.audioContext = null;
         this.sounds = new Map();
         this.musicTracks = new Map();
@@ -65,7 +67,7 @@ export class AudioManager {
     }
 
     /**
-     * Load sound files (placeholder - will load actual files when available)
+     * Load sound files and music tracks
      */
     loadSounds() {
         // Sound effects map
@@ -79,17 +81,47 @@ export class AudioManager {
             unlock: { file: 'assets/audio/sfx/unlock.mp3', volume: 0.7 }
         };
 
-        // Music tracks map
+        // Music tracks map - using the available Halloween bell music
         this.musicDefinitions = {
-            menu: { file: 'assets/audio/music/menu-theme.mp3', loop: true },
-            gameplay1: { file: 'assets/audio/music/gameplay-ambient-1.mp3', loop: true },
-            gameplay2: { file: 'assets/audio/music/gameplay-ambient-2.mp3', loop: true },
-            victory: { file: 'assets/audio/music/victory.mp3', loop: false }
+            menu: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.3 },
+            loading: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.2 },
+            gameplay: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 },
+            gameplay1: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 },
+            gameplay2: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 }
         };
 
-        // In production, load actual audio files here
-        // For now, we'll create placeholder audio objects
-        console.log('🎵 Audio definitions loaded (files not yet available)');
+        // Preload music files
+        this.preloadMusic();
+
+        console.log('🎵 Audio definitions loaded with creepy Halloween bells music');
+    }
+
+    /**
+     * Preload music files
+     */
+    preloadMusic() {
+        Object.keys(this.musicDefinitions).forEach(trackName => {
+            const definition = this.musicDefinitions[trackName];
+            const audio = new Audio();
+            audio.src = definition.file;
+            audio.loop = definition.loop;
+            audio.volume = definition.volume * this.musicVolume;
+            audio.preload = 'auto';
+            
+            // Store the audio element
+            this.musicTracks.set(trackName, audio);
+            
+            // Handle loading events
+            audio.addEventListener('canplaythrough', () => {
+                console.log(`🎵 Loaded: ${trackName}`);
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.warn(`🎵 Failed to load: ${trackName}`, e);
+                // Fallback to soft tones if file doesn't exist
+                this.musicTracks.delete(trackName);
+            });
+        });
     }
 
     /**
@@ -124,21 +156,122 @@ export class AudioManager {
     playMusic(trackName, fade = true) {
         if (!this.musicEnabled) return;
 
-        const definition = this.musicDefinitions[trackName];
-        if (!definition) {
-            console.warn(`Music track not found: ${trackName}`);
-            return;
-        }
-
         // Stop current music if playing
         if (this.currentMusic) {
             this.stopMusic(fade);
         }
 
-        // In production, load and play actual music file
+        // Try to play actual audio file first
+        const audioElement = this.musicTracks.get(trackName);
+        if (audioElement) {
+            this.playAudioFile(audioElement, trackName, fade);
+        } else {
+            // Fallback to soft tones if audio file not available
+            console.log(`🎵 Audio file not found for ${trackName}, using soft tones`);
+            this.fallbackToSoftTones(trackName, fade);
+        }
+
         this.currentMusic = trackName;
-        
         console.log(`🎵 Playing music: ${trackName}`);
+    }
+
+    /**
+     * Play actual audio file
+     * @param {HTMLAudioElement} audioElement - Audio element
+     * @param {string} trackName - Track name
+     * @param {boolean} fade - Fade in
+     */
+    playAudioFile(audioElement, trackName, fade) {
+        try {
+            audioElement.currentTime = 0;
+            audioElement.volume = fade ? 0 : (this.musicDefinitions[trackName].volume * this.musicVolume);
+            
+            const playPromise = audioElement.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    if (fade) {
+                        this.fadeInAudio(audioElement, this.musicDefinitions[trackName].volume * this.musicVolume);
+                    }
+                    console.log(`🎵 Playing audio file: ${trackName}`);
+                }).catch(error => {
+                    console.warn(`🎵 Audio play failed for ${trackName}:`, error);
+                    this.fallbackToSoftTones(trackName, fade);
+                });
+            }
+            
+            this.currentAudioElement = audioElement;
+        } catch (error) {
+            console.warn(`🎵 Error playing ${trackName}:`, error);
+            this.fallbackToSoftTones(trackName, fade);
+        }
+    }
+
+    /**
+     * Fade in audio element
+     * @param {HTMLAudioElement} audioElement - Audio element
+     * @param {number} targetVolume - Target volume
+     */
+    fadeInAudio(audioElement, targetVolume) {
+        const fadeSteps = 20;
+        const fadeInterval = 100;
+        const volumeStep = targetVolume / fadeSteps;
+        let currentStep = 0;
+
+        const fadeTimer = setInterval(() => {
+            currentStep++;
+            audioElement.volume = Math.min(volumeStep * currentStep, targetVolume);
+            
+            if (currentStep >= fadeSteps) {
+                clearInterval(fadeTimer);
+            }
+        }, fadeInterval);
+    }
+
+    /**
+     * Fade out audio element
+     * @param {HTMLAudioElement} audioElement - Audio element
+     * @param {Function} callback - Callback when fade complete
+     */
+    fadeOutAudio(audioElement, callback) {
+        const fadeSteps = 20;
+        const fadeInterval = 50;
+        const startVolume = audioElement.volume;
+        const volumeStep = startVolume / fadeSteps;
+        let currentStep = 0;
+
+        const fadeTimer = setInterval(() => {
+            currentStep++;
+            audioElement.volume = Math.max(startVolume - (volumeStep * currentStep), 0);
+            
+            if (currentStep >= fadeSteps || audioElement.volume <= 0) {
+                clearInterval(fadeTimer);
+                audioElement.pause();
+                if (callback) callback();
+            }
+        }, fadeInterval);
+    }
+
+    /**
+     * Fallback to soft tones when audio file not available
+     * @param {string} trackName - Track name
+     * @param {boolean} fade - Fade in
+     */
+    fallbackToSoftTones(trackName, fade) {
+        // Map track names to soft tone types
+        const toneMap = {
+            'menu': 'soft',
+            'loading': 'gentle', 
+            'gameplay': 'calm',
+            'gameplay1': 'calm',
+            'gameplay2': 'soft'
+        };
+
+        const toneType = toneMap[trackName] || 'soft';
+
+        setTimeout(() => {
+            this.generateSoftTones(toneType);
+        }, fade ? 500 : 0);
     }
 
     /**
@@ -148,8 +281,23 @@ export class AudioManager {
     stopMusic(fade = true) {
         if (!this.currentMusic) return;
 
-        // In production, stop actual audio
         console.log(`🎵 Stopping music: ${this.currentMusic}`);
+        
+        // Stop audio file if playing
+        if (this.currentAudioElement) {
+            if (fade) {
+                this.fadeOutAudio(this.currentAudioElement, () => {
+                    this.currentAudioElement = null;
+                });
+            } else {
+                this.currentAudioElement.pause();
+                this.currentAudioElement = null;
+            }
+        }
+        
+        // Stop soft tones
+        this.stopSoftTones();
+        
         this.currentMusic = null;
     }
 
@@ -158,8 +306,21 @@ export class AudioManager {
      */
     pauseMusic() {
         if (!this.currentMusic) return;
-        // In production, pause actual audio
-        console.log('⏸️ Music paused');
+        
+        if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            console.log('⏸️ Audio file paused');
+        } else if (this.softToneNodes) {
+            this.softToneNodes.forEach(node => {
+                if (node.gainNode) {
+                    node.gainNode.gain.linearRampToValueAtTime(
+                        0,
+                        this.audioContext.currentTime + 0.5
+                    );
+                }
+            });
+            console.log('⏸️ Soft tones paused');
+        }
     }
 
     /**
@@ -167,8 +328,26 @@ export class AudioManager {
      */
     resumeMusic() {
         if (!this.currentMusic) return;
-        // In production, resume actual audio
-        console.log('▶️ Music resumed');
+        
+        if (this.currentAudioElement) {
+            const playPromise = this.currentAudioElement.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn('Resume failed:', error);
+                });
+            }
+            console.log('▶️ Audio file resumed');
+        } else if (this.softToneNodes) {
+            this.softToneNodes.forEach(node => {
+                if (node.gainNode) {
+                    node.gainNode.gain.linearRampToValueAtTime(
+                        node.volume * this.musicVolume,
+                        this.audioContext.currentTime + 0.5
+                    );
+                }
+            });
+            console.log('▶️ Soft tones resumed');
+        }
     }
 
     /**
@@ -202,6 +381,133 @@ export class AudioManager {
     }
 
     /**
+     * Generate soft ambient tones
+     * @param {string} type - Type of ambient tone ('soft', 'gentle', 'calm')
+     */
+    generateSoftTones(type = 'soft') {
+        if (!this.audioContext || !this.musicEnabled) return;
+
+        // Stop current tones
+        this.stopSoftTones();
+
+        // Create very simple, soft tones
+        this.softToneNodes = [];
+        
+        const toneConfig = this.getSoftToneConfig(type);
+        
+        toneConfig.frequencies.forEach((freq, index) => {
+            setTimeout(() => {
+                this.createSoftTone(freq, toneConfig.volume);
+            }, index * 1000); // Stagger the tones
+        });
+
+        this.currentMusic = type;
+        console.log(`🎵 Playing soft tones: ${type}`);
+    }
+
+    /**
+     * Get soft tone configuration
+     * @param {string} type - Tone type
+     * @returns {Object} Configuration
+     */
+    getSoftToneConfig(type) {
+        const configs = {
+            soft: {
+                frequencies: [220, 330, 440], // A3, E4, A4 - gentle harmony
+                volume: 0.08
+            },
+            gentle: {
+                frequencies: [196, 294, 392], // G3, D4, G4 - soothing
+                volume: 0.06
+            },
+            calm: {
+                frequencies: [174, 261, 349], // F3, C4, F4 - peaceful
+                volume: 0.07
+            }
+        };
+
+        return configs[type] || configs.soft;
+    }
+
+    /**
+     * Create a single soft tone
+     * @param {number} frequency - Tone frequency
+     * @param {number} volume - Tone volume
+     */
+    createSoftTone(frequency, volume) {
+        if (!this.audioContext) return;
+
+        try {
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const filterNode = this.audioContext.createBiquadFilter();
+
+            // Very soft sine wave
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+
+            // Soft low-pass filter
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 800;
+            filterNode.Q.value = 0.5;
+
+            // Connect nodes
+            oscillator.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            // Very gentle fade in
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(
+                volume * this.musicVolume,
+                this.audioContext.currentTime + 3
+            );
+
+            // Store for cleanup
+            this.softToneNodes.push({
+                oscillator,
+                gainNode,
+                filterNode,
+                frequency,
+                volume
+            });
+
+            // Start the tone
+            oscillator.start(this.audioContext.currentTime);
+
+        } catch (error) {
+            console.error('Soft tone creation failed:', error);
+        }
+    }
+
+    /**
+     * Stop soft tones
+     */
+    stopSoftTones() {
+        if (this.softToneNodes) {
+            this.softToneNodes.forEach(node => {
+                try {
+                    // Very gentle fade out
+                    node.gainNode.gain.linearRampToValueAtTime(
+                        0,
+                        this.audioContext.currentTime + 2
+                    );
+
+                    // Stop after fade
+                    setTimeout(() => {
+                        if (node.oscillator) {
+                            node.oscillator.stop();
+                        }
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error stopping soft tone:', error);
+                }
+            });
+            this.softToneNodes = [];
+        }
+    }
+
+    /**
      * Set music enabled/disabled
      * @param {boolean} enabled - Enable music
      */
@@ -230,7 +536,27 @@ export class AudioManager {
      */
     setMusicVolume(volume) {
         this.musicVolume = Math.max(0, Math.min(1, volume));
-        // In production, update actual audio volume
+        
+        // Update current audio file volume
+        if (this.currentAudioElement && this.currentMusic) {
+            const definition = this.musicDefinitions[this.currentMusic];
+            if (definition) {
+                this.currentAudioElement.volume = definition.volume * this.musicVolume;
+            }
+        }
+        
+        // Update current soft tones volume
+        if (this.softToneNodes) {
+            this.softToneNodes.forEach(node => {
+                if (node.gainNode) {
+                    node.gainNode.gain.linearRampToValueAtTime(
+                        node.volume * this.musicVolume,
+                        this.audioContext.currentTime + 0.1
+                    );
+                }
+            });
+        }
+        
         console.log(`🎵 Music volume: ${this.musicVolume}`);
     }
 
@@ -350,6 +676,21 @@ export class AudioManager {
      */
     destroy() {
         this.stopMusic(false);
+        this.stopSoftTones();
+        
+        // Clean up audio elements
+        if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement = null;
+        }
+        
+        // Clean up all preloaded music
+        this.musicTracks.forEach(audio => {
+            audio.pause();
+            audio.src = '';
+        });
+        this.musicTracks.clear();
+        
         if (this.audioContext) {
             this.audioContext.close();
         }

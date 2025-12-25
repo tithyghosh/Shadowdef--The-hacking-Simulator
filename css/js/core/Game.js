@@ -161,17 +161,56 @@ export class Game {
      * Show settings
      */
     showSettings() {
+        const settings = this.audio.getSettings();
+        
         this.ui.showModal('Settings', `
             <div class="settings-panel">
-                <h3>Audio</h3>
-                <label>
-                    <input type="checkbox" id="music-toggle" ${this.audio.musicEnabled ? 'checked' : ''}>
-                    Enable Music
-                </label>
-                <label>
-                    <input type="checkbox" id="sfx-toggle" ${this.audio.sfxEnabled ? 'checked' : ''}>
-                    Enable Sound Effects
-                </label>
+                <h3>Audio Controls</h3>
+                
+                <div class="audio-control">
+                    <label>
+                        <input type="checkbox" id="music-toggle" ${settings.musicEnabled ? 'checked' : ''}>
+                        Enable Music
+                    </label>
+                </div>
+                
+                <div class="audio-control">
+                    <label for="music-volume">Music Volume:</label>
+                    <div class="volume-control">
+                        <input type="range" id="music-volume" min="0" max="100" 
+                               value="${Math.round(settings.musicVolume * 100)}" 
+                               ${!settings.musicEnabled ? 'disabled' : ''}>
+                        <span id="music-volume-display">${Math.round(settings.musicVolume * 100)}%</span>
+                    </div>
+                </div>
+                
+                <div class="audio-control">
+                    <label>
+                        <input type="checkbox" id="sfx-toggle" ${settings.sfxEnabled ? 'checked' : ''}>
+                        Enable Sound Effects
+                    </label>
+                </div>
+                
+                <div class="audio-control">
+                    <label for="sfx-volume">SFX Volume:</label>
+                    <div class="volume-control">
+                        <input type="range" id="sfx-volume" min="0" max="100" 
+                               value="${Math.round(settings.sfxVolume * 100)}"
+                               ${!settings.sfxEnabled ? 'disabled' : ''}>
+                        <span id="sfx-volume-display">${Math.round(settings.sfxVolume * 100)}%</span>
+                    </div>
+                </div>
+                
+                <div class="music-controls">
+                    <button class="btn btn-small" id="music-pause-btn" 
+                            ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
+                        ${this.audio.currentAudioElement && !this.audio.currentAudioElement.paused ? 'PAUSE' : 'RESUME'}
+                    </button>
+                    <button class="btn btn-small" id="music-stop-btn"
+                            ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
+                        STOP
+                    </button>
+                </div>
                 
                 <div class="divider"></div>
                 
@@ -200,16 +239,85 @@ export class Game {
     setupSettingsListeners() {
         const musicToggle = document.getElementById('music-toggle');
         const sfxToggle = document.getElementById('sfx-toggle');
+        const musicVolume = document.getElementById('music-volume');
+        const sfxVolume = document.getElementById('sfx-volume');
+        const musicVolumeDisplay = document.getElementById('music-volume-display');
+        const sfxVolumeDisplay = document.getElementById('sfx-volume-display');
+        const musicPauseBtn = document.getElementById('music-pause-btn');
+        const musicStopBtn = document.getElementById('music-stop-btn');
 
+        // Music toggle
         if (musicToggle) {
             musicToggle.addEventListener('change', (e) => {
                 this.audio.setMusicEnabled(e.target.checked);
+                
+                // Enable/disable volume slider
+                if (musicVolume) {
+                    musicVolume.disabled = !e.target.checked;
+                }
+                
+                // Enable/disable music control buttons
+                const hasMusic = this.audio.currentMusic;
+                if (musicPauseBtn) musicPauseBtn.disabled = !e.target.checked || !hasMusic;
+                if (musicStopBtn) musicStopBtn.disabled = !e.target.checked || !hasMusic;
             });
         }
 
+        // SFX toggle
         if (sfxToggle) {
             sfxToggle.addEventListener('change', (e) => {
                 this.audio.setSfxEnabled(e.target.checked);
+                
+                // Enable/disable volume slider
+                if (sfxVolume) {
+                    sfxVolume.disabled = !e.target.checked;
+                }
+            });
+        }
+
+        // Music volume slider
+        if (musicVolume && musicVolumeDisplay) {
+            musicVolume.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                this.audio.setMusicVolume(volume);
+                musicVolumeDisplay.textContent = `${e.target.value}%`;
+            });
+        }
+
+        // SFX volume slider
+        if (sfxVolume && sfxVolumeDisplay) {
+            sfxVolume.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                this.audio.setSfxVolume(volume);
+                sfxVolumeDisplay.textContent = `${e.target.value}%`;
+                
+                // Play test sound
+                this.audio.playButtonClick();
+            });
+        }
+
+        // Music pause/resume button
+        if (musicPauseBtn) {
+            musicPauseBtn.addEventListener('click', () => {
+                if (this.audio.currentAudioElement && !this.audio.currentAudioElement.paused) {
+                    this.audio.pauseMusic();
+                    musicPauseBtn.textContent = 'RESUME';
+                } else {
+                    this.audio.resumeMusic();
+                    musicPauseBtn.textContent = 'PAUSE';
+                }
+            });
+        }
+
+        // Music stop button
+        if (musicStopBtn) {
+            musicStopBtn.addEventListener('click', () => {
+                this.audio.stopMusic();
+                if (musicPauseBtn) {
+                    musicPauseBtn.textContent = 'PAUSE';
+                    musicPauseBtn.disabled = true;
+                }
+                musicStopBtn.disabled = true;
             });
         }
     }

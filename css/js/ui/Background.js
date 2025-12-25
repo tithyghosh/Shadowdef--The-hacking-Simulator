@@ -34,6 +34,9 @@ export class Background {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+        
+        // Recreate particles to fill new screen size
+        this.createParticles();
     }
 
     /**
@@ -44,11 +47,19 @@ export class Background {
         
         const count = CONFIG.PERFORMANCE.ENABLE_PARTICLES 
             ? this.config.PARTICLE_COUNT 
-            : 20;
+            : 30;
         
-        for (let i = 0; i < count; i++) {
+        // Calculate particle density based on screen size
+        const screenArea = this.canvas.width * this.canvas.height;
+        const baseArea = 1920 * 1080; // Base resolution
+        const densityMultiplier = Math.sqrt(screenArea / baseArea);
+        const adjustedCount = Math.floor(count * densityMultiplier * this.config.NETWORK_DENSITY);
+        
+        for (let i = 0; i < adjustedCount; i++) {
             this.particles.push(this.createParticle());
         }
+        
+        console.log(`🌐 Created ${adjustedCount} network particles for ${this.canvas.width}x${this.canvas.height}`);
     }
 
     /**
@@ -93,12 +104,21 @@ export class Background {
      * Draw particles and connections
      */
     drawParticles() {
-        // Semi-transparent background for trail effect
-        this.ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+        // Clear canvas with dark background
+        this.ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw connections
-        this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.3)';
+        // Draw network connections first (behind particles)
+        this.drawNetworkConnections();
+        
+        // Draw particles on top
+        this.drawNetworkNodes();
+    }
+
+    /**
+     * Draw network connections between particles
+     */
+    drawNetworkConnections() {
         this.ctx.lineWidth = 1;
 
         for (let i = 0; i < this.particles.length; i++) {
@@ -111,9 +131,15 @@ export class Background {
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 if (distance < this.config.CONNECTION_DISTANCE) {
-                    const opacity = 1 - (distance / this.config.CONNECTION_DISTANCE);
-                    this.ctx.strokeStyle = `rgba(0, 243, 255, ${opacity * 0.3})`;
+                    const opacity = (1 - (distance / this.config.CONNECTION_DISTANCE)) * 0.4;
                     
+                    // Create gradient line for better visual effect
+                    const gradient = this.ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                    gradient.addColorStop(0, `rgba(0, 243, 255, ${opacity * p1.opacity})`);
+                    gradient.addColorStop(0.5, `rgba(139, 92, 246, ${opacity * 0.8})`);
+                    gradient.addColorStop(1, `rgba(255, 0, 110, ${opacity * p2.opacity})`);
+                    
+                    this.ctx.strokeStyle = gradient;
                     this.ctx.beginPath();
                     this.ctx.moveTo(p1.x, p1.y);
                     this.ctx.lineTo(p2.x, p2.y);
@@ -121,9 +147,14 @@ export class Background {
                 }
             }
         }
+    }
 
-        // Draw particles
+    /**
+     * Draw network nodes (particles)
+     */
+    drawNetworkNodes() {
         this.particles.forEach(particle => {
+            // Main particle
             this.ctx.fillStyle = `rgba(0, 243, 255, ${particle.opacity})`;
             this.ctx.beginPath();
             this.ctx.arc(
@@ -135,16 +166,20 @@ export class Background {
             );
             this.ctx.fill();
 
-            // Add glow effect
+            // Enhanced glow effect
+            const glowSize = particle.size * 4;
             const gradient = this.ctx.createRadialGradient(
                 particle.x,
                 particle.y,
                 0,
                 particle.x,
                 particle.y,
-                particle.size * 3
+                glowSize
             );
-            gradient.addColorStop(0, `rgba(0, 243, 255, ${particle.opacity * 0.5})`);
+            
+            const glowOpacity = particle.opacity * this.config.GLOW_INTENSITY;
+            gradient.addColorStop(0, `rgba(0, 243, 255, ${glowOpacity})`);
+            gradient.addColorStop(0.4, `rgba(139, 92, 246, ${glowOpacity * 0.6})`);
             gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
             
             this.ctx.fillStyle = gradient;
@@ -152,11 +187,40 @@ export class Background {
             this.ctx.arc(
                 particle.x,
                 particle.y,
-                particle.size * 3,
+                glowSize,
                 0,
                 Math.PI * 2
             );
             this.ctx.fill();
+
+            // Add pulsing effect for larger particles
+            if (particle.size > 2.5) {
+                const pulseSize = particle.size * 6;
+                const pulseOpacity = (Math.sin(Date.now() * 0.003 + particle.x * 0.01) + 1) * 0.1 * particle.opacity;
+                
+                const pulseGradient = this.ctx.createRadialGradient(
+                    particle.x,
+                    particle.y,
+                    0,
+                    particle.x,
+                    particle.y,
+                    pulseSize
+                );
+                
+                pulseGradient.addColorStop(0, `rgba(255, 0, 110, ${pulseOpacity})`);
+                pulseGradient.addColorStop(1, 'rgba(255, 0, 110, 0)');
+                
+                this.ctx.fillStyle = pulseGradient;
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    particle.x,
+                    particle.y,
+                    pulseSize,
+                    0,
+                    Math.PI * 2
+                );
+                this.ctx.fill();
+            }
         });
     }
 

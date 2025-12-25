@@ -7,7 +7,19 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xl);
+    position: absolute;
+    background: transparent;
+    display: none !important; /* Hidden by default */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#main-menu.active {
+    display: flex !important;
+    z-index: 2;
 }
 
 .logo {
@@ -24,11 +36,9 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-shadow: 0 0 30px rgba(0, 243, 255, 0.5);
-    margin-bottom: var(--spacing-xl);
     animation: glitch 3s infinite;
+    margin: 0;
 }
-
-
 
 .menu-buttons {
     display: flex;
@@ -41,6 +51,12 @@
 #mission-select {
     flex-direction: column;
     padding: var(--spacing-xl);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
 }
 
 .mission-header {
@@ -139,6 +155,12 @@
 /* Game Screen */
 #game-screen {
     flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
 }
 
 .game-header {
@@ -149,6 +171,76 @@
     background: var(--panel-bg);
     border-bottom: 2px solid var(--cyber-blue);
     flex-shrink: 0;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+/* Music Control Panel */
+.music-panel {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: var(--darker-bg);
+    border: 1px solid var(--cyber-blue);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 4px;
+    min-width: 120px;
+}
+
+.music-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.music-status {
+    color: var(--cyber-blue);
+    font-size: var(--font-size-sm);
+    font-weight: bold;
+}
+
+.music-volume {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.music-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-icon {
+    background: transparent;
+    border: 1px solid var(--cyber-blue);
+    color: var(--cyber-blue);
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.9rem;
+    border-radius: 3px;
+}
+
+.btn-icon:hover {
+    background: var(--cyber-blue);
+    color: var(--bg-primary);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.btn-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+.btn-icon:disabled:hover {
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
 }
 
 .game-stats {
@@ -320,6 +412,10 @@
         min-width: 250px;
     }
     
+    .main-menu-content {
+        gap: var(--spacing-lg);
+    }
+    
     .game-content {
         flex-direction: column;
     }
@@ -339,6 +435,15 @@
         gap: var(--spacing-sm);
     }
     
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .music-panel {
+        min-width: 100px;
+    }
+    
     .mission-grid {
         grid-template-columns: 1fr;
     }
@@ -347,6 +452,15 @@
 @media (max-width: 480px) {
     .logo {
         font-size: 2rem;
+        letter-spacing: 2px;
+    }
+    
+    .menu-buttons {
+        min-width: 200px;
+    }
+    
+    .main-menu-content {
+        gap: var(--spacing-md);
     }
     
     .game-header {
@@ -362,5 +476,21 @@
     .stat {
         justify-content: space-between;
         width: 100%;
+    }
+    
+    .header-controls {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        width: 100%;
+    }
+    
+    .music-panel {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .music-info {
+        flex-direction: row;
+        gap: var(--spacing-sm);
     }
 }

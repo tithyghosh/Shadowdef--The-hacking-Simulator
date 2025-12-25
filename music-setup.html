@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Setup - SHADOWDEF</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .setup-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            padding: 30px;
+            border-radius: 10px;
+        }
+        
+        .setup-container h1 {
+            color: #00f3ff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .instruction {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #00f3ff;
+        }
+        
+        .file-structure {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #00f3ff, #ff006e);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .success { color: #00ff41; }
+        .warning { color: #ff6b35; }
+        .error { color: #ff006e; }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>🎵 Halloween Bell Music Setup</h1>
+        
+        <div class="instruction">
+            <h3>📁 Step 1: Add Your Music File</h3>
+            <p>Place your creepy Halloween bell music file in the assets/music folder:</p>
+            <div class="file-structure">
+assets/
+└── music/
+    └── creepy-halloween-bell.mp3  ← Put your file here
+            </div>
+            <p><strong>Supported formats:</strong> MP3, WAV, OGG</p>
+            <p><strong>Recommended:</strong> MP3 format for best browser compatibility</p>
+        </div>
+        
+        <div class="instruction">
+            <h3>🎮 Step 2: Test the Music System</h3>
+            <p>Click the buttons below to test if your music file loads correctly:</p>
+            
+            <button class="test-button" onclick="testMusic('menu')">Test Menu Music</button>
+            <button class="test-button" onclick="testMusic('loading')">Test Loading Music</button>
+            <button class="test-button" onclick="testMusic('gameplay')">Test Gameplay Music</button>
+            <button class="test-button" onclick="stopMusic()">Stop Music</button>
+            
+            <div class="status" id="status">
+                Ready to test. Add your music file first, then click a test button.
+            </div>
+        </div>
+        
+        <div class="instruction">
+            <h3>🔧 Step 3: Volume Control</h3>
+            <p>Adjust the music volume:</p>
+            <input type="range" id="volume" min="0" max="1" step="0.1" value="0.3" onchange="setVolume(this.value)" style="width: 200px;">
+            <span id="vol-display">30%</span>
+        </div>
+        
+        <div class="instruction">
+            <h3>ℹ️ How It Works</h3>
+            <ul>
+                <li>If your music file exists, it will play the Halloween bell music</li>
+                <li>If the file is missing, it will fallback to soft generated tones</li>
+                <li>The music will loop continuously in the background</li>
+                <li>Volume is set to be gentle and non-intrusive</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="index.html" class="test-button">Launch Game</a>
+            <a href="audio-test.html" class="test-button">Audio Test Page</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { AudioManager } from './css/js/core/AudioManager.js';
+        
+        let audioManager = null;
+        
+        function initAudio() {
+            if (!audioManager) {
+                audioManager = AudioManager.getInstance();
+                audioManager.setMusicVolume(0.3);
+                updateStatus('Audio system initialized', 'success');
+            }
+        }
+        
+        window.testMusic = function(trackName) {
+            initAudio();
+            audioManager.playMusic(trackName);
+            updateStatus(`Testing ${trackName} music - Listen for Halloween bell music or soft tones`, 'success');
+        };
+        
+        window.stopMusic = function() {
+            if (audioManager) {
+                audioManager.stopMusic();
+                updateStatus('Music stopped', 'warning');
+            }
+        };
+        
+        window.setVolume = function(volume) {
+            initAudio();
+            audioManager.setMusicVolume(parseFloat(volume));
+            document.getElementById('vol-display').textContent = Math.round(volume * 100) + '%';
+            updateStatus(`Volume set to ${Math.round(volume * 100)}%`, 'success');
+        };
+        
+        function updateStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        // Auto-initialize on first interaction
+        document.addEventListener('click', initAudio, { once: true });
+    </script>
+</body>
+</html>

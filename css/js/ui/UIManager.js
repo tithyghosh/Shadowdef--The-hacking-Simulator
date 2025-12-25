@@ -11,6 +11,8 @@ export class UIManager {
         this.activeModal = null;
         this.notifications = [];
         this.modalContainer = document.getElementById('modal-container') || this.createModalContainer();
+        this.musicPanelInterval = null;
+        this.previousVolume = 0.3;
     }
 
     /**
@@ -370,6 +372,103 @@ export class UIManager {
                 flash.parentNode.removeChild(flash);
             }
         }, duration);
+    }
+
+    /**
+     * Update music control panel
+     * @param {Object} audioManager - Audio manager instance
+     */
+    updateMusicPanel(audioManager) {
+        const musicStatus = document.getElementById('music-status');
+        const musicVolumeIndicator = document.getElementById('music-volume-indicator');
+        const musicPlayPause = document.getElementById('music-play-pause');
+        const musicVolumeBtn = document.getElementById('music-volume-btn');
+
+        if (!musicStatus || !musicVolumeIndicator || !musicPlayPause || !musicVolumeBtn) {
+            return;
+        }
+
+        const settings = audioManager.getSettings();
+        const isPlaying = audioManager.currentMusic && 
+                         audioManager.currentAudioElement && 
+                         !audioManager.currentAudioElement.paused;
+
+        // Update status text
+        if (settings.musicEnabled && audioManager.currentMusic) {
+            musicStatus.textContent = isPlaying ? '♪ Playing' : '♪ Paused';
+            musicStatus.style.color = isPlaying ? 'var(--cyber-green)' : 'var(--cyber-orange)';
+        } else {
+            musicStatus.textContent = '♪ Music';
+            musicStatus.style.color = 'var(--text-secondary)';
+        }
+
+        // Update volume display
+        musicVolumeIndicator.textContent = `${Math.round(settings.musicVolume * 100)}%`;
+
+        // Update play/pause button
+        musicPlayPause.textContent = isPlaying ? '⏸️' : '▶️';
+        musicPlayPause.disabled = !settings.musicEnabled || !audioManager.currentMusic;
+
+        // Update volume button
+        if (settings.musicVolume === 0) {
+            musicVolumeBtn.textContent = '🔇';
+        } else if (settings.musicVolume < 0.5) {
+            musicVolumeBtn.textContent = '🔉';
+        } else {
+            musicVolumeBtn.textContent = '🔊';
+        }
+        musicVolumeBtn.disabled = !settings.musicEnabled;
+    }
+
+    /**
+     * Setup music control panel listeners
+     * @param {Object} audioManager - Audio manager instance
+     */
+    setupMusicControlPanel(audioManager) {
+        const musicPlayPause = document.getElementById('music-play-pause');
+        const musicVolumeBtn = document.getElementById('music-volume-btn');
+
+        if (musicPlayPause) {
+            musicPlayPause.addEventListener('click', () => {
+                if (audioManager.currentAudioElement && !audioManager.currentAudioElement.paused) {
+                    audioManager.pauseMusic();
+                } else {
+                    audioManager.resumeMusic();
+                }
+                this.updateMusicPanel(audioManager);
+            });
+        }
+
+        if (musicVolumeBtn) {
+            musicVolumeBtn.addEventListener('click', () => {
+                // Quick volume toggle
+                const currentVolume = audioManager.getSettings().musicVolume;
+                if (currentVolume > 0) {
+                    // Store current volume and mute
+                    this.previousVolume = currentVolume;
+                    audioManager.setMusicVolume(0);
+                } else {
+                    // Restore previous volume or default to 30%
+                    audioManager.setMusicVolume(this.previousVolume || 0.3);
+                }
+                this.updateMusicPanel(audioManager);
+            });
+        }
+
+        // Update panel every second to keep it in sync
+        this.musicPanelInterval = setInterval(() => {
+            this.updateMusicPanel(audioManager);
+        }, 1000);
+    }
+
+    /**
+     * Cleanup music control panel
+     */
+    cleanupMusicControlPanel() {
+        if (this.musicPanelInterval) {
+            clearInterval(this.musicPanelInterval);
+            this.musicPanelInterval = null;
+        }
     }
 
     /**

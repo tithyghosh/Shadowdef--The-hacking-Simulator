@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Controls Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <div style="padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: var(--cyber-blue); text-align: center;">Audio Controls Test</h1>
+        
+        <!-- Music Control Panel Test -->
+        <div class="music-panel" id="music-panel" style="margin: 20px 0;">
+            <div class="music-info">
+                <span class="music-status" id="music-status">♪ Music</span>
+                <span class="music-volume" id="music-volume-indicator">30%</span>
+            </div>
+            <div class="music-buttons">
+                <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">▶️</button>
+                <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel Test -->
+        <div class="settings-panel" style="border: 2px solid var(--cyber-blue); padding: 20px; margin: 20px 0;">
+            <h3>Audio Controls</h3>
+            
+            <div class="audio-control">
+                <label>
+                    <input type="checkbox" id="music-toggle" checked>
+                    Enable Music
+                </label>
+            </div>
+            
+            <div class="audio-control">
+                <label for="music-volume">Music Volume:</label>
+                <div class="volume-control">
+                    <input type="range" id="music-volume" min="0" max="100" value="30">
+                    <span id="music-volume-display">30%</span>
+                </div>
+            </div>
+            
+            <div class="audio-control">
+                <label>
+                    <input type="checkbox" id="sfx-toggle" checked>
+                    Enable Sound Effects
+                </label>
+            </div>
+            
+            <div class="audio-control">
+                <label for="sfx-volume">SFX Volume:</label>
+                <div class="volume-control">
+                    <input type="range" id="sfx-volume" min="0" max="100" value="50">
+                    <span id="sfx-volume-display">50%</span>
+                </div>
+            </div>
+            
+            <div class="music-controls">
+                <button class="btn btn-small" id="music-pause-btn">PAUSE</button>
+                <button class="btn btn-small" id="music-stop-btn">STOP</button>
+            </div>
+        </div>
+
+        <!-- Test Controls -->
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn btn-primary" onclick="testAudio()">Start Music Test</button>
+            <button class="btn" onclick="testSFX()">Test SFX</button>
+        </div>
+
+        <div id="status" style="color: var(--text-secondary); text-align: center; margin: 20px 0;"></div>
+    </div>
+
+    <script type="module">
+        import { AudioManager } from './css/js/core/AudioManager.js';
+        import { UIManager } from './css/js/ui/UIManager.js';
+
+        let audio, ui;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            audio = AudioManager.getInstance();
+            ui = new UIManager();
+            
+            // Setup music control panel
+            ui.setupMusicControlPanel(audio);
+            ui.updateMusicPanel(audio);
+            
+            // Setup settings controls
+            setupSettingsControls();
+            
+            updateStatus('Audio system initialized. Click "Start Music Test" to begin.');
+        });
+
+        function setupSettingsControls() {
+            const musicToggle = document.getElementById('music-toggle');
+            const sfxToggle = document.getElementById('sfx-toggle');
+            const musicVolume = document.getElementById('music-volume');
+            const sfxVolume = document.getElementById('sfx-volume');
+            const musicVolumeDisplay = document.getElementById('music-volume-display');
+            const sfxVolumeDisplay = document.getElementById('sfx-volume-display');
+            const musicPauseBtn = document.getElementById('music-pause-btn');
+            const musicStopBtn = document.getElementById('music-stop-btn');
+
+            // Music toggle
+            musicToggle?.addEventListener('change', (e) => {
+                audio.setMusicEnabled(e.target.checked);
+                ui.updateMusicPanel(audio);
+                updateStatus(`Music ${e.target.checked ? 'enabled' : 'disabled'}`);
+            });
+
+            // SFX toggle
+            sfxToggle?.addEventListener('change', (e) => {
+                audio.setSfxEnabled(e.target.checked);
+                updateStatus(`SFX ${e.target.checked ? 'enabled' : 'disabled'}`);
+            });
+
+            // Music volume
+            musicVolume?.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                audio.setMusicVolume(volume);
+                musicVolumeDisplay.textContent = `${e.target.value}%`;
+                ui.updateMusicPanel(audio);
+                updateStatus(`Music volume: ${e.target.value}%`);
+            });
+
+            // SFX volume
+            sfxVolume?.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                audio.setSfxVolume(volume);
+                sfxVolumeDisplay.textContent = `${e.target.value}%`;
+                audio.playButtonClick(); // Test sound
+                updateStatus(`SFX volume: ${e.target.value}%`);
+            });
+
+            // Music controls
+            musicPauseBtn?.addEventListener('click', () => {
+                if (audio.currentAudioElement && !audio.currentAudioElement.paused) {
+                    audio.pauseMusic();
+                    musicPauseBtn.textContent = 'RESUME';
+                    updateStatus('Music paused');
+                } else {
+                    audio.resumeMusic();
+                    musicPauseBtn.textContent = 'PAUSE';
+                    updateStatus('Music resumed');
+                }
+                ui.updateMusicPanel(audio);
+            });
+
+            musicStopBtn?.addEventListener('click', () => {
+                audio.stopMusic();
+                musicPauseBtn.textContent = 'PAUSE';
+                updateStatus('Music stopped');
+                ui.updateMusicPanel(audio);
+            });
+        }
+
+        window.testAudio = function() {
+            audio.playMusic('menu');
+            updateStatus('Playing Halloween bell music...');
+            ui.updateMusicPanel(audio);
+        };
+
+        window.testSFX = function() {
+            audio.playButtonClick();
+            updateStatus('Playing button click sound effect');
+        };
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+    </script>
+</body>
+</html>
