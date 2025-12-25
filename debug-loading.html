@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Loading - SHADOWDEF</title>
+    
+    <!-- Social Login Scripts -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/puzzles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="game-container">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen active">
+            <div class="loading-container">
+                <div class="logo-container">
+                    <div class="logo-text">SHADOWDEF</div>
+                    <div class="logo-subtitle">Hack the Invisible</div>
+                </div>
+                
+                <div class="loading-progress">
+                    <div class="progress-label">Loading Game Assets...</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="loading-progress-fill"></div>
+                    </div>
+                    <div class="progress-percentage" id="loading-percentage">0%</div>
+                </div>
+                
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen">
+            <!-- Login content will be rendered by LoginScreen.js -->
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen">
+            <div class="main-menu-header">
+                <div class="logo">SHADOWDEF</div>
+                <div class="logo-subtitle">Cybersecurity Training Hub</div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-category">
+                    <h3 class="category-title">Training Missions</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card missions-card" data-action="mission-select">
+                            <div class="card-icon">🎯</div>
+                            <div class="card-content">
+                                <div class="card-title">MISSIONS</div>
+                                <div class="card-subtitle">Start your cybersecurity training</div>
+                                <div class="card-progress" id="mission-progress">0/20 Completed</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">Player Hub</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card profile-card" data-action="profile">
+                            <div class="card-icon">👤</div>
+                            <div class="card-content">
+                                <div class="card-title">PROFILE</div>
+                                <div class="card-subtitle">View stats and achievements</div>
+                                <div class="card-stats" id="profile-stats">Level 1 • 0 Credits</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card credits-card" data-action="credits-store">
+                            <div class="card-icon">💰</div>
+                            <div class="card-content">
+                                <div class="card-title">CREDITS</div>
+                                <div class="card-subtitle">Manage your gaming credits</div>
+                                <div class="card-credits" id="credits-display">1000 Credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">System</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card settings-card" data-action="settings">
+                            <div class="card-icon">⚙️</div>
+                            <div class="card-content">
+                                <div class="card-title">SETTINGS</div>
+                                <div class="card-subtitle">Audio, preferences & account</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card about-card" data-action="credits">
+                            <div class="card-icon">ℹ️</div>
+                            <div class="card-content">
+                                <div class="card-title">ABOUT</div>
+                                <div class="card-subtitle">Game info and credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Status Bar -->
+            <div class="user-status-bar" id="user-status-bar">
+                <div class="user-info" id="user-info">
+                    <div class="user-avatar" id="user-avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name" id="user-name">Guest Player</div>
+                        <div class="user-status" id="user-status">Not logged in</div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-small" id="login-logout-btn" data-action="login">LOGIN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Screen -->
+        <div id="profile-screen" class="screen">
+            <button class="back-btn" data-action="back">← BACK</button>
+            <!-- Profile content will be rendered by ProfileScreen.js -->
+        </div>
+
+        <!-- Mission Select Screen -->
+        <div id="mission-select" class="screen">
+            <button class="back-btn" data-action="back">← BACK</button>
+            <div class="mission-header">
+                <h2>SELECT MISSION</h2>
+                <p class="subtitle">Choose your operation</p>
+            </div>
+            <div class="mission-grid" id="mission-grid"></div>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+
+    <!-- Debug Panel -->
+    <div style="position: fixed; top: 10px; right: 10px; background: var(--panel-bg); border: 2px solid var(--cyber-blue); padding: 15px; z-index: 9999; max-width: 300px;">
+        <h4 style="color: var(--cyber-pink); margin: 0 0 10px 0;">Debug Panel</h4>
+        <div id="debug-status" style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 10px;">Initializing...</div>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <button class="btn btn-small" onclick="testLoading()">Test Loading</button>
+            <button class="btn btn-small" onclick="skipLoading()">Skip</button>
+            <button class="btn btn-small" onclick="showLogin()">Login</button>
+            <button class="btn btn-small" onclick="showMenu()">Menu</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="/css/js/main.js"></script>
+    
+    <!-- Emergency Loading Script (runs immediately) -->
+    <script>
+        // Emergency loading system that runs immediately
+        console.log('🚨 Emergency loading script started');
+        
+        let emergencyLoadingStarted = false;
+        
+        function startEmergencyLoading() {
+            if (emergencyLoadingStarted) return;
+            emergencyLoadingStarted = true;
+            
+            console.log('🚨 Starting emergency loading...');
+            
+            const progressFill = document.getElementById('loading-progress-fill');
+            const progressPercentage = document.getElementById('loading-percentage');
+            const progressLabel = document.querySelector('.progress-label');
+            
+            if (!progressFill || !progressPercentage) {
+                console.error('❌ Loading elements not found');
+                return;
+            }
+            
+            let progress = 0;
+            const steps = [
+                'Initializing Core Systems...',
+                'Loading Game Assets...',
+                'Preparing Audio Systems...',
+                'Loading Mission Data...',
+                'Finalizing Setup...',
+                'Loading Complete!'
+            ];
+            
+            let stepIndex = 0;
+            
+            const loadingInterval = setInterval(() => {
+                progress += 2;
+                
+                // Update progress bar and percentage
+                progressFill.style.width = progress + '%';
+                progressPercentage.textContent = progress + '%';
+                
+                // Update step message
+                const currentStepIndex = Math.floor(progress / 20);
+                if (currentStepIndex < steps.length && currentStepIndex !== stepIndex) {
+                    stepIndex = currentStepIndex;
+                    if (progressLabel) {
+                        progressLabel.textContent = steps[stepIndex];
+                    }
+                    console.log(`📋 Step: ${steps[stepIndex]} (${progress}%)`);
+                }
+                
+                // Complete loading
+                if (progress >= 100) {
+                    clearInterval(loadingInterval);
+                    console.log('✅ Emergency loading complete');
+                    
+                    setTimeout(() => {
+                        // Hide loading screen
+                        const loadingScreen = document.getElementById('loading-screen');
+                        if (loadingScreen) {
+                            loadingScreen.style.opacity = '0';
+                            loadingScreen.style.transition = 'opacity 1s ease';
+                            
+                            setTimeout(() => {
+                                loadingScreen.style.display = 'none';
+                                loadingScreen.classList.remove('active');
+                                
+                                // Show main menu or login screen
+                                const mainMenu = document.getElementById('main-menu');
+                                const loginScreen = document.getElementById('login-screen');
+                                
+                                if (mainMenu) {
+                                    mainMenu.style.display = 'flex';
+                                    mainMenu.classList.add('active');
+                                    console.log('🎮 Showing main menu');
+                                } else if (loginScreen) {
+                                    loginScreen.style.display = 'flex';
+                                    loginScreen.classList.add('active');
+                                    console.log('🔐 Showing login screen');
+                                }
+                            }, 1000);
+                        }
+                    }, 1000);
+                }
+            }, 100); // Update every 100ms
+        }
+        
+        // Start emergency loading after a short delay if main system doesn't start
+        setTimeout(() => {
+            if (!window.loadingManager || !window.game) {
+                console.log('⚠️ Main loading system not detected, starting emergency loading');
+                startEmergencyLoading();
+            }
+        }, 2000);
+        
+        // Also provide manual trigger
+        window.startEmergencyLoading = startEmergencyLoading;
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                console.log('🚨 Manual emergency loading triggered');
+                startEmergencyLoading();
+            }
+        });
+    </script>
+    
+    <script>
+        // Debug functions
+        window.testLoading = () => {
+            console.log('🧪 Testing loading...');
+            startEmergencyLoading();
+        };
+
+        window.skipLoading = () => {
+            console.log('⏭️ Skipping loading...');
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+                const mainMenu = document.getElementById('main-menu');
+                if (mainMenu) {
+                    mainMenu.style.display = 'flex';
+                    mainMenu.classList.add('active');
+                }
+            }
+        };
+
+        window.showLogin = () => {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) {
+                loginScreen.style.display = 'flex';
+                loginScreen.classList.add('active');
+            }
+        };
+
+        window.showMenu = () => {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            const mainMenu = document.getElementById('main-menu');
+            if (mainMenu) {
+                mainMenu.style.display = 'flex';
+                mainMenu.classList.add('active');
+            }
+        };
+
+        // Debug status updates
+        function updateDebugStatus(message) {
+            const debugStatus = document.getElementById('debug-status');
+            if (debugStatus) {
+                debugStatus.textContent = message;
+            }
+            console.log('🐛 Debug:', message);
+        }
+
+        // Listen for initialization events
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDebugStatus('DOM loaded, emergency loading ready...');
+            console.log('📋 Press ENTER or SPACE to start emergency loading');
+        });
+
+        // Check for game initialization
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            if (window.game && window.loadingManager) {
+                updateDebugStatus('✅ Game and LoadingManager initialized');
+                clearInterval(checkInterval);
+            } else if (checkCount > 20) { // 2 seconds
+                updateDebugStatus('❌ Starting emergency loading...');
+                startEmergencyLoading();
+                clearInterval(checkInterval);
+            } else {
+                updateDebugStatus(`Waiting... Press ENTER to force start (${checkCount}/20)`);
+            }
+        }, 100);
+    </script>
+</body>
+</html>

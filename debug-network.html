@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Network Background</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0e27;
+            font-family: Arial, sans-serif;
+        }
+        
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            background: rgba(255, 0, 0, 0.1); /* Red tint to see if canvas exists */
+        }
+        
+        .debug-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+        
+        .center-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            text-align: center;
+            color: #00f3ff;
+        }
+        
+        button {
+            background: #00f3ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="debug-info">
+        <h3>Debug Info:</h3>
+        <div id="canvas-info">Canvas: Not checked</div>
+        <div id="context-info">Context: Not checked</div>
+        <div id="animation-info">Animation: Not started</div>
+        <div id="nodes-info">Nodes: 0</div>
+        <div id="connections-info">Connections: 0</div>
+    </div>
+    
+    <div class="center-content">
+        <h1>Network Background Debug</h1>
+        <p>You should see animated network lines behind this text</p>
+        <button onclick="startDebugNetwork()">Start Network</button>
+        <button onclick="stopDebugNetwork()">Stop Network</button>
+        <button onclick="debugCanvas()">Debug Canvas</button>
+    </div>
+
+    <script>
+        let debugNetwork = null;
+        let debugInfo = {
+            canvas: null,
+            context: null,
+            animationRunning: false,
+            nodeCount: 0,
+            connectionCount: 0
+        };
+
+        function updateDebugInfo() {
+            document.getElementById('canvas-info').textContent = 
+                `Canvas: ${debugInfo.canvas ? `${debugInfo.canvas.width}x${debugInfo.canvas.height}` : 'Not found'}`;
+            document.getElementById('context-info').textContent = 
+                `Context: ${debugInfo.context ? 'Available' : 'Not available'}`;
+            document.getElementById('animation-info').textContent = 
+                `Animation: ${debugInfo.animationRunning ? 'Running' : 'Stopped'}`;
+            document.getElementById('nodes-info').textContent = 
+                `Nodes: ${debugInfo.nodeCount}`;
+            document.getElementById('connections-info').textContent = 
+                `Connections: ${debugInfo.connectionCount}`;
+        }
+
+        function debugCanvas() {
+            const canvas = document.getElementById('bg-canvas');
+            console.log('Canvas element:', canvas);
+            console.log('Canvas dimensions:', canvas ? `${canvas.width}x${canvas.height}` : 'Canvas not found');
+            console.log('Canvas style:', canvas ? canvas.style.cssText : 'No canvas');
+            
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                console.log('Canvas context:', ctx);
+                
+                // Draw a simple test
+                ctx.fillStyle = 'red';
+                ctx.fillRect(50, 50, 100, 100);
+                console.log('Drew red rectangle at 50,50');
+            }
+            
+            updateDebugInfo();
+        }
+
+        class DebugNetworkBackground {
+            constructor(canvasId) {
+                console.log('Creating DebugNetworkBackground with canvas:', canvasId);
+                
+                this.canvas = document.getElementById(canvasId);
+                debugInfo.canvas = this.canvas;
+                
+                if (!this.canvas) {
+                    console.error(`Canvas not found: ${canvasId}`);
+                    updateDebugInfo();
+                    return;
+                }
+
+                console.log('Canvas found:', this.canvas);
+                console.log('Canvas dimensions:', this.canvas.width, 'x', this.canvas.height);
+
+                this.ctx = this.canvas.getContext('2d');
+                debugInfo.context = this.ctx;
+                
+                if (!this.ctx) {
+                    console.error('Could not get 2D context');
+                    updateDebugInfo();
+                    return;
+                }
+
+                console.log('Context obtained:', this.ctx);
+
+                this.nodes = [];
+                this.connections = [];
+                this.animationId = null;
+                this.isRunning = false;
+                
+                this.config = {
+                    nodeCount: 15,
+                    maxConnections: 3,
+                    connectionDistance: 200,
+                    nodeSpeed: 0.5,
+                    nodeSize: 3
+                };
+                
+                this.resize();
+                this.createNodes();
+                this.createConnections();
+                
+                updateDebugInfo();
+            }
+
+            resize() {
+                console.log('Resizing canvas...');
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                console.log('New canvas size:', this.canvas.width, 'x', this.canvas.height);
+                
+                // Clear canvas with dark background
+                this.ctx.fillStyle = '#0a0e27';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            createNodes() {
+                console.log('Creating nodes...');
+                this.nodes = [];
+                
+                for (let i = 0; i < this.config.nodeCount; i++) {
+                    this.nodes.push({
+                        id: i,
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        vy: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        size: this.config.nodeSize,
+                        opacity: 0.8
+                    });
+                }
+                
+                debugInfo.nodeCount = this.nodes.length;
+                console.log('Created', this.nodes.length, 'nodes');
+                updateDebugInfo();
+            }
+
+            createConnections() {
+                console.log('Creating connections...');
+                this.connections = [];
+                
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node1 = this.nodes[i];
+                    let connectionCount = 0;
+                    
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        if (connectionCount >= this.config.maxConnections) break;
+                        
+                        const node2 = this.nodes[j];
+                        const distance = this.getDistance(node1, node2);
+                        
+                        if (distance < this.config.connectionDistance) {
+                            this.connections.push({
+                                node1: i,
+                                node2: j,
+                                strength: 1 - (distance / this.config.connectionDistance)
+                            });
+                            connectionCount++;
+                        }
+                    }
+                }
+                
+                debugInfo.connectionCount = this.connections.length;
+                console.log('Created', this.connections.length, 'connections');
+                updateDebugInfo();
+            }
+
+            getDistance(node1, node2) {
+                const dx = node1.x - node2.x;
+                const dy = node1.y - node2.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            updateNodes() {
+                this.nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+
+                    if (node.x < 0 || node.x > this.canvas.width) {
+                        node.vx *= -1;
+                        node.x = Math.max(0, Math.min(this.canvas.width, node.x));
+                    }
+                    if (node.y < 0 || node.y > this.canvas.height) {
+                        node.vy *= -1;
+                        node.y = Math.max(0, Math.min(this.canvas.height, node.y));
+                    }
+                });
+            }
+
+            draw() {
+                // Clear with dark background
+                this.ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw connections
+                this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.6)';
+                this.ctx.lineWidth = 2;
+                
+                this.connections.forEach(connection => {
+                    const node1 = this.nodes[connection.node1];
+                    const node2 = this.nodes[connection.node2];
+                    
+                    if (!node1 || !node2) return;
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node1.x, node1.y);
+                    this.ctx.lineTo(node2.x, node2.y);
+                    this.ctx.stroke();
+                });
+
+                // Draw nodes
+                this.ctx.fillStyle = 'rgba(0, 243, 255, 0.8)';
+                
+                this.nodes.forEach(node => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+
+                this.updateNodes();
+                this.draw();
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            start() {
+                if (this.isRunning) return;
+                
+                console.log('Starting network animation...');
+                this.isRunning = true;
+                debugInfo.animationRunning = true;
+                this.animate();
+                updateDebugInfo();
+            }
+
+            stop() {
+                console.log('Stopping network animation...');
+                this.isRunning = false;
+                debugInfo.animationRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                updateDebugInfo();
+            }
+        }
+
+        function startDebugNetwork() {
+            console.log('Starting debug network...');
+            if (!debugNetwork) {
+                debugNetwork = new DebugNetworkBackground('bg-canvas');
+            }
+            debugNetwork.start();
+        }
+
+        function stopDebugNetwork() {
+            console.log('Stopping debug network...');
+            if (debugNetwork) {
+                debugNetwork.stop();
+            }
+        }
+
+        // Auto-start when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing debug network...');
+            updateDebugInfo();
+            
+            setTimeout(() => {
+                startDebugNetwork();
+            }, 1000);
+        });
+
+        // Make globally available
+        window.debugNetwork = debugNetwork;
+        window.startDebugNetwork = startDebugNetwork;
+        window.stopDebugNetwork = stopDebugNetwork;
+        window.debugCanvas = debugCanvas;
+    </script>
+</body>
+</html>

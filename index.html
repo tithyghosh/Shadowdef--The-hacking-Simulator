@@ -7,6 +7,10 @@
     <meta name="description" content="SHADOWDEF - Cybersecurity Training Simulator">
     <title>SHADOWDEF - Hack the Invisible</title>
 
+    <!-- Social Login Scripts -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
     <!-- CSS -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/loading.css">
@@ -14,6 +18,7 @@
     <link rel="stylesheet" href="css/screens.css">
     <link rel="stylesheet" href="css/puzzles.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/auth.css">
 </head>
 
 <body>
@@ -47,15 +52,97 @@
             </div>
         </div>
 
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen">
+            <!-- Login content will be rendered by LoginScreen.js -->
+        </div>
+
         <!-- Main Menu -->
         <div id="main-menu" class="screen">
-            <div class="logo">SHADOWDEF</div>
-            <div class="menu-buttons">
-                <button class="btn btn-primary" data-action="new-game">NEW GAME</button>
-                <button class="btn" data-action="mission-select">LOAD MISSION</button>
-                <button class="btn" data-action="settings">SETTINGS</button>
-                <button class="btn" data-action="credits">CREDITS</button>
+            <div class="main-menu-header">
+                <div class="logo">SHADOWDEF</div>
+                <div class="logo-subtitle">Cybersecurity Training Hub</div>
             </div>
+            
+            <div class="menu-grid">
+                <div class="menu-category">
+                    <h3 class="category-title">Training Missions</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card missions-card" data-action="mission-select">
+                            <div class="card-icon">🎯</div>
+                            <div class="card-content">
+                                <div class="card-title">MISSIONS</div>
+                                <div class="card-subtitle">Start your cybersecurity training</div>
+                                <div class="card-progress" id="mission-progress">0/20 Completed</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">Player Hub</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card profile-card" data-action="profile">
+                            <div class="card-icon">👤</div>
+                            <div class="card-content">
+                                <div class="card-title">PROFILE</div>
+                                <div class="card-subtitle">View stats and achievements</div>
+                                <div class="card-stats" id="profile-stats">Level 1 • 0 Credits</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card credits-card" data-action="credits-store">
+                            <div class="card-icon">💰</div>
+                            <div class="card-content">
+                                <div class="card-title">CREDITS</div>
+                                <div class="card-subtitle">Manage your gaming credits</div>
+                                <div class="card-credits" id="credits-display">1000 Credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="menu-category">
+                    <h3 class="category-title">System</h3>
+                    <div class="menu-cards">
+                        <button class="menu-card settings-card" data-action="settings">
+                            <div class="card-icon">⚙️</div>
+                            <div class="card-content">
+                                <div class="card-title">SETTINGS</div>
+                                <div class="card-subtitle">Audio, preferences & account</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card about-card" data-action="credits">
+                            <div class="card-icon">ℹ️</div>
+                            <div class="card-content">
+                                <div class="card-title">ABOUT</div>
+                                <div class="card-subtitle">Game info and credits</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Status Bar -->
+            <div class="user-status-bar" id="user-status-bar">
+                <div class="user-info" id="user-info">
+                    <div class="user-avatar" id="user-avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name" id="user-name">Guest Player</div>
+                        <div class="user-status" id="user-status">Not logged in</div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-small" id="login-logout-btn" data-action="login">LOGIN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Screen -->
+        <div id="profile-screen" class="screen">
+            <button class="back-btn" data-action="back">← BACK</button>
+            <!-- Profile content will be rendered by ProfileScreen.js -->
         </div>
 
         <!-- Mission Select Screen -->
@@ -144,8 +231,534 @@
     <!-- Modal Container -->
     <div id="modal-container"></div>
 
-    <!-- JavaScript Modules -->
-    <script type="module" src="/css/js/main.js"></script>
+    <!-- Loading Script with Network Background -->
+    <script>
+        // Simple Network Background for Loading Screen
+        class SimpleNetworkBackground {
+            constructor(canvasId) {
+                console.log('🌐 Creating SimpleNetworkBackground with canvas ID:', canvasId);
+                
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) {
+                    console.error(`❌ Canvas not found: ${canvasId}`);
+                    return;
+                }
+
+                console.log('✅ Canvas found:', this.canvas);
+                console.log('Canvas initial size:', this.canvas.width, 'x', this.canvas.height);
+
+                this.ctx = this.canvas.getContext('2d');
+                if (!this.ctx) {
+                    console.error('❌ Could not get 2D context');
+                    return;
+                }
+
+                console.log('✅ 2D context obtained');
+
+                this.nodes = [];
+                this.connections = [];
+                this.animationId = null;
+                this.isRunning = false;
+                
+                this.config = {
+                    nodeCount: 25,
+                    maxConnections: 3,
+                    connectionDistance: 250,
+                    nodeSpeed: 0.1,
+                    nodeSize: 1.5,
+                    colors: {
+                        primary: 'rgba(0, 243, 255, 0.6)',
+                        secondary: 'rgba(139, 92, 246, 0.4)',
+                        accent: 'rgba(255, 0, 110, 0.3)'
+                    }
+                };
+                
+                this.resize();
+                this.createNodes();
+                this.createConnections();
+                
+                // Test draw to verify canvas is working
+                console.log('🎨 Testing canvas draw...');
+                this.ctx.fillStyle = 'rgba(0, 243, 255, 0.5)';
+                this.ctx.fillRect(50, 50, 100, 100);
+                console.log('✅ Test rectangle drawn');
+                
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                console.log('🔄 Resizing canvas...');
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                console.log('New canvas size:', this.canvas.width, 'x', this.canvas.height);
+                this.createNodes();
+                this.createConnections();
+            }
+
+            createNodes() {
+                this.nodes = [];
+                
+                for (let i = 0; i < this.config.nodeCount; i++) {
+                    this.nodes.push({
+                        id: i,
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        vy: (Math.random() - 0.5) * this.config.nodeSpeed,
+                        size: this.config.nodeSize + Math.random() * 1,
+                        opacity: 0.4 + Math.random() * 0.4,
+                        pulsePhase: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            createConnections() {
+                this.connections = [];
+                
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node1 = this.nodes[i];
+                    let connectionCount = 0;
+                    
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        if (connectionCount >= this.config.maxConnections) break;
+                        
+                        const node2 = this.nodes[j];
+                        const distance = this.getDistance(node1, node2);
+                        
+                        if (distance < this.config.connectionDistance) {
+                            this.connections.push({
+                                node1: i,
+                                node2: j,
+                                strength: 1 - (distance / this.config.connectionDistance),
+                                pulseOffset: Math.random() * Math.PI * 2
+                            });
+                            connectionCount++;
+                        }
+                    }
+                }
+            }
+
+            getDistance(node1, node2) {
+                const dx = node1.x - node2.x;
+                const dy = node1.y - node2.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            updateNodes() {
+                this.nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+
+                    if (node.x < 0 || node.x > this.canvas.width) {
+                        node.vx *= -1;
+                        node.x = Math.max(0, Math.min(this.canvas.width, node.x));
+                    }
+                    if (node.y < 0 || node.y > this.canvas.height) {
+                        node.vy *= -1;
+                        node.y = Math.max(0, Math.min(this.canvas.height, node.y));
+                    }
+
+                    node.pulsePhase += 0.015;
+                });
+
+                if (Math.random() < 0.008) {
+                    this.createConnections();
+                }
+            }
+
+            draw() {
+                this.ctx.fillStyle = 'rgba(10, 14, 39, 0.03)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.drawConnections();
+                this.drawNodes();
+            }
+
+            drawConnections() {
+                this.connections.forEach(connection => {
+                    const node1 = this.nodes[connection.node1];
+                    const node2 = this.nodes[connection.node2];
+                    
+                    if (!node1 || !node2) return;
+
+                    const currentDistance = this.getDistance(node1, node2);
+                    if (currentDistance > this.config.connectionDistance) return;
+
+                    const opacity = connection.strength * 0.4;
+                    const pulse = Math.sin(Date.now() * 0.0008 + connection.pulseOffset) * 0.3 + 0.7;
+
+                    const gradient = this.ctx.createLinearGradient(
+                        node1.x, node1.y, node2.x, node2.y
+                    );
+                    
+                    gradient.addColorStop(0, `rgba(0, 243, 255, ${opacity * pulse})`);
+                    gradient.addColorStop(0.5, `rgba(139, 92, 246, ${opacity * pulse * 0.7})`);
+                    gradient.addColorStop(1, `rgba(255, 0, 110, ${opacity * pulse * 0.5})`);
+
+                    this.ctx.strokeStyle = gradient;
+                    this.ctx.lineWidth = 0.8 + connection.strength * 0.5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node1.x, node1.y);
+                    this.ctx.lineTo(node2.x, node2.y);
+                    this.ctx.stroke();
+                });
+            }
+
+            drawNodes() {
+                this.nodes.forEach(node => {
+                    const pulse = Math.sin(node.pulsePhase) * 0.3 + 0.7;
+                    const currentSize = node.size * pulse;
+                    const currentOpacity = node.opacity * pulse;
+
+                    this.ctx.fillStyle = `rgba(0, 243, 255, ${currentOpacity})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, currentSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    const glowSize = currentSize * 3;
+                    const gradient = this.ctx.createRadialGradient(
+                        node.x, node.y, 0,
+                        node.x, node.y, glowSize
+                    );
+                    
+                    gradient.addColorStop(0, `rgba(0, 243, 255, ${currentOpacity * 0.6})`);
+                    gradient.addColorStop(0.5, `rgba(139, 92, 246, ${currentOpacity * 0.3})`);
+                    gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, glowSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+
+                this.updateNodes();
+                this.draw();
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            start() {
+                if (this.isRunning) {
+                    console.log('⚠️ Network background already running');
+                    return;
+                }
+                
+                console.log('🚀 Starting network background animation...');
+                this.isRunning = true;
+                this.animate();
+                console.log('✅ Network background started successfully');
+            }
+
+            stop() {
+                this.isRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                console.log('🌐 Network background stopped');
+            }
+
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+
+        // Loading system variables
+        let loadingStarted = false;
+        let networkBackground = null;
+        
+        function startSimpleLoading() {
+            if (loadingStarted) return;
+            loadingStarted = true;
+            
+            console.log('🚀 Starting loading with network background...');
+            
+            const progressFill = document.getElementById('loading-progress-fill');
+            const progressPercentage = document.getElementById('loading-percentage');
+            const progressLabel = document.querySelector('.progress-label');
+            const loadingScreen = document.getElementById('loading-screen');
+            const mainMenu = document.getElementById('main-menu');
+            
+            if (!progressFill || !progressPercentage || !progressLabel) {
+                console.error('❌ Loading elements not found');
+                return;
+            }
+            
+            const steps = [
+                { text: 'Initializing Core Systems...', progress: 15, duration: 800 },
+                { text: 'Loading Game Assets...', progress: 35, duration: 1000 },
+                { text: 'Preparing Audio Systems...', progress: 50, duration: 600 },
+                { text: 'Loading Mission Data...', progress: 70, duration: 800 },
+                { text: 'Initializing Security Protocols...', progress: 85, duration: 600 },
+                { text: 'Finalizing Setup...', progress: 100, duration: 500 }
+            ];
+            
+            let currentStep = 0;
+            let currentProgress = 0;
+            
+            function animateToProgress(targetProgress, duration, callback) {
+                const startProgress = currentProgress;
+                const progressDiff = targetProgress - startProgress;
+                const startTime = Date.now();
+                
+                function updateFrame() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    currentProgress = startProgress + (progressDiff * progress);
+                    
+                    progressFill.style.width = currentProgress + '%';
+                    progressPercentage.textContent = Math.floor(currentProgress) + '%';
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateFrame);
+                    } else {
+                        currentProgress = targetProgress;
+                        if (callback) callback();
+                    }
+                }
+                
+                requestAnimationFrame(updateFrame);
+            }
+            
+            function executeStep() {
+                if (currentStep >= steps.length) {
+                    // Loading complete
+                    progressLabel.textContent = 'Loading Complete!';
+                    console.log('✅ Loading completed successfully!');
+                    
+                    setTimeout(() => {
+                        // Stop network background for loading screen
+                        if (networkBackground) {
+                            networkBackground.stop();
+                        }
+                        
+                        // Fade out loading screen
+                        loadingScreen.style.opacity = '0';
+                        loadingScreen.style.transition = 'opacity 1s ease';
+                        
+                        setTimeout(() => {
+                            loadingScreen.style.display = 'none';
+                            loadingScreen.classList.remove('active');
+                            
+                            // Show main menu
+                            mainMenu.style.display = 'flex';
+                            mainMenu.classList.add('active');
+                            mainMenu.style.opacity = '0';
+                            mainMenu.style.transition = 'opacity 1s ease';
+                            
+                            setTimeout(() => {
+                                mainMenu.style.opacity = '1';
+                            }, 50);
+                            
+                            console.log('🎮 Main menu displayed');
+                        }, 1000);
+                    }, 1000);
+                    return;
+                }
+                
+                const step = steps[currentStep];
+                progressLabel.textContent = step.text;
+                
+                console.log(`📋 Step ${currentStep + 1}/${steps.length}: ${step.text} -> ${step.progress}%`);
+                
+                animateToProgress(step.progress, step.duration, () => {
+                    currentStep++;
+                    setTimeout(executeStep, 200);
+                });
+            }
+            
+            // Start the loading process
+            executeStep();
+        }
+        
+        // Start loading when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM loaded, initializing network background...');
+            
+            // Debug: Check if canvas exists
+            const canvas = document.getElementById('bg-canvas');
+            console.log('Canvas element found:', canvas);
+            if (canvas) {
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+                console.log('Canvas style:', canvas.style.cssText);
+            }
+            
+            // Initialize network background immediately
+            try {
+                networkBackground = new SimpleNetworkBackground('bg-canvas');
+                console.log('Network background created:', networkBackground);
+                networkBackground.start();
+                console.log('Network background started');
+            } catch (error) {
+                console.error('Error creating network background:', error);
+            }
+            
+            console.log('📄 Starting loading in 1 second...');
+            setTimeout(() => {
+                startSimpleLoading();
+            }, 1000);
+        });
+        
+        // Manual controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen && loadingScreen.classList.contains('active')) {
+                    if (!loadingStarted) {
+                        console.log('🚨 Manual loading start triggered');
+                        startSimpleLoading();
+                    } else {
+                        console.log('⏭️ Skipping to main menu...');
+                        if (networkBackground) {
+                            networkBackground.stop();
+                        }
+                        loadingScreen.style.display = 'none';
+                        const mainMenu = document.getElementById('main-menu');
+                        if (mainMenu) {
+                            mainMenu.style.display = 'flex';
+                            mainMenu.classList.add('active');
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Make functions and objects globally available for debugging
+        window.startSimpleLoading = startSimpleLoading;
+        window.networkBackground = networkBackground;
+    </script>
+
+    <!-- Load complex game systems after loading screen works -->
+    <script type="module">
+        // Load the complex game systems after the loading screen is working
+        setTimeout(async () => {
+            try {
+                console.log('🔧 Loading game systems...');
+                
+                // Import and initialize game systems
+                const { Game } = await import('./css/js/core/Game.js');
+                const { AuthManager } = await import('./css/js/core/AuthManager.js');
+                const { Background } = await import('./css/js/ui/Background.js');
+                const { UIManager } = await import('./css/js/ui/UIManager.js');
+                const { AudioManager } = await import('./css/js/core/AudioManager.js');
+                const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
+                const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
+                
+                // Initialize background
+                const background = new Background('bg-canvas');
+                background.start();
+                
+                // Initialize managers
+                const authManager = AuthManager.getInstance();
+                const audio = AudioManager.getInstance();
+                const ui = new UIManager();
+                
+                // Initialize game
+                const game = new Game(ui, audio);
+                const loginScreen = new LoginScreen(game);
+                const profileScreen = new ProfileScreen(game);
+                
+                // Make globally available
+                window.game = game;
+                window.authManager = authManager;
+                window.loginScreen = loginScreen;
+                window.profileScreen = profileScreen;
+                
+                // Setup event listeners
+                document.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    
+                    const action = btn.dataset.action;
+                    handleAction(action, e);
+                });
+                
+                function handleAction(action, event) {
+                    switch (action) {
+                        case 'mission-select':
+                            game.showMissionSelect();
+                            break;
+                        case 'profile':
+                            game.screens.showScreen('profile-screen');
+                            profileScreen.render();
+                            break;
+                        case 'credits-store':
+                            showCreditsStore();
+                            break;
+                        case 'settings':
+                            game.showSettings();
+                            break;
+                        case 'credits':
+                            game.showCredits();
+                            break;
+                        case 'login':
+                            if (authManager.isUserAuthenticated()) {
+                                ui.showConfirm(
+                                    'Logout Confirmation',
+                                    'Are you sure you want to logout?',
+                                    async () => await authManager.logout()
+                                );
+                            } else {
+                                game.screens.showScreen('login-screen');
+                                loginScreen.render();
+                            }
+                            break;
+                        default:
+                            console.warn('Unknown action:', action);
+                    }
+                }
+                
+                function showCreditsStore() {
+                    const user = authManager.getCurrentUser();
+                    const credits = user?.gameStats?.credits || 0;
+                    
+                    ui.showModal('Gaming Credits', `
+                        <div class="credits-store">
+                            <div class="current-credits">
+                                <div class="credits-display-large">
+                                    <span class="credits-icon">💰</span>
+                                    <span class="credits-amount">${credits}</span>
+                                    <span class="credits-label">Credits</span>
+                                </div>
+                            </div>
+                            <div class="credits-info">
+                                <h3>How to Earn Credits:</h3>
+                                <div class="earning-methods">
+                                    <div class="earning-method">
+                                        <span class="method-icon">🎯</span>
+                                        <span class="method-text">Complete missions</span>
+                                        <span class="method-reward">+100-500</span>
+                                    </div>
+                                    <div class="earning-method">
+                                        <span class="method-icon">🏆</span>
+                                        <span class="method-text">Unlock achievements</span>
+                                        <span class="method-reward">+200-1000</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `, {
+                        buttons: [{
+                            text: 'START EARNING',
+                            class: 'btn-primary',
+                            onClick: () => game.showMissionSelect()
+                            }]
+                    });
+                }
+                
+                console.log('✅ Game systems loaded successfully');
+                
+            } catch (error) {
+                console.error('❌ Failed to load game systems:', error);
+                console.log('🎮 Game will work in basic mode');
+            }
+        }, 2000);
+    </script>
 </body>
 
 </html>
