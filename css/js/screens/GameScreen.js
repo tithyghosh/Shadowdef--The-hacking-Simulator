@@ -371,17 +371,23 @@ loadPuzzle() {
                         class: 'btn-primary',
                         onClick: () => {
                             if (success) {
-                                this.game.showMissionSelect();
+                                // Check if there's a next level in the current section
+                                if (this.game.hasNextLevelInCurrentSection()) {
+                                    this.game.goToNextLevel();
+                                } else {
+                                    // Last level - go back to current section levels
+                                    this.game.backToCurrentCategoryLevels();
+                                }
                             } else {
                                 this.game.startMission(this.currentMission);
                             }
                         }
                     },
                     {
-                        text: 'MISSION SELECT',
+                        text: 'BACK TO LEVELS',
                         class: 'btn',
                         onClick: () => {
-                            this.game.showMissionSelect();
+                            this.game.backToCurrentCategoryLevels();
                         }
                     }
                 ]
@@ -426,7 +432,7 @@ loadPuzzle() {
                     {
                         text: 'QUIT MISSION',
                         class: 'btn',
-                        onClick: () => this.game.showMissionSelect()
+                        onClick: () => this.game.backToCurrentCategoryLevels()
                     }
                 ]
             }

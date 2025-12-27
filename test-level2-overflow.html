@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Level 2 Overflow Fix</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Test Network & Phishing Section - Focus on Level 2 -->
+        <div id="network-missions" class="screen" style="display: flex !important;">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>NETWORK & PHISHING - LEVEL 2 OVERFLOW TEST</h2>
+                <p class="subtitle">Testing that "Medium" label stays within Level 2 box boundaries</p>
+            </div>
+            <div class="mission-grid" id="network-mission-grid">
+                <!-- Level 1 - Reference -->
+                <div class="mission-card">
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 1</div>
+                        <div class="mission-title">LEVEL 1: Port Scanner</div>
+                        <div class="mission-desc">Navigate through network ports to reach the core</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span class="mission-time">⏱️ 5-8 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 2 - PROBLEM CASE -->
+                <div class="mission-card locked" style="border: 3px solid var(--cyber-pink); position: relative;">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 2</div>
+                        <div class="mission-title">LEVEL 2: Network Infiltration</div>
+                        <div class="mission-desc">Navigate complex network with multiple firewalls</div>
+                    <

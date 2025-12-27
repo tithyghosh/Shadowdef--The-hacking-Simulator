@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Categories</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Mission Categories Screen -->
+        <div id="mission-select" class="screen" style="display: flex !important;">
+            <button class="back-btn" data-action="back">← BACK</button>
+            <div class="mission-header">
+                <h2>TRAINING CATEGORIES</h2>
+                <p class="subtitle">Choose your specialization</p>
+            </div>
+            <div class="category-grid">
+                <div class="category-card" data-category="password">
+                    <div class="category-icon">🔐</div>
+                    <div class="category-content">
+                        <div class="category-title">PASSWORD CRACKING</div>
+                        <div class="category-subtitle">Master the art of password analysis and decryption</div>
+                        <div class="category-progress" id="password-progress">3/3 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Pattern Recognition</span>
+                            <span class="skill-tag">Cryptanalysis</span>
+                            <span class="skill-tag">Brute Force</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-card" data-category="malware">
+                    <div class="category-icon">🦠</div>
+                    <div class="category-content">
+                        <div class="category-title">MALWARE DETECTION</div>
+                        <div class="category-subtitle">Identify and neutralize malicious software threats</div>
+                        <div class="category-progress" id="malware-progress">1/2 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Threat Analysis</span>
+                            <span class="skill-tag">System Scanning</span>
+                            <span class="skill-tag">Incident Response</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-card" data-category="network">
+                    <div class="category-icon">🌐</div>
+                    <div class="category-content">
+                        <div class="category-title">NETWORK & PHISHING</div>
+                        <div class="category-subtitle">Navigate networks and detect social engineering</div>
+                        <div class="category-progress" id="network-progress">2/7 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Network Analysis</span>
+                            <span class="skill-tag">Phishing Detection</span>
+                            <span class="skill-tag">Firewall Bypass</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test category selection
+        document.addEventListener('click', (e) => {
+            const categoryCard = e.target.closest('[data-category]');
+            if (categoryCard) {
+                const category = categoryCard.dataset.category;
+                alert(`Selected category: ${category}`);
+            }
+        });
+    </script>
+</body>
+</html>
+</text>
+</invoke>

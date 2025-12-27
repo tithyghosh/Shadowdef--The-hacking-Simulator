@@ -145,14 +145,86 @@
             <!-- Profile content will be rendered by ProfileScreen.js -->
         </div>
 
-        <!-- Mission Select Screen -->
+        <!-- Mission Categories Screen -->
         <div id="mission-select" class="screen">
             <button class="back-btn" data-action="back">← BACK</button>
             <div class="mission-header">
-                <h2>SELECT MISSION</h2>
-                <p class="subtitle">Choose your operation</p>
+                <h2>TRAINING CATEGORIES</h2>
+                <p class="subtitle">Choose your specialization</p>
             </div>
-            <div class="mission-grid" id="mission-grid"></div>
+            <div class="category-grid">
+                <div class="category-card" data-category="password">
+                    <div class="category-icon">🔐</div>
+                    <div class="category-content">
+                        <div class="category-title">PASSWORD CRACKING</div>
+                        <div class="category-subtitle">Master the art of password analysis and decryption</div>
+                        <div class="category-progress" id="password-progress">0/3 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Pattern Recognition</span>
+                            <span class="skill-tag">Cryptanalysis</span>
+                            <span class="skill-tag">Brute Force</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-card" data-category="malware">
+                    <div class="category-icon">🦠</div>
+                    <div class="category-content">
+                        <div class="category-title">MALWARE DETECTION</div>
+                        <div class="category-subtitle">Identify and neutralize malicious software threats</div>
+                        <div class="category-progress" id="malware-progress">0/2 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Threat Analysis</span>
+                            <span class="skill-tag">System Scanning</span>
+                            <span class="skill-tag">Incident Response</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-card" data-category="network">
+                    <div class="category-icon">🌐</div>
+                    <div class="category-content">
+                        <div class="category-title">NETWORK & PHISHING</div>
+                        <div class="category-subtitle">Navigate networks and detect social engineering</div>
+                        <div class="category-progress" id="network-progress">0/7 Completed</div>
+                        <div class="category-skills">
+                            <span class="skill-tag">Network Analysis</span>
+                            <span class="skill-tag">Phishing Detection</span>
+                            <span class="skill-tag">Firewall Bypass</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Cracking Missions -->
+        <div id="password-missions" class="screen">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>PASSWORD CRACKING</h2>
+                <p class="subtitle">Master password analysis and decryption techniques</p>
+            </div>
+            <div class="mission-grid" id="password-mission-grid"></div>
+        </div>
+
+        <!-- Malware Detection Missions -->
+        <div id="malware-missions" class="screen">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>MALWARE DETECTION</h2>
+                <p class="subtitle">Identify and neutralize malicious software threats</p>
+            </div>
+            <div class="mission-grid" id="malware-mission-grid"></div>
+        </div>
+
+        <!-- Network & Phishing Missions -->
+        <div id="network-missions" class="screen">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>NETWORK & PHISHING</h2>
+                <p class="subtitle">Navigate networks and detect social engineering attacks</p>
+            </div>
+            <div class="mission-grid" id="network-mission-grid"></div>
         </div>
 
         <!-- Game Screen -->
@@ -183,7 +255,11 @@
                             <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
                         </div>
                     </div>
-                    <button class="btn" data-action="pause">PAUSE</button>
+                    <div class="game-nav-buttons">
+                        <button class="btn" data-action="back-to-levels">BACK TO LEVELS</button>
+                        <button class="btn" data-action="pause">PAUSE</button>
+                        <button class="btn btn-primary" data-action="next-level" id="next-level-btn">CONTINUE</button>
+                    </div>
                 </div>
             </div>
 
@@ -681,7 +757,19 @@
                 function handleAction(action, event) {
                     switch (action) {
                         case 'mission-select':
-                            game.showMissionSelect();
+                            game.showMissionCategories();
+                            break;
+                        case 'back-to-categories':
+                            game.showMissionCategories();
+                            break;
+                        case 'back-to-levels':
+                            game.backToCurrentCategoryLevels();
+                            break;
+                        case 'next-level':
+                            game.goToNextLevel();
+                            break;
+                        case 'pause':
+                            game.pauseGame();
                             break;
                         case 'profile':
                             game.screens.showScreen('profile-screen');
@@ -712,6 +800,15 @@
                             console.warn('Unknown action:', action);
                     }
                 }
+                
+                // Handle category selection
+                document.addEventListener('click', (e) => {
+                    const categoryCard = e.target.closest('[data-category]');
+                    if (categoryCard) {
+                        const category = categoryCard.dataset.category;
+                        game.showCategoryMissions(category);
+                    }
+                });
                 
                 function showCreditsStore() {
                     const user = authManager.getCurrentUser();
