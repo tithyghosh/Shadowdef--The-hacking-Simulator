@@ -309,6 +309,194 @@
     background: transparent;
 }
 
+/* Category Grid for Mission Categories */
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+}
+
+.category-card {
+    background: var(--panel-bg);
+    border: 2px solid var(--cyber-blue);
+    padding: var(--spacing-lg);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.category-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(0, 243, 255, 0.1),
+        transparent
+    );
+    transition: left var(--transition-slow);
+}
+
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0, 243, 255, 0.4);
+    border-color: var(--cyber-pink);
+}
+
+.category-card:hover::before {
+    left: 100%;
+}
+
+.category-card[data-category="password"] {
+    border-color: var(--cyber-green);
+}
+
+.category-card[data-category="password"]:hover {
+    border-color: var(--cyber-green);
+    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
+}
+
+.category-card[data-category="malware"] {
+    border-color: var(--cyber-pink);
+}
+
+.category-card[data-category="malware"]:hover {
+    border-color: var(--cyber-pink);
+    box-shadow: 0 15px 40px rgba(255, 0, 110, 0.4);
+}
+
+.category-card[data-category="network"] {
+    border-color: var(--cyber-purple);
+}
+
+.category-card[data-category="network"]:hover {
+    border-color: var(--cyber-purple);
+    box-shadow: 0 15px 40px rgba(138, 43, 226, 0.4);
+}
+
+.category-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--cyber-blue);
+}
+
+.category-card[data-category="password"] .category-icon {
+    color: var(--cyber-green);
+}
+
+.category-card[data-category="malware"] .category-icon {
+    color: var(--cyber-pink);
+}
+
+.category-card[data-category="network"] .category-icon {
+    color: var(--cyber-purple);
+}
+
+.category-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.category-title {
+    font-size: var(--font-size-xl);
+    color: var(--cyber-blue);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.category-card[data-category="password"] .category-title {
+    color: var(--cyber-green);
+}
+
+.category-card[data-category="malware"] .category-title {
+    color: var(--cyber-pink);
+}
+
+.category-card[data-category="network"] .category-title {
+    color: var(--cyber-purple);
+}
+
+.category-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.4;
+}
+
+.category-progress {
+    color: var(--cyber-blue);
+    font-size: var(--font-size-sm);
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-md);
+}
+
+.category-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    justify-content: center;
+}
+
+.skill-tag {
+    background: rgba(0, 243, 255, 0.2);
+    color: var(--cyber-blue);
+    border: 1px solid var(--cyber-blue);
+    padding: 4px 8px;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    border-radius: 3px;
+}
+
+.category-card[data-category="password"] .skill-tag {
+    background: rgba(0, 255, 65, 0.2);
+    color: var(--cyber-green);
+    border-color: var(--cyber-green);
+}
+
+.category-card[data-category="malware"] .skill-tag {
+    background: rgba(255, 0, 110, 0.2);
+    color: var(--cyber-pink);
+    border-color: var(--cyber-pink);
+}
+
+.category-card[data-category="network"] .skill-tag {
+    background: rgba(138, 43, 226, 0.2);
+    color: var(--cyber-purple);
+    border-color: var(--cyber-purple);
+}
+
+/* Individual Category Mission Screens */
+#password-missions,
+#malware-missions,
+#network-missions {
+    flex-direction: column;
+    padding: var(--spacing-xl);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
 .mission-header {
     text-align: center;
     margin-bottom: var(--spacing-lg);
@@ -322,12 +510,12 @@
 
 .mission-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
     max-width: 1200px;
     margin: 0 auto;
     overflow-y: auto;
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
 }
 
 .mission-card {
@@ -337,7 +525,29 @@
     cursor: pointer;
     transition: all var(--transition-normal);
     position: relative;
-    min-height: 150px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.mission-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mission-meta {
+    margin-top: auto;
+    padding-top: var(--spacing-sm);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+    overflow: hidden;
 }
 
 .mission-card:hover {
@@ -347,7 +557,7 @@
 }
 
 .mission-card.locked {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     border-color: var(--text-secondary);
 }
@@ -355,6 +565,7 @@
 .mission-card.locked:hover {
     transform: none;
     box-shadow: none;
+    border-color: var(--text-secondary);
 }
 
 .mission-card.completed::after {
@@ -364,6 +575,28 @@
     right: 10px;
     color: var(--cyber-green);
     font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.lock-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.mission-level {
+    font-size: var(--font-size-sm);
+    color: var(--cyber-blue);
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: 1px;
+}
+
+.mission-card.locked .mission-level {
+    color: var(--text-secondary);
 }
 
 .mission-title {
@@ -371,23 +604,41 @@
     color: var(--cyber-pink);
     margin-bottom: var(--spacing-sm);
     text-transform: uppercase;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .mission-desc {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
     line-height: 1.4;
+    flex-grow: 1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .mission-difficulty {
     display: inline-block;
-    padding: 5px 10px;
-    font-size: var(--font-size-sm);
+    padding: 4px 8px;
+    font-size: var(--font-size-xs);
     background: rgba(0, 255, 65, 0.2);
     color: var(--cyber-green);
     border: 1px solid var(--cyber-green);
     text-transform: uppercase;
+    border-radius: 3px;
+    margin-right: var(--spacing-sm);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.mission-time {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    display: inline-block;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .mission-difficulty.medium {
@@ -427,6 +678,36 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+}
+
+.game-nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.game-nav-buttons .btn {
+    white-space: nowrap;
+}
+
+#next-level-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--darker-bg);
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+#next-level-btn:disabled:hover {
+    background: var(--darker-bg);
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+    transform: none;
+    box-shadow: none;
+}
+
+#next-level-btn[style*="display: none"] {
+    display: none !important;
 }
 
 /* Music Control Panel */
@@ -686,6 +967,20 @@
         text-align: center;
     }
     
+    .category-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .category-card {
+        min-height: 180px;
+        padding: var(--spacing-md);
+    }
+    
+    .category-icon {
+        font-size: 3rem;
+    }
+    
     .game-content {
         flex-direction: column;
     }
@@ -708,6 +1003,18 @@
     .header-controls {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--spacing-xs);
+    }
+    
+    .game-nav-buttons {
+        flex-wrap: wrap;
+        gap: var(--spacing-xs);
+    }
+    
+    .game-nav-buttons .btn {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
     }
     
     .music-panel {
@@ -716,6 +1023,30 @@
     
     .mission-grid {
         grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+    }
+    
+    .mission-card {
+        min-height: 160px;
+        padding: var(--spacing-sm);
+    }
+    
+    .mission-title {
+        font-size: var(--font-size-base);
+    }
+    
+    .mission-desc {
+        font-size: var(--font-size-xs);
+    }
+    
+    .mission-difficulty {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+    
+    .mission-time {
+        font-size: 0.7rem;
     }
 }
 
@@ -759,6 +1090,35 @@
         font-size: var(--font-size-base);
     }
     
+    .category-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+    }
+    
+    .category-card {
+        min-height: 160px;
+        padding: var(--spacing-sm);
+    }
+    
+    .category-icon {
+        font-size: 2.5rem;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .category-title {
+        font-size: var(--font-size-lg);
+    }
+    
+    .category-subtitle {
+        font-size: var(--font-size-sm);
+    }
+    
+    .skill-tag {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+    
     .game-header {
         padding: var(--spacing-sm);
     }
@@ -778,6 +1138,19 @@
         flex-direction: column;
         gap: var(--spacing-xs);
         width: 100%;
+    }
+    
+    .game-nav-buttons {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    
+    .game-nav-buttons .btn {
+        flex: 1;
+        min-width: 80px;
+        font-size: var(--font-size-xs);
+        padding: var(--spacing-xs);
     }
     
     .music-panel {

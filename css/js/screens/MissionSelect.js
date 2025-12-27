@@ -32,6 +32,28 @@ export class MissionSelect {
     }
 
     /**
+     * Render missions for a specific category
+     * @param {Array} missions - Array of mission objects for the category
+     * @param {string} gridId - ID of the grid element to render into
+     */
+    renderCategory(missions, gridId) {
+        const grid = document.getElementById(gridId);
+        if (!grid) {
+            console.error(`Mission grid not found: ${gridId}`);
+            return;
+        }
+
+        grid.innerHTML = '';
+
+        missions.forEach(mission => {
+            const card = this.createMissionCard(mission);
+            grid.appendChild(card);
+        });
+
+        console.log(`📋 Category missions rendered for ${gridId}`);
+    }
+
+    /**
      * Create a mission card element
      * @param {Object} mission - Mission data
      * @returns {HTMLElement} Mission card
@@ -43,22 +65,27 @@ export class MissionSelect {
         // Difficulty styling
         const difficultyClass = mission.difficulty.toLowerCase();
         
+        // Lock icon for locked missions
+        const lockIcon = mission.locked ? '<div class="lock-icon">🔒</div>' : '';
+        
         card.innerHTML = `
-            <div class="mission-title">${mission.title}</div>
-            <div class="mission-desc">${mission.desc}</div>
-            <div style="margin-top: 10px;">
-                <span class="mission-difficulty ${difficultyClass}">${mission.difficulty.toUpperCase()}</span>
-                <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 10px;">
-                    ⏱️ ${mission.estimatedTime}
-                </span>
+            ${lockIcon}
+            <div class="mission-content">
+                <div class="mission-level">LEVEL ${mission.level}</div>
+                <div class="mission-title">${mission.title}</div>
+                <div class="mission-desc">${mission.desc}</div>
             </div>
-            ${mission.bestScore > 0 ? `
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-border);">
-                    <span style="color: var(--text-secondary); font-size: 0.85rem;">
-                        Best Score: <span style="color: var(--cyber-green);">${mission.bestScore}</span>
-                    </span>
-                </div>
-            ` : ''}
+            <div class="mission-meta">
+                <span class="mission-difficulty ${difficultyClass}">${mission.difficulty.toUpperCase()}</span>
+                <span class="mission-time">⏱️ ${mission.estimatedTime}</span>
+                ${mission.bestScore > 0 ? `
+                    <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--panel-border);">
+                        <span style="color: var(--text-secondary); font-size: var(--font-size-xs);">
+                            Best Score: <span style="color: var(--cyber-green);">${mission.bestScore}</span>
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
         `;
 
         // Click handler
@@ -74,8 +101,8 @@ export class MissionSelect {
         } else {
             // Locked mission feedback
             card.addEventListener('click', () => {
-                this.ui.showNotification('Complete previous missions to unlock!', 'warning');
-                this.ui.shake(card.id);
+                this.ui.showNotification('Complete previous levels to unlock!', 'warning');
+                this.ui.shake && this.ui.shake(card);
             });
         }
 

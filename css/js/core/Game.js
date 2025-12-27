@@ -7,7 +7,17 @@ import { ScoreManager } from './ScoreManager.js';
 import { ScreenManager } from '../screens/ScreenManager.js';
 import { MissionSelect } from '../screens/MissionSelect.js';
 import { GameScreen } from '../screens/GameScreen.js';
-import { missions } from '../data/missions.js';
+import { 
+    missions, 
+    passwordMissions, 
+    malwareMissions, 
+    networkMissions,
+    getMissionsBySection,
+    getMissionById,
+    unlockNextLevelInSection,
+    getUnlockedMissionsForSection,
+    getCompletedMissionsForSection
+} from '../data/missions.js';
 
 export class Game {
     constructor(uiManager, audioManager) {
@@ -19,13 +29,28 @@ export class Game {
         
         this.currentMission = null;
         this.activePuzzle = null;
+        this.currentSection = null; // Track current section
         
-        // Initialize mission data
-        this.missions = missions;
+        // Initialize mission data - separate sections
+        this.passwordMissions = passwordMissions;
+        this.malwareMissions = malwareMissions;
+        this.networkMissions = networkMissions;
+        this.missions = missions; // Combined for backward compatibility
         
         // Screen instances
         this.missionSelectScreen = new MissionSelect(this);
         this.gameScreen = new GameScreen(this);
+        
+        // Load progress and initialize
+        this.init();
+    }
+
+    /**
+     * Initialize the game
+     */
+    init() {
+        this.loadProgress();
+        console.log('🎮 Game initialized');
     }
 
     /**
@@ -34,22 +59,225 @@ export class Game {
     startNewGame() {
         console.log('🎮 Starting new game...');
         
-        // Reset progress
+        // Reset progress for all sections
         this.state.resetProgress();
         
-        // Unlock first mission
-        this.missions[0].locked = false;
+        // Ensure first levels are unlocked in each section
+        this.passwordMissions[0].locked = false;
+        this.malwareMissions[0].locked = false;
+        this.networkMissions[0].locked = false;
         
-        // Start first mission
-        this.startMission(this.missions[0]);
+        // Lock all other levels
+        this.passwordMissions.slice(1).forEach(m => m.locked = true);
+        this.malwareMissions.slice(1).forEach(m => m.locked = true);
+        this.networkMissions.slice(1).forEach(m => m.locked = true);
+        
+        // Show mission categories
+        this.showMissionCategories();
     }
 
     /**
-     * Show mission select screen
+     * Show mission categories screen
      */
-    showMissionSelect() {
+    showMissionCategories() {
         this.screens.showScreen('mission-select');
-        this.missionSelectScreen.render(this.missions);
+        this.updateCategoryProgress();
+    }
+
+    /**
+     * Show missions for a specific category
+     */
+    showCategoryMissions(category) {
+        let screenId, gridId, missions;
+        
+        switch (category) {
+            case 'password':
+                screenId = 'password-missions';
+                gridId = 'password-mission-grid';
+                missions = this.passwordMissions;
+                this.currentSection = 'password';
+                break;
+            case 'malware':
+                screenId = 'malware-missions';
+                gridId = 'malware-mission-grid';
+                missions = this.malwareMissions;
+                this.currentSection = 'malware';
+                break;
+            case 'network':
+                screenId = 'network-missions';
+                gridId = 'network-mission-grid';
+                missions = this.networkMissions;
+                this.currentSection = 'network';
+                break;
+            default:
+                console.warn('Unknown category:', category);
+                return;
+        }
+
+        this.screens.showScreen(screenId);
+        this.missionSelectScreen.renderCategory(missions, gridId);
+    }
+
+    /**
+     * Update category progress indicators
+     */
+    updateCategoryProgress() {
+        const passwordCompleted = this.passwordMissions.filter(m => m.completed).length;
+        const malwareCompleted = this.malwareMissions.filter(m => m.completed).length;
+        const networkCompleted = this.networkMissions.filter(m => m.completed).length;
+
+        // Update progress displays
+        const passwordProgress = document.getElementById('password-progress');
+        const malwareProgress = document.getElementById('malware-progress');
+        const networkProgress = document.getElementById('network-progress');
+
+        if (passwordProgress) {
+            passwordProgress.textContent = `${passwordCompleted}/${this.passwordMissions.length} Completed`;
+        }
+        if (malwareProgress) {
+            malwareProgress.textContent = `${malwareCompleted}/${this.malwareMissions.length} Completed`;
+        }
+        if (networkProgress) {
+            networkProgress.textContent = `${networkCompleted}/${this.networkMissions.length} Completed`;
+        }
+    }
+
+    /**
+     * Go back to the current category's level selection screen
+     */
+    backToCurrentCategoryLevels() {
+        if (!this.currentSection) {
+            console.warn('No current section to determine category');
+            this.showMissionCategories();
+            return;
+        }
+
+        this.showCategoryMissions(this.currentSection);
+    }
+
+    /**
+     * Check if there's a next level available in the current section
+     */
+    hasNextLevelInCurrentSection() {
+        if (!this.currentMission || !this.currentSection) {
+            return false;
+        }
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                return false;
+        }
+
+        // Check if there's a next level
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        return nextMission && !nextMission.locked;
+    }
+
+    /**
+     * Go to the next level in the current category
+     */
+    goToNextLevel() {
+        if (!this.currentMission || !this.currentSection) {
+            console.warn('No current mission or section to find next level');
+            return;
+        }
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                console.warn('Unknown section for next level:', this.currentSection);
+                return;
+        }
+
+        // Find next level in the same section
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        if (!nextMission) {
+            // No more missions in this section - should not happen if button is properly disabled
+            console.warn('No next mission available - Continue button should be disabled');
+            this.ui.showNotification('🎉 Section completed! All levels finished!', 'success');
+            return;
+        }
+
+        if (nextMission.locked) {
+            // Should not happen if button is properly disabled
+            console.warn('Next mission is locked - Continue button should be disabled');
+            this.ui.showNotification('Complete current level to unlock the next one!', 'warning');
+            return;
+        }
+
+        // Start the next mission directly
+        console.log(`🎯 Going to next level: ${nextMission.title}`);
+        this.startMission(nextMission);
+    }
+
+    /**
+     * Update the Continue button state based on available next level
+     */
+    updateContinueButton() {
+        const continueBtn = document.getElementById('next-level-btn');
+        if (!continueBtn || !this.currentMission || !this.currentSection) return;
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                continueBtn.style.display = 'none';
+                return;
+        }
+
+        // Find next level in the same section
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        if (!nextMission) {
+            // Last mission in section - hide the button completely
+            continueBtn.style.display = 'none';
+            console.log(`🏁 Last level in ${this.currentSection} section - Continue button hidden`);
+        } else if (nextMission.locked) {
+            // Next level is locked - show disabled button
+            continueBtn.style.display = 'inline-block';
+            continueBtn.disabled = true;
+            continueBtn.textContent = 'COMPLETE TO UNLOCK';
+        } else {
+            // Next level is available - show active button
+            continueBtn.style.display = 'inline-block';
+            continueBtn.disabled = false;
+            continueBtn.textContent = 'CONTINUE';
+        }
     }
 
     /**
@@ -66,9 +294,21 @@ export class Game {
         this.currentMission = mission;
         this.score.reset();
         
+        // Set current section based on mission type
+        if (mission.type === 'password') {
+            this.currentSection = 'password';
+        } else if (mission.type === 'malware') {
+            this.currentSection = 'malware';
+        } else if (mission.type === 'network' || mission.type === 'phishing' || mission.type === 'firewall') {
+            this.currentSection = 'network';
+        }
+        
         // Show game screen
         this.screens.showScreen('game-screen');
         this.gameScreen.loadMission(mission);
+        
+        // Update continue button state
+        this.updateContinueButton();
     }
 
     /**
@@ -90,10 +330,16 @@ export class Game {
                 finalScore
             );
 
-            // Unlock next mission
-            const nextMission = this.missions[this.currentMission.id];
-            if (nextMission) {
-                nextMission.locked = false;
+            // Unlock next level in the same section only
+            const currentLevel = this.currentMission.level;
+            const sectionUnlocked = unlockNextLevelInSection(this.currentSection, currentLevel);
+            
+            if (sectionUnlocked) {
+                this.ui.showNotification(
+                    `🔓 Next level unlocked in ${this.currentSection.toUpperCase()} section!`, 
+                    'success', 
+                    3000
+                );
             }
 
             // Award user experience and credits if authenticated
@@ -128,6 +374,12 @@ export class Game {
 
         // Save progress
         this.saveProgress();
+        
+        // Update category progress
+        this.updateCategoryProgress();
+        
+        // Update continue button state
+        this.updateContinueButton();
 
         // Show results
         this.gameScreen.showResults(success, stats, finalScore);
@@ -172,8 +424,13 @@ export class Game {
         
         if (currentScreen === 'mission-select') {
             this.screens.showScreen('main-menu');
+        } else if (currentScreen === 'password-missions' || 
+                   currentScreen === 'malware-missions' || 
+                   currentScreen === 'network-missions') {
+            this.showMissionCategories();
         } else if (currentScreen === 'game-screen') {
-            this.showMissionSelect();
+            // Use the new back to levels functionality
+            this.backToCurrentCategoryLevels();
         }
     }
 
@@ -376,8 +633,23 @@ export class Game {
      */
     saveProgress() {
         const data = {
-            missions: this.missions.map(m => ({
+            passwordMissions: this.passwordMissions.map(m => ({
                 id: m.id,
+                level: m.level,
+                completed: m.completed,
+                locked: m.locked,
+                bestScore: m.bestScore || 0
+            })),
+            malwareMissions: this.malwareMissions.map(m => ({
+                id: m.id,
+                level: m.level,
+                completed: m.completed,
+                locked: m.locked,
+                bestScore: m.bestScore || 0
+            })),
+            networkMissions: this.networkMissions.map(m => ({
+                id: m.id,
+                level: m.level,
                 completed: m.completed,
                 locked: m.locked,
                 bestScore: m.bestScore || 0
@@ -386,7 +658,7 @@ export class Game {
         };
 
         this.state.saveData('progress', data);
-        console.log('💾 Progress saved');
+        console.log('💾 Progress saved for all sections');
     }
 
     /**
@@ -479,26 +751,72 @@ export class Game {
             }
             
             console.log('📂 User progress loaded from cloud');
+            this.updateCategoryProgress();
             return;
         }
         
         // Fallback to local storage for guest users
         const data = this.state.loadData('progress');
         
-        if (data && data.missions) {
-            // Restore mission states
-            data.missions.forEach(saved => {
-                const mission = this.missions.find(m => m.id === saved.id);
-                if (mission) {
-                    mission.completed = saved.completed;
-                    mission.locked = saved.locked;
-                    mission.bestScore = saved.bestScore || 0;
-                }
-            });
+        if (data) {
+            // Load section-based progress if available
+            if (data.passwordMissions) {
+                data.passwordMissions.forEach(saved => {
+                    const mission = this.passwordMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            if (data.malwareMissions) {
+                data.malwareMissions.forEach(saved => {
+                    const mission = this.malwareMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            if (data.networkMissions) {
+                data.networkMissions.forEach(saved => {
+                    const mission = this.networkMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            // Legacy support for old progress format
+            if (data.missions && !data.passwordMissions) {
+                data.missions.forEach(saved => {
+                    const mission = this.missions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
 
             console.log('📂 Local progress loaded');
         } else {
-            console.log('📭 No saved progress found');
+            console.log('📭 No saved progress found - starting fresh');
         }
+        
+        this.updateCategoryProgress();
+    }
+
+    /**
+     * Show mission select screen (legacy method for compatibility)
+     */
+    showMissionSelect() {
+        this.showMissionCategories();
     }
 }

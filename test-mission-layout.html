@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mission Layout Fix</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Test Network & Phishing Section Layout -->
+        <div id="network-missions" class="screen" style="display: flex !important;">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>NETWORK & PHISHING</h2>
+                <p class="subtitle">Navigate networks and detect social engineering attacks</p>
+            </div>
+            <div class="mission-grid" id="network-mission-grid">
+                <!-- Level 1 - Unlocked -->
+                <div class="mission-card">
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 1</div>
+                        <div class="mission-title">LEVEL 1: Port Scanner</div>
+                        <div class="mission-desc">Navigate through network ports to reach the core</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span class="mission-time">⏱️ 5-8 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 2 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 2</div>
+                        <div class="mission-title">LEVEL 2: Network Infiltration</div>
+                        <div class="mission-desc">Navigate complex network with multiple firewalls</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty medium">MEDIUM</span>
+                        <span class="mission-time">⏱️ 8-12 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 3 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 3</div>
+                        <div class="mission-title">LEVEL 3: Fortress Network</div>
+                        <div class="mission-desc">Break through heavily fortified network defenses</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty hard">HARD</span>
+                        <span class="mission-time">⏱️ 10-15 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 4 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 4</div>
+                        <div class="mission-title">LEVEL 4: Router Navigation</div>
+                        <div class="mission-desc">Navigate through interconnected network nodes</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty medium">MEDIUM</span>
+                        <span class="mission-time">⏱️ 6-10 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 5 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 5</div>
+                        <div class="mission-title">LEVEL 5: Email Analysis</div>
+                        <div class="mission-desc">Identify phishing attempts in suspicious emails</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span class="mission-time">⏱️ 5-8 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 6 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 6</div>
+                        <div class="mission-title">LEVEL 6: Complex Network</div>
+                        <div class="mission-desc">Navigate large-scale network infrastructure</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty hard">HARD</span>
+                        <span class="mission-time">⏱️ 10-15 min</span>
+                    </div>
+                </div>
+
+                <!-- Level 7 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 7</div>
+                        <div class="mission-title">LEVEL 7: Spear Phishing</div>
+                        <div class="mission-desc">Analyze sophisticated targeted phishing attack</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty hard">HARD</span>
+                        <span class="mission-time">⏱️ 8-12 min</span>
+                    </div>
+                </div>
+
+                <!-- Completed Level Example -->
+                <div class="mission-card completed">
+                    <div class="mission-content">
+                        <div class="mission-level">LEVEL 1</div>
+                        <div class="mission-title">LEVEL 1: Port Scanner (COMPLETED)</div>
+                        <div class="mission-desc">Navigate through network ports to reach the core</div>
+                    </div>
+                    <div class="mission-meta">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span class="mission-time">⏱️ 5-8 min</span>
+                        <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--panel-border);">
+                            <span style="color: var(--text-secondary); font-size: var(--font-size-xs);">
+                                Best Score: <span style="color: var(--cyber-green);">8750</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="position: fixed; bottom: 20px; left: 20px; background: var(--panel-bg); padding: 20px; border: 2px solid var(--cyber-blue); max-width: 300px;">
+        <h4 style="color: var(--cyber-blue); margin-bottom: 10px;">Layout Test</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
+            Check that difficulty labels and time don't overlap with cards below.
+        </p>
+        <div style="color: var(--cyber-green); font-size: 0.85rem;">
+            ✅ Fixed Issues:<br>
+            • Increased card height<br>
+            • Better spacing between elements<br>
+            • Proper flexbox layout<br>
+            • Larger grid gaps
+        </div>
+    </div>
+
+    <script>
+        // Test click handlers
+        document.addEventListener('click', (e) => {
+            const card = e.target.closest('.mission-card');
+            if (card) {
+                if (card.classList.contains('locked')) {
+                    alert('🔒 Complete previous levels to unlock!');
+                } else if (card.classList.contains('completed')) {
+                    const level = card.querySelector('.mission-level').textContent;
+                    alert(`✅ ${level} already completed - would show replay options`);
+                } else {
+                    const level = card.querySelector('.mission-level').textContent;
+                    alert(`🎯 Starting ${level}...`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+</text>
+</invoke>

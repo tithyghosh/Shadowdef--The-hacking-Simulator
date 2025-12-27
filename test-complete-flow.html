@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Complete Continue Flow</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Test Game Screen -->
+        <div id="game-screen" class="screen" style="display: flex !important;">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="stat-label">SECTION:</span>
+                        <span class="stat-value" id="current-section">PASSWORD</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">LEVEL:</span>
+                        <span class="stat-value" id="current-level">1</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">STATUS:</span>
+                        <span class="stat-value" id="level-status">IN PROGRESS</span>
+                    </div>
+                </div>
+                <div class="header-controls">
+                    <div class="music-panel" id="music-panel">
+                        <div class="music-info">
+                            <span class="music-status" id="music-status">♪ Music</span>
+                            <span class="music-volume" id="music-volume-indicator">30%</span>
+                        </div>
+                        <div class="music-buttons">
+                            <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">⏸️</button>
+                            <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
+                        </div>
+                    </div>
+                    <div class="game-nav-buttons">
+                        <button class="btn" data-action="back-to-levels">BACK TO LEVELS</button>
+                        <button class="btn" data-action="pause">PAUSE</button>
+                        <button class="btn btn-primary" data-action="next-level" id="next-level-btn">CONTINUE</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-content">
+                <div class="puzzle-area" id="puzzle-area">
+                    <div style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                        <h3 id="level-title">Password Cracking - Level 1</h3>
+                        <p id="level-desc">Test complete Continue button flow</p>
+                        <br>
+                        
+                        <div style="margin: 20px 0; padding: 20px; background: var(--panel-bg); border: 2px solid var(--cyber-blue);">
+                            <h4 style="color: var(--cyber-blue); margin-bottom: 15px;">Test Complete Flow</h4>
+                            
+                            <div style="margin: 15px 0;">
+                                <h5 style="color: var(--cyber-green);">Password Section (3 levels):</h5>
+                                <button class="btn btn-small" onclick="startLevel('password', 1)" style="margin: 3px;">Start Level 1</button>
+                                <button class="btn btn-small" onclick="completeLevel()" style="margin: 3px;">Complete Current</button>
+                                <button class="btn btn-small" onclick="clickContinue()" style="margin: 3px;">Click Continue</button>
+                            </div>
+                            
+                            <div style="margin: 15px 0;">
+                                <h5 style="color: var(--cyber-pink);">Malware Section (2 levels):</h5>
+                                <button class="btn btn-small" onclick="startLevel('malware', 1)" style="margin: 3px;">Start Level 1</button>
+                                <button class="btn btn-small" onclick="completeLevel()" style="margin: 3px;">Complete Current</button>
+                                <button class="btn btn-small" onclick="clickContinue()" style="margin: 3px;">Click Continue</button>
+                            </div>
+                            
+                            <div style="margin: 15px 0;">
+                                <h5 style="color: var(--cyber-purple);">Network Section (7 levels):</h5>
+                                <button class="btn btn-small" onclick="startLevel('network', 1)" style="margin: 3px;">Start Level 1</button>
+                                <button class="btn btn-small" onclick="completeLevel()" style="margin: 3px;">Complete Current</button>
+                                <button class="btn btn-small" onclick="clickContinue()" style="margin: 3px;">Click Continue</button>
+                            </div>
+                            
+                            <div style="margin: 15px 0;">
+                                <button class="btn" onclick="resetTest()" style="margin: 5px;">Reset Test</button>
+                            </div>
+                        </div>
+                        
+                        <div id="flow-log" style="margin: 20px 0; padding: 15px; background: var(--darker-bg); border: 1px solid var(--text-secondary); text-align: left; max-height: 200px; overflow-y: auto;">
+                            <strong style="color: var(--cyber-blue);">Flow Log:</strong><br>
+                            <span style="color: var(--text-muted);">Actions will be logged here...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <div class="panel">
+                        <div class="panel-title">Current State</div>
+                        <div id="current-state" style="color: var(--text-secondary); padding: 10px; font-size: 0.9rem;">
+                            Section: <span id="state-section">-</span><br>
+                            Level: <span id="state-level">-</span><br>
+                            Max Level: <span id="state-max">-</span><br>
+                            Completed: <span id="state-completed">false</span><br>
+                            Next Unlocked: <span id="state-next-unlocked">-</span>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Continue Button</div>
+                        <div id="button-state" style="color: var(--text-secondary); padding: 10px; font-size: 0.9rem;">
+                            Visible: <span id="btn-visible">-</span><br>
+                            Enabled: <span id="btn-enabled">-</span><br>
+                            Text: <span id="btn-text">-</span><br>
+                            Should Show: <span id="btn-should-show">-</span>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Expected Behavior</div>
+                        <div style="color: var(--text-secondary); padding: 10px; font-size: 0.85rem;">
+                            <strong style="color: var(--cyber-green);">✓ Correct:</strong><br>
+                            • Continue goes to next level in same section<br>
+                            • Button hidden on last level<br>
+                            • No redirect to category menu<br><br>
+                            <strong style="color: var(--cyber-pink);">✗ Wrong:</strong><br>
+                            • Redirect to category selection<br>
+                            • Button visible on last level<br>
+                            • Cross-section navigation
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test data structure
+        const sections = {
+            password: { maxLevel: 3, levels: [false, false, false] }, // completed states
+            malware: { maxLevel: 2, levels: [false, false] },
+            network: { maxLevel: 7, levels: [false, false, false, false, false, false, false] }
+        };
+        
+        let currentSection = null;
+        let currentLevel = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('flow-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<br><span style="color: var(--text-muted);">[${timestamp}]</span> ${message}`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateDisplay() {
+            if (!currentSection || !currentLevel) return;
+            
+            const section = sections[currentSection];
+            const isCompleted = section.levels[currentLevel - 1];
+            const isLastLevel = currentLevel === section.maxLevel;
+            const nextLevelUnlocked = currentLevel < section.maxLevel && section.levels[currentLevel - 1];
+            
+            // Update main display
+            document.getElementById('current-section').textContent = currentSection.toUpperCase();
+            document.getElementById('current-level').textContent = currentLevel;
+            document.getElementById('level-status').textContent = isCompleted ? 'COMPLETED' : 'IN PROGRESS';
+            document.getElementById('level-title').textContent = `${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} - Level ${currentLevel}`;
+            document.getElementById('level-desc').textContent = isLastLevel ? 'This is the LAST level in this section' : 'Complete to unlock next level';
+            
+            // Update state panel
+            document.getElementById('state-section').textContent = currentSection;
+            document.getElementById('state-level').textContent = currentLevel;
+            document.getElementById('state-max').textContent = section.maxLevel;
+            document.getElementById('state-completed').textContent = isCompleted;
+            document.getElementById('state-next-unlocked').textContent = nextLevelUnlocked;
+            
+            // Update continue button
+            updateContinueButton();
+        }
+
+        function updateContinueButton() {
+            const continueBtn = document.getElementById('next-level-btn');
+            const section = sections[currentSection];
+            const isCompleted = section.levels[currentLevel - 1];
+            const isLastLevel = currentLevel === section.maxLevel;
+            const hasNextLevel = currentLevel < section.maxLevel;
+            const nextLevelUnlocked = isCompleted && hasNextLevel;
+            
+            let visible, enabled, text, shouldShow;
+            
+            if (isLastLevel) {
+                // Last level - hide button
+                visible = false;
+                enabled = false;
+                text = 'SECTION COMPLETE';
+                shouldShow = false;
+                continueBtn.style.display = 'none';
+            } else if (nextLevelUnlocked) {
+                // Next level available
+                visible = true;
+                enabled = true;
+                text = 'CONTINUE';
+                shouldShow = true;
+                continueBtn.style.display = 'inline-block';
+                continueBtn.disabled = false;
+                continueBtn.textContent = text;
+            } else {
+                // Next level locked
+                visible = true;
+                enabled = false;
+                text = 'COMPLETE TO UNLOCK';
+                shouldShow = true;
+                continueBtn.style.display = 'inline-block';
+                continueBtn.disabled = true;
+                continueBtn.textContent = text;
+            }
+            
+            // Update button state display
+            document.getElementById('btn-visible').textContent = visible;
+            document.getElementById('btn-enabled').textContent = enabled;
+            document.getElementById('btn-text').textContent = text;
+            document.getElementById('btn-should-show').textContent = shouldShow;
+            
+            // Color code the state
+            const stateDiv = document.getElementById('button-state');
+            if (isLastLevel && !visible) {
+                stateDiv.style.borderLeft = '3px solid var(--cyber-green)';
+            } else if (visible && enabled) {
+                stateDiv.style.borderLeft = '3px solid var(--cyber-blue)';
+            } else {
+                stateDiv.style.borderLeft = '3px solid var(--cyber-orange)';
+            }
+        }
+
+        function startLevel(section, level) {
+            currentSection = section;
+            currentLevel = level;
+            log(`🎯 Started ${section.toUpperCase()} Level ${level}`);
+            updateDisplay();
+        }
+
+        function completeLevel() {
+            if (!currentSection || !currentLevel) {
+                alert('No active level to complete');
+                return;
+            }
+            
+            const section = sections[currentSection];
+            section.levels[currentLevel - 1] = true;
+            
+            log(`✅ Completed ${currentSection.toUpperCase()} Level ${currentLevel}`);
+            
+            // Unlock next level if exists
+            if (currentLevel < section.maxLevel) {
+                log(`🔓 Next level unlocked in ${currentSection.toUpperCase()} section`);
+            } else {
+                log(`🏁 ${currentSection.toUpperCase()} section completed!`);
+            }
+            
+            updateDisplay();
+        }
+
+        function clickContinue() {
+            const continueBtn = document.getElementById('next-level-btn');
+            
+            if (continueBtn.style.display === 'none') {
+                log(`❌ Continue button is hidden - cannot click`);
+                alert('Continue button is hidden (last level)');
+                return;
+            }
+            
+            if (continueBtn.disabled) {
+                log(`❌ Continue button is disabled - cannot proceed`);
+                alert('Continue button is disabled (complete current level first)');
+                return;
+            }
+            
+            // Simulate going to next level
+            const nextLevel = currentLevel + 1;
+            log(`🚀 Continue clicked - going to ${currentSection.toUpperCase()} Level ${nextLevel}`);
+            startLevel(currentSection, nextLevel);
+        }
+
+        function resetTest() {
+            // Reset all progress
+            Object.keys(sections).forEach(section => {
+                sections[section].levels.fill(false);
+            });
+            
+            currentSection = null;
+            currentLevel = null;
+            
+            document.getElementById('flow-log').innerHTML = '<strong style="color: var(--cyber-blue);">Flow Log:</strong><br><span style="color: var(--text-muted);">Test reset - select a level to start...</span>';
+            
+            // Reset displays
+            document.getElementById('current-section').textContent = '-';
+            document.getElementById('current-level').textContent = '-';
+            document.getElementById('level-status').textContent = '-';
+            document.getElementById('level-title').textContent = 'Select a test scenario';
+            document.getElementById('level-desc').textContent = 'Use the buttons above to test the flow';
+            
+            // Hide continue button
+            const continueBtn = document.getElementById('next-level-btn');
+            continueBtn.style.display = 'none';
+            
+            log('🔄 Test reset');
+        }
+
+        // Initialize
+        resetTest();
+    </script>
+</body>
+</html>
+</text>
+</invoke>

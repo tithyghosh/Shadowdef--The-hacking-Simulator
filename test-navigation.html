@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Navigation</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Test Game Screen with New Navigation -->
+        <div id="game-screen" class="screen" style="display: flex !important;">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="stat-label">TIME:</span>
+                        <span class="stat-value" id="timer">02:45</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">SCORE:</span>
+                        <span class="stat-value" id="score">1250</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">ATTEMPTS:</span>
+                        <span class="stat-value" id="attempts">3</span>
+                    </div>
+                </div>
+                <div class="header-controls">
+                    <div class="music-panel" id="music-panel">
+                        <div class="music-info">
+                            <span class="music-status" id="music-status">♪ Music</span>
+                            <span class="music-volume" id="music-volume-indicator">30%</span>
+                        </div>
+                        <div class="music-buttons">
+                            <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">⏸️</button>
+                            <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
+                        </div>
+                    </div>
+                    <div class="game-nav-buttons">
+                        <button class="btn" data-action="back-to-levels">BACK TO LEVELS</button>
+                        <button class="btn" data-action="pause">PAUSE</button>
+                        <button class="btn btn-primary" data-action="next-level" id="next-level-btn">CONTINUE</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-content">
+                <div class="puzzle-area" id="puzzle-area">
+                    <div style="text-align: center; padding: 50px; color: var(--text-secondary);">
+                        <h3>Test Puzzle Area</h3>
+                        <p>This is where the active puzzle would load</p>
+                        <br>
+                        <button class="btn btn-primary" onclick="testComplete()">COMPLETE LEVEL</button>
+                        <button class="btn" onclick="testDisableContinue()">DISABLE CONTINUE</button>
+                        <button class="btn" onclick="testEnableContinue()">ENABLE CONTINUE</button>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <div class="panel">
+                        <div class="panel-title">Objectives</div>
+                        <ul class="objectives-list" id="objectives">
+                            <li class="objective completed">→ Analyze the intelligence hints</li>
+                            <li class="objective">→ Enter the correct password</li>
+                            <li class="objective">→ Beat the AI opponent</li>
+                        </ul>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">AI Opponent</div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span id="ai-name">CYBER-THREAT</span>
+                                <span id="ai-progress-text">45%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ai-progress" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <p class="ai-status" id="ai-status">
+                            Beat them before they crack the system!
+                        </p>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Hints Available</div>
+                        <p class="hints-display">
+                            <span id="hints-remaining">2</span> / 3
+                        </p>
+                        <button class="btn" id="hint-btn" data-action="hint">
+                            REQUEST HINT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test functions
+        function testComplete() {
+            alert('Level completed! Continue button should now work.');
+        }
+        
+        function testDisableContinue() {
+            const btn = document.getElementById('next-level-btn');
+            btn.disabled = true;
+            btn.textContent = 'CATEGORY COMPLETE';
+        }
+        
+        function testEnableContinue() {
+            const btn = document.getElementById('next-level-btn');
+            btn.disabled = false;
+            btn.textContent = 'CONTINUE';
+        }
+
+        // Test button clicks
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            
+            const action = btn.dataset.action;
+            
+            switch (action) {
+                case 'back-to-levels':
+                    alert('Back to Levels clicked - would return to current category level selection');
+                    break;
+                case 'pause':
+                    alert('Pause clicked - would pause the game');
+                    break;
+                case 'next-level':
+                    if (btn.disabled) {
+                        alert('Continue button is disabled');
+                    } else {
+                        alert('Continue clicked - would go to next level in current category');
+                    }
+                    break;
+                case 'hint':
+                    alert('Hint requested');
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
+</text>
+</invoke>

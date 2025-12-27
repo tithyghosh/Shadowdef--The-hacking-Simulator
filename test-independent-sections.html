@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Independent Sections</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Test Password Cracking Section -->
+        <div id="password-missions" class="screen" style="display: flex !important;">
+            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>PASSWORD CRACKING</h2>
+                <p class="subtitle">Master password analysis and decryption techniques</p>
+            </div>
+            <div class="mission-grid" id="password-mission-grid">
+                <!-- Level 1 - Unlocked -->
+                <div class="mission-card">
+                    <div class="mission-level">LEVEL 1</div>
+                    <div class="mission-title">LEVEL 1: Basic Access</div>
+                    <div class="mission-desc">Crack a simple 4-character password using pattern recognition</div>
+                    <div style="margin-top: 10px;">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 10px;">
+                            ⏱️ 3-5 min
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Level 2 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-level">LEVEL 2</div>
+                    <div class="mission-title">LEVEL 2: Alpha Protocol</div>
+                    <div class="mission-desc">Decode encrypted message with advanced patterns</div>
+                    <div style="margin-top: 10px;">
+                        <span class="mission-difficulty easy">EASY</span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 10px;">
+                            ⏱️ 5-7 min
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Level 3 - Locked -->
+                <div class="mission-card locked">
+                    <div class="lock-icon">🔒</div>
+                    <div class="mission-level">LEVEL 3</div>
+                    <div class="mission-title">LEVEL 3: Digital Keys</div>
+                    <div class="mission-desc">Crack a complex password using multiple clues</div>
+                    <div style="margin-top: 10px;">
+                        <span class="mission-difficulty medium">MEDIUM</span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 10px;">
+                            ⏱️ 7-10 min
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="position: fixed; bottom: 20px; left: 20px; background: var(--panel-bg); padding: 20px; border: 2px solid var(--cyber-blue); max-width: 300px;">
+        <h4 style="color: var(--cyber-blue); margin-bottom: 10px;">Test Controls</h4>
+        <button class="btn btn-small" onclick="unlockLevel2()" style="margin: 5px;">Unlock Level 2</button>
+        <button class="btn btn-small" onclick="unlockLevel3()" style="margin: 5px;">Unlock Level 3</button>
+        <button class="btn btn-small" onclick="completeLevel1()" style="margin: 5px;">Complete Level 1</button>
+        <button class="btn btn-small" onclick="resetProgress()" style="margin: 5px;">Reset Progress</button>
+    </div>
+
+    <script>
+        function unlockLevel2() {
+            const level2 = document.querySelector('.mission-card.locked');
+            if (level2) {
+                level2.classList.remove('locked');
+                level2.querySelector('.lock-icon').remove();
+                alert('Level 2 unlocked!');
+            }
+        }
+
+        function unlockLevel3() {
+            const cards = document.querySelectorAll('.mission-card.locked');
+            if (cards.length > 0) {
+                const level3 = cards[cards.length - 1];
+                level3.classList.remove('locked');
+                level3.querySelector('.lock-icon').remove();
+                alert('Level 3 unlocked!');
+            }
+        }
+
+        function completeLevel1() {
+            const level1 = document.querySelector('.mission-card:not(.locked)');
+            if (level1) {
+                level1.classList.add('completed');
+                alert('Level 1 completed! ✓');
+            }
+        }
+
+        function resetProgress() {
+            const cards = document.querySelectorAll('.mission-card');
+            cards.forEach((card, index) => {
+                card.classList.remove('completed');
+                if (index > 0) {
+                    card.classList.add('locked');
+                    if (!card.querySelector('.lock-icon')) {
+                        const lockIcon = document.createElement('div');
+                        lockIcon.className = 'lock-icon';
+                        lockIcon.textContent = '🔒';
+                        card.appendChild(lockIcon);
+                    }
+                }
+            });
+            alert('Progress reset - only Level 1 unlocked');
+        }
+
+        // Test click handlers
+        document.addEventListener('click', (e) => {
+            const card = e.target.closest('.mission-card');
+            if (card) {
+                if (card.classList.contains('locked')) {
+                    alert('🔒 Complete previous levels to unlock!');
+                } else {
+                    const level = card.querySelector('.mission-level').textContent;
+                    alert(`Starting ${level}...`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+</text>
+</invoke>

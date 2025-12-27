@@ -1,11 +1,13 @@
 /**
- * Mission definitions database
+ * Mission definitions database - Independent Sections
  */
 
-export const missions = [
+// Password Cracking Section (3 levels)
+export const passwordMissions = [
     {
         id: 1,
-        title: "INITIATION: Basic Access",
+        level: 1,
+        title: "LEVEL 1: Basic Access",
         desc: "Crack a simple 4-character password using pattern recognition",
         difficulty: "easy",
         type: "password",
@@ -23,18 +25,19 @@ export const missions = [
                 "Common tech term"
             ]
         },
-        aiSpeed: 0.7, // 70% speed (easier)
+        aiSpeed: 0.7,
         rewards: {
             xp: 100,
             credits: 50
         },
         completed: false,
-        locked: false,
+        locked: false, // First level unlocked by default
         bestScore: 0
     },
     {
         id: 2,
-        title: "DECRYPTION: Alpha Protocol",
+        level: 2,
+        title: "LEVEL 2: Alpha Protocol",
         desc: "Decode encrypted message with advanced patterns",
         difficulty: "easy",
         type: "password",
@@ -63,7 +66,8 @@ export const missions = [
     },
     {
         id: 3,
-        title: "AUTHENTICATION: Digital Keys",
+        level: 3,
+        title: "LEVEL 3: Digital Keys",
         desc: "Crack a complex password using multiple clues",
         difficulty: "medium",
         type: "password",
@@ -81,7 +85,7 @@ export const missions = [
                 "Common prefix in tech"
             ]
         },
-        aiSpeed: 1.0, // Normal speed
+        aiSpeed: 1.0,
         rewards: {
             xp: 200,
             credits: 100
@@ -89,10 +93,73 @@ export const missions = [
         completed: false,
         locked: true,
         bestScore: 0
+    }
+];
+
+// Malware Detection Section (2 levels)
+export const malwareMissions = [
+    {
+        id: 8,
+        level: 1,
+        title: "LEVEL 1: System Scan",
+        desc: "Identify infected files in a compromised system",
+        difficulty: "easy",
+        type: "malware",
+        estimatedTime: "8-12 min",
+        objectives: [
+            "Scan file system",
+            "Identify infected files",
+            "Minimize false positives"
+        ],
+        puzzle: {
+            totalFiles: 15,
+            infectedFiles: 4,
+            timeLimit: 180
+        },
+        aiSpeed: 0.9,
+        rewards: {
+            xp: 200,
+            credits: 100
+        },
+        completed: false,
+        locked: false, // First level unlocked by default
+        bestScore: 0
     },
     {
+        id: 11,
+        level: 2,
+        title: "LEVEL 2: Outbreak Response",
+        desc: "Contain malware outbreak with precision",
+        difficulty: "hard",
+        type: "malware",
+        estimatedTime: "12-15 min",
+        objectives: [
+            "Rapid system scan",
+            "Identify all threats",
+            "Zero false positives"
+        ],
+        puzzle: {
+            totalFiles: 20,
+            infectedFiles: 6,
+            timeLimit: 240
+        },
+        aiSpeed: 1.2,
+        rewards: {
+            xp: 400,
+            credits: 200
+        },
+        completed: false,
+        locked: true,
+        bestScore: 0
+    }
+];
+
+// Network & Phishing Section (7 levels)
+export const networkMissions = [
+    {
         id: 4,
-        title: "FIREWALL: Port Scanner",
+        level: 1,
+        title: "LEVEL 1: Port Scanner",
         desc: "Navigate through network ports to reach the core",
         difficulty: "easy",
         type: "firewall",
@@ -115,12 +182,13 @@ export const missions = [
             credits: 75
         },
         completed: false,
-        locked: true,
+        locked: false, // First level unlocked by default
         bestScore: 0
     },
     {
         id: 5,
-        title: "BREACH: Network Infiltration",
+        level: 2,
+        title: "LEVEL 2: Network Infiltration",
         desc: "Navigate complex network with multiple firewalls",
         difficulty: "medium",
         type: "firewall",
@@ -148,7 +216,8 @@ export const missions = [
     },
     {
         id: 6,
-        title: "ADVANCED: Fortress Network",
+        level: 3,
+        title: "LEVEL 3: Fortress Network",
         desc: "Break through heavily fortified network defenses",
         difficulty: "hard",
         type: "firewall",
@@ -174,167 +243,137 @@ export const missions = [
         locked: true,
         bestScore: 0
     },
-{
-    id: 7,
-    title: "NETWORK: Router Navigation",
-    desc: "Navigate through interconnected network nodes",
-    difficulty: "medium",
-    type: "network",
-    estimatedTime: "6-10 min",
-    objectives: [
-        "Analyze network topology",
-        "Find efficient route",
-        "Reach target server"
-    ],
-    puzzle: {
-        nodeCount: 8,
-        startNode: 0,
-        endNode: 7,
-        maxHops: 10
+    {
+        id: 7,
+        level: 4,
+        title: "LEVEL 4: Router Navigation",
+        desc: "Navigate through interconnected network nodes",
+        difficulty: "medium",
+        type: "network",
+        estimatedTime: "6-10 min",
+        objectives: [
+            "Analyze network topology",
+            "Find efficient route",
+            "Reach target server"
+        ],
+        puzzle: {
+            nodeCount: 8,
+            startNode: 0,
+            endNode: 7,
+            maxHops: 10
+        },
+        aiSpeed: 1.0,
+        rewards: {
+            xp: 200,
+            credits: 100
+        },
+        completed: false,
+        locked: true,
+        bestScore: 0
     },
-    aiSpeed: 1.0,
-    rewards: {
-        xp: 200,
-        credits: 100
+    {
+        id: 9,
+        level: 5,
+        title: "LEVEL 5: Email Analysis",
+        desc: "Identify phishing attempts in suspicious emails",
+        difficulty: "easy",
+        type: "phishing",
+        estimatedTime: "5-8 min",
+        objectives: [
+            "Review suspicious email",
+            "Identify red flags",
+            "Submit accurate analysis"
+        ],
+        puzzle: {
+            correctIndicators: [0, 1, 2, 3, 5],
+            minCorrect: 3
+        },
+        aiSpeed: 0.9,
+        rewards: {
+            xp: 180,
+            credits: 90
+        },
+        completed: false,
+        locked: true,
+        bestScore: 0
     },
-    completed: false,
-    locked: true,
-    bestScore: 0
-},
-{
-    id: 8,
-    title: "DETECTION: System Scan",
-    desc: "Identify infected files in a compromised system",
-    difficulty: "medium",
-    type: "malware",
-    estimatedTime: "8-12 min",
-    objectives: [
-        "Scan file system",
-        "Identify infected files",
-        "Minimize false positives"
-    ],
-    puzzle: {
-        totalFiles: 15,
-        infectedFiles: 4,
-        timeLimit: 180
+    {
+        id: 10,
+        level: 6,
+        title: "LEVEL 6: Complex Network",
+        desc: "Navigate large-scale network infrastructure",
+        difficulty: "hard",
+        type: "network",
+        estimatedTime: "10-15 min",
+        objectives: [
+            "Map complex network",
+            "Optimize route selection",
+            "Minimize hop count"
+        ],
+        puzzle: {
+            nodeCount: 12,
+            startNode: 0,
+            endNode: 11,
+            maxHops: 12
+        },
+        aiSpeed: 1.3,
+        rewards: {
+            xp: 350,
+            credits: 175
+        },
+        completed: false,
+        locked: true,
+        bestScore: 0
     },
-    aiSpeed: 1.1,
-    rewards: {
-        xp: 250,
-        credits: 125
-    },
-    completed: false,
-    locked: true,
-    bestScore: 0
-},
-
-{
-    id: 9,
-    title: "SOCIAL: Email Analysis",
-    desc: "Identify phishing attempts in suspicious emails",
-    difficulty: "easy",
-    type: "phishing",
-    estimatedTime: "5-8 min",
-    objectives: [
-        "Review suspicious email",
-        "Identify red flags",
-        "Submit accurate analysis"
-    ],
-    puzzle: {
-        correctIndicators: [0, 1, 2, 3, 5],
-        minCorrect: 3
-    },
-    aiSpeed: 0.9,
-    rewards: {
-        xp: 180,
-        credits: 90
-    },
-    completed: false,
-    locked: true,
-    bestScore: 0
-},
-{
-    id: 10,
-    title: "ADVANCED: Complex Network",
-    desc: "Navigate large-scale network infrastructure",
-    difficulty: "hard",
-    type: "network",
-    estimatedTime: "10-15 min",
-    objectives: [
-        "Map complex network",
-        "Optimize route selection",
-        "Minimize hop count"
-    ],
-    puzzle: {
-        nodeCount: 12,
-        startNode: 0,
-        endNode: 11,
-        maxHops: 12
-    },
-    aiSpeed: 1.3,
-    rewards: {
-        xp: 350,
-        credits: 175
-    },
-    completed: false,
-    locked: true,
-    bestScore: 0
-},
-{
-    id: 11,
-    title: "ADVANCED: Outbreak Response",
-    desc: "Contain malware outbreak with precision",
-    difficulty: "hard",
-    type: "malware",
-    estimatedTime: "12-15 min",
-    objectives: [
-        "Rapid system scan",
-        "Identify all threats",
-        "Zero false positives"
-    ],
-    puzzle: {
-        totalFiles: 20,
-        infectedFiles: 6,
-        timeLimit: 240
-    },
-    aiSpeed: 1.2,
-    rewards: {
-        xp: 400,
-        credits: 200
-    },
-    completed: false,
-    locked: true,
-    bestScore: 0
-},
-{
-    id: 12,
-    title: "ADVANCED: Spear Phishing",
-    desc: "Analyze sophisticated targeted phishing attack",
-    difficulty: "hard",
-    type: "phishing",
-    estimatedTime: "8-12 min",
-    objectives: [
-        "Analyze complex phishing attempt",
-        "Identify subtle indicators",
-        "High accuracy required"
-    ],
-    puzzle: {
-        correctIndicators: [0, 1, 2, 3, 4, 6],
-        minCorrect: 5
-    },
-    aiSpeed: 1.1,
-    rewards: {
-        xp: 380,
-        credits: 190
-    },
-    completed: false,
-    locked: true,
-    bestScore: 0
-}
+    {
+        id: 12,
+        level: 7,
+        title: "LEVEL 7: Spear Phishing",
+        desc: "Analyze sophisticated targeted phishing attack",
+        difficulty: "hard",
+        type: "phishing",
+        estimatedTime: "8-12 min",
+        objectives: [
+            "Analyze complex phishing attempt",
+            "Identify subtle indicators",
+            "High accuracy required"
+        ],
+        puzzle: {
+            correctIndicators: [0, 1, 2, 3, 4, 6],
+            minCorrect: 5
+        },
+        aiSpeed: 1.1,
+        rewards: {
+            xp: 380,
+            credits: 190
+        },
+        completed: false,
+        locked: true,
+        bestScore: 0
+    }
 ];
 
+// Combined missions array for backward compatibility
+export const missions = [...passwordMissions, ...malwareMissions, ...networkMissions];
+
 /**
- * Get mission by ID
+ * Get missions for a specific section
+ */
+export function getMissionsBySection(section) {
+    switch (section) {
+        case 'password':
+            return passwordMissions;
+        case 'malware':
+            return malwareMissions;
+        case 'network':
+            return networkMissions;
+        default:
+            return [];
+    }
+}
+
+/**
+ * Get mission by ID from any section
  */
 export function getMissionById(id) {
     return missions.find(m => m.id === id);
@@ -355,22 +394,41 @@ export function getMissionsByType(type) {
 }
 
 /**
- * Get unlocked missions
+ * Get unlocked missions for a section
  */
-export function getUnlockedMissions() {
-    return missions.filter(m => !m.locked);
+export function getUnlockedMissionsForSection(section) {
+    const sectionMissions = getMissionsBySection(section);
+    return sectionMissions.filter(m => !m.locked);
 }
 
 /**
- * Get completed missions
+ * Get completed missions for a section
  */
-export function getCompletedMissions() {
-    return missions.filter(m => m.completed);
+export function getCompletedMissionsForSection(section) {
+    const sectionMissions = getMissionsBySection(section);
+    return sectionMissions.filter(m => m.completed);
 }
 
 /**
- * Get next available mission
+ * Get next available mission in a section
  */
-export function getNextMission() {
-    return missions.find(m => !m.locked && !m.completed);
+export function getNextMissionInSection(section) {
+    const sectionMissions = getMissionsBySection(section);
+    return sectionMissions.find(m => !m.locked && !m.completed);
+}
+
+/**
+ * Unlock next level in a section after completing current level
+ */
+export function unlockNextLevelInSection(section, completedLevel) {
+    const sectionMissions = getMissionsBySection(section);
+    const nextMission = sectionMissions.find(m => m.level === completedLevel + 1);
+    
+    if (nextMission && nextMission.locked) {
+        nextMission.locked = false;
+        console.log(`🔓 Unlocked ${section} Level ${nextMission.level}: ${nextMission.title}`);
+        return true;
+    }
+    
+    return false;
 }
