@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Game Levels - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <link rel="stylesheet" href="css/password-cracking-game.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #00f3ff;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .debug-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00f3ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .debug-btn {
+            background: #1a1a1a;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+        }
+        .debug-btn:hover {
+            background: rgba(0, 255, 65, 0.2);
+        }
+        .debug-output {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <h1>🔧 DEBUG: Game Levels Not Appearing</h1>
+        <p>Testing why the password cracking game levels are not showing up</p>
+        
+        <div class="debug-controls">
+            <button class="debug-btn" onclick="checkElements()">🔍 Check Elements</button>
+            <button class="debug-btn" onclick="checkGameState()">📊 Check Game State</button>
+            <button class="debug-btn" onclick="testRenderLevels()">🎯 Test Render Levels</button>
+            <button class="debug-btn" onclick="forceShowGame()">🎮 Force Show Game</button>
+            <button class="debug-btn" onclick="clearOutput()">🗑️ Clear Output</button>
+        </div>
+        
+        <div class="debug-output" id="debugOutput">
+            <div>Debug output will appear here...</div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="password-missions" class="screen" style="display: block;">
+        <div class="mission-header">
+            <h2>PASSWORD CRACKING & DEFENSE GAME</h2>
+            <p class="subtitle">Interactive Cybersecurity Simulation - Stop Live Attacks</p>
+        </div>
+        
+        <div id="password-training-container">
+            <div class="password-level-selection" id="passwordLevelSelection">
+                <div class="training-overview">
+                    <div class="program-info">
+                        <h3>🎮 GAME OBJECTIVES</h3>
+                        <div class="objectives-grid">
+                            <div class="objective-item">
+                                <div class="objective-icon">⚡</div>
+                                <div class="objective-text">Stop live cyber attacks in progress</div>
+                            </div>
+                            <div class="objective-item">
+                                <div class="objective-icon">🛡️</div>
+                                <div class="objective-text">Configure defense systems under pressure</div>
+                            </div>
+                            <div class="objective-item">
+                                <div class="objective-icon">🎯</div>
+                                <div class="objective-text">Make critical security decisions in real-time</div>
+                            </div>
+                            <div class="objective-item">
+                                <div class="objective-icon">🏆</div>
+                                <div class="objective-text">Secure systems through interactive gameplay</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trainee-dashboard">
+                        <h3>👤 PLAYER PROFILE</h3>
+                        <div class="profile-stats">
+                            <div class="stat-card">
+                                <div class="stat-value" id="traineeRank">Junior Analyst</div>
+                                <div class="stat-label">Current Rank</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="completedLevels">0/5</div>
+                                <div class="stat-label">Missions Complete</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="overallScore">0%</div>
+                                <div class="stat-label">Success Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="levels-grid" id="passwordLevelsGrid">
+                    <!-- Game levels should appear here -->
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #ff006e; border: 2px dashed #ff006e; border-radius: 8px;">
+                        ⚠️ LEVELS NOT APPEARING - This is the problem we're debugging
+                    </div>
+                </div>
+            </div>
+
+            <div class="password-game-screen" id="passwordGameScreen" style="display: none;">
+                <!-- Game screen content -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/password-cracking-game.js"></script>
+    <script>
+        function log(message) {
+            const output = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function checkElements() {
+            log('🔍 Checking DOM elements...');
+            
+            const grid = document.getElementById('passwordLevelsGrid');
+            log(`Grid element: ${grid ? '✅ Found' : '❌ Not found'}`);
+            if (grid) {
+                log(`Grid innerHTML length: ${grid.innerHTML.length}`);
+                log(`Grid children count: ${grid.children.length}`);
+            }
+            
+            const levelSelection = document.getElementById('passwordLevelSelection');
+            log(`Level selection: ${levelSelection ? '✅ Found' : '❌ Not found'}`);
+            if (levelSelection) {
+                log(`Level selection display: ${levelSelection.style.display}`);
+            }
+            
+            const gameScreen = document.getElementById('passwordGameScreen');
+            log(`Game screen: ${gameScreen ? '✅ Found' : '❌ Not found'}`);
+            if (gameScreen) {
+                log(`Game screen display: ${gameScreen.style.display}`);
+            }
+        }
+
+        function checkGameState() {
+            log('📊 Checking game state...');
+            
+            if (typeof window.gameState !== 'undefined') {
+                log('✅ gameState exists');
+                log(`Current level: ${window.gameState.currentLevel}`);
+                log(`Unlocked levels: [${window.gameState.unlockedLevels.join(', ')}]`);
+                log(`Completed levels: [${window.gameState.completedLevels.join(', ')}]`);
+            } else {
+                log('❌ gameState not found');
+            }
+            
+            if (typeof window.gameLevels !== 'undefined') {
+                log('✅ gameLevels exists');
+                log(`Number of levels: ${Object.keys(window.gameLevels).length}`);
+                Object.keys(window.gameLevels).forEach(key => {
+                    const level = window.gameLevels[key];
+                    log(`Level ${key}: ${level.title}`);
+                });
+            } else {
+                log('❌ gameLevels not found');
+            }
+        }
+
+        function testRenderLevels() {
+            log('🎯 Testing render levels function...');
+            
+            if (typeof window.renderGameLevels === 'function') {
+                log('✅ renderGameLevels function exists');
+                try {
+                    window.renderGameLevels();
+                    log('✅ renderGameLevels called successfully');
+                    
+                    // Check if levels were actually rendered
+                    const grid = document.getElementById('passwordLevelsGrid');
+                    if (grid) {
+                        log(`Grid children after render: ${grid.children.length}`);
+                        if (grid.children.length > 0) {
+                            log('✅ Levels were rendered!');
+                        } else {
+                            log('❌ No levels were rendered');
+                        }
+                    }
+                } catch (error) {
+                    log(`❌ Error calling renderGameLevels: ${error.message}`);
+                }
+            } else {
+                log('❌ renderGameLevels function not found');
+            }
+        }
+
+        function forceShowGame() {
+            log('🎮 Force showing game...');
+            
+            if (typeof window.showPasswordCrackingGame === 'function') {
+                log('✅ showPasswordCrackingGame function exists');
+                try {
+                    window.showPasswordCrackingGame();
+                    log('✅ showPasswordCrackingGame called successfully');
+                } catch (error) {
+                    log(`❌ Error calling showPasswordCrackingGame: ${error.message}`);
+                }
+            } else {
+                log('❌ showPasswordCrackingGame function not found');
+            }
+            
+            // Also try the test functions
+            if (typeof window.testGameShow === 'function') {
+                log('✅ testGameShow function exists');
+                try {
+                    window.testGameShow();
+                    log('✅ testGameShow called successfully');
+                } catch (error) {
+                    log(`❌ Error calling testGameShow: ${error.message}`);
+                }
+            }
+            
+            if (typeof window.testGameRender === 'function') {
+                log('✅ testGameRender function exists');
+                try {
+                    window.testGameRender();
+                    log('✅ testGameRender called successfully');
+                } catch (error) {
+                    log(`❌ Error calling testGameRender: ${error.message}`);
+                }
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('debugOutput').innerHTML = '<div>Debug output cleared...</div>';
+        }
+
+        // Auto-run initial checks
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🔧 Debug page loaded');
+            
+            setTimeout(() => {
+                log('🔍 Running initial checks...');
+                checkElements();
+                checkGameState();
+                
+                // Try to render levels automatically
+                setTimeout(() => {
+                    log('🎯 Auto-testing level render...');
+                    testRenderLevels();
+                }, 1000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

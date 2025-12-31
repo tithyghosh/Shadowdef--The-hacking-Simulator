@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Levels Loading Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #00f3ff;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #00f3ff;
+            border-radius: 10px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            background: #1a1a1a;
+            border: 2px solid #00f3ff;
+            color: #00f3ff;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .test-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+        }
+        .test-btn.active {
+            background: rgba(0, 243, 255, 0.3);
+            border-color: #00ff41;
+            color: #00ff41;
+        }
+        .level-info {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧪 ALL LEVELS LOADING TEST</h1>
+        <p>Testing that all 10 cybersecurity training levels load their game content properly</p>
+    </div>
+
+    <div class="level-info">
+        <div id="currentLevelInfo">Click a level button to test loading</div>
+    </div>
+
+    <div class="test-controls">
+        <button class="test-btn" onclick="testLevel(1)">Level 1</button>
+        <button class="test-btn" onclick="testLevel(2)">Level 2</button>
+        <button class="test-btn" onclick="testLevel(3)">Level 3</button>
+        <button class="test-btn" onclick="testLevel(4)">Level 4</button>
+        <button class="test-btn" onclick="testLevel(5)">Level 5</button>
+        <button class="test-btn" onclick="testLevel(6)">Level 6</button>
+        <button class="test-btn" onclick="testLevel(7)">Level 7</button>
+        <button class="test-btn" onclick="testLevel(8)">Level 8</button>
+        <button class="test-btn" onclick="testLevel(9)">Level 9</button>
+        <button class="test-btn" onclick="testLevel(10)">Level 10</button>
+    </div>
+
+    <!-- Training Container -->
+    <div id="password-training-container">
+        <div class="password-level-selection" id="passwordLevelSelection" style="display: none;">
+            <div class="levels-grid" id="passwordLevelsGrid">
+                <!-- Levels will be populated here -->
+            </div>
+        </div>
+
+        <div class="password-game-screen" id="passwordGameScreen" style="display: block;">
+            <div class="password-level-header">
+                <div class="level-info">
+                    <div class="current-level" id="passwordCurrentLevel">Select a level to test</div>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="passwordProgressFill"></div>
+                        </div>
+                        <span class="progress-text" id="passwordProgressText">0%</span>
+                    </div>
+                </div>
+                <div class="level-objective" id="passwordLevelObjective">
+                    Choose a level from the buttons above to test its content loading
+                </div>
+            </div>
+
+            <div class="password-game-content" id="passwordGameContent">
+                <div class="security-instruction-panel">
+                    <h3>🧪 LEVEL LOADING TEST</h3>
+                    <p>This test verifies that all 10 levels load their interactive game content properly.</p>
+                    <p>Click the level buttons above to test each level's content loading.</p>
+                </div>
+            </div>
+
+            <div class="password-game-controls">
+                <button class="btn btn-secondary" onclick="resetTest()">
+                    🔄 Reset Test
+                </button>
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="passwordCheckBtn" onclick="checkSecurityLevel()" style="display: none;">
+                        Submit Assessment
+                    </button>
+                    <button class="btn btn-success" id="passwordContinueBtn" onclick="nextSecurityLevel()" style="display: none;">
+                        Continue Training →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/cybersecurity-training-system.js"></script>
+    <script>
+        let currentTestLevel = null;
+
+        function testLevel(levelNum) {
+            console.log(`🧪 Testing Level ${levelNum} loading...`);
+            
+            // Update button states
+            document.querySelectorAll('.test-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentTestLevel = levelNum;
+            
+            // Get level data
+            const level = window.securityLevels[levelNum];
+            if (!level) {
+                console.error(`❌ Level ${levelNum} not found`);
+                document.getElementById('currentLevelInfo').innerHTML = `❌ Level ${levelNum} not found in securityLevels`;
+                return;
+            }
+            
+            // Update level info
+            document.getElementById('currentLevelInfo').innerHTML = `
+                <strong>Testing Level ${levelNum}:</strong> ${level.title}<br>
+                <em>Type: ${level.type} | Difficulty: ${level.difficulty}</em>
+            `;
+            
+            // Update header
+            document.getElementById('passwordCurrentLevel').innerHTML = `
+                <div class="training-level-info">
+                    <div class="training-level-number">LEVEL ${levelNum}</div>
+                    <div class="training-level-title">${level.title}</div>
+                    <div class="training-level-category">${level.category}</div>
+                </div>
+            `;
+            
+            document.getElementById('passwordLevelObjective').innerHTML = `
+                <div class="training-objective">
+                    <div class="objective-label">MISSION OBJECTIVE:</div>
+                    <div class="objective-text">${level.objective}</div>
+                    <div class="objective-meta">
+                        <span class="difficulty-badge ${level.difficulty.toLowerCase()}">${level.difficulty}</span>
+                        <span class="time-limit">⏱️ ${Math.floor(level.timeLimit / 60)}:${(level.timeLimit % 60).toString().padStart(2, '0')}</span>
+                        <span class="passing-score">🎯 ${level.passingScore}%</span>
+                    </div>
+                </div>
+            `;
+            
+            // Test content loading
+            try {
+                if (typeof window.loadSecurityLevelContent === 'function') {
+                    window.loadSecurityLevelContent(level);
+                    console.log(`✅ Level ${levelNum} content loaded successfully`);
+                    
+                    // Check if content was actually loaded
+                    const content = document.getElementById('passwordGameContent');
+                    if (content && content.innerHTML.trim()) {
+                        console.log(`✅ Level ${levelNum} has interactive content`);
+                    } else {
+                        console.warn(`⚠️ Level ${levelNum} content appears empty`);
+                    }
+                } else {
+                    console.error('❌ loadSecurityLevelContent function not available');
+                    document.getElementById('currentLevelInfo').innerHTML += '<br>❌ loadSecurityLevelContent function not available';
+                }
+            } catch (error) {
+                console.error(`❌ Error loading Level ${levelNum}:`, error);
+                document.getElementById('currentLevelInfo').innerHTML += `<br>❌ Error: ${error.message}`;
+            }
+        }
+
+        function resetTest() {
+            document.querySelectorAll('.test-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('currentLevelInfo').textContent = 'Click a level button to test loading';
+            document.getElementById('passwordCurrentLevel').textContent = 'Select a level to test';
+            document.getElementById('passwordLevelObjective').textContent = 'Choose a level from the buttons above to test its content loading';
+            document.getElementById('passwordGameContent').innerHTML = `
+                <div class="security-instruction-panel">
+                    <h3>🧪 LEVEL LOADING TEST</h3>
+                    <p>This test verifies that all 10 levels load their interactive game content properly.</p>
+                    <p>Click the level buttons above to test each level's content loading.</p>
+                </div>
+            `;
+            currentTestLevel = null;
+        }
+
+        function runAllTests() {
+            console.log('🧪 Running all level loading tests...');
+            let testResults = [];
+            
+            for (let i = 1; i <= 10; i++) {
+                try {
+                    const level = window.securityLevels[i];
+                    if (level) {
+                        // Create a temporary container to test loading
+                        const tempContainer = document.createElement('div');
+                        window.loadSecurityLevelContent(level);
+                        testResults.push(`✅ Level ${i}: ${level.title} - OK`);
+                    } else {
+                        testResults.push(`❌ Level ${i}: Not found`);
+                    }
+                } catch (error) {
+                    testResults.push(`❌ Level ${i}: Error - ${error.message}`);
+                }
+            }
+            
+            console.log('📊 Test Results:');
+            testResults.forEach(result => console.log(result));
+            
+            const passedTests = testResults.filter(r => r.startsWith('✅')).length;
+            const totalTests = testResults.length;
+            
+            alert(`Test Complete!\n${passedTests}/${totalTests} levels loaded successfully.\n\nCheck console for detailed results.`);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Level loading test initialized');
+            
+            setTimeout(() => {
+                if (window.securityLevels && typeof window.loadSecurityLevelContent === 'function') {
+                    console.log('✅ Security training system available');
+                    
+                    // Add a button to run all tests
+                    const testControls = document.querySelector('.test-controls');
+                    const runAllBtn = document.createElement('button');
+                    runAllBtn.className = 'test-btn';
+                    runAllBtn.style.backgroundColor = '#00ff41';
+                    runAllBtn.style.borderColor = '#00ff41';
+                    runAllBtn.style.color = '#0a0a0a';
+                    runAllBtn.textContent = 'Run All Tests';
+                    runAllBtn.onclick = runAllTests;
+                    testControls.appendChild(runAllBtn);
+                } else {
+                    console.error('❌ Security training system not available');
+                    document.getElementById('currentLevelInfo').innerHTML = '❌ Security training system not loaded';
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

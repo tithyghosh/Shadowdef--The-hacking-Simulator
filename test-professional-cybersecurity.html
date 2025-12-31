@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Cybersecurity Training System Test</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <style>
+        .test-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.95);
+            color: #00ff41;
+            padding: 15px;
+            border: 1px solid #00ff41;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        .test-btn {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        .test-btn:hover { background: #00f3ff; }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="test-panel">
+        <div><strong>Professional Cybersecurity Test</strong></div>
+        <button class="test-btn" onclick="testSecurityTraining()">Start Training</button>
+        <button class="test-btn" onclick="testLevel1()">Test Level 1</button>
+        <button class="test-btn" onclick="testClassification()">Test Classification</button>
+        <div id="test-status" style="margin-top: 10px; font-size: 10px;"></div>
+    </div>
+    
+    <div id="game-container" class="game-container">
+        <!-- Mission Categories Screen -->
+        <div id="mission-select" class="screen active">
+            <div class="mission-header">
+                <h2>TRAINING CATEGORIES</h2>
+                <p class="subtitle">Choose your specialization</p>
+            </div>
+            <div class="category-grid">
+                <div class="category-card" data-category="password">
+                    <div class="category-icon">🔐</div>
+                    <div class="category-content">
+                        <div class="category-title">CYBERSECURITY TRAINING</div>
+                        <div class="category-subtitle">Professional Password Security & Defense Simulation</div>
+                        <div class="category-progress">0/10 Modules Complete</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Cybersecurity Training -->
+        <div id="password-missions" class="screen">
+            <button class="back-btn" onclick="showScreen('mission-select')">← BACK TO CATEGORIES</button>
+            <div class="mission-header">
+                <h2>CYBERSECURITY TRAINING PROGRAM</h2>
+                <p class="subtitle">Professional Password Security & Defense Simulation</p>
+            </div>
+            
+            <!-- Professional Security Training Container -->
+            <div id="password-training-container">
+                <!-- Level Selection Screen -->
+                <div class="password-level-selection" id="passwordLevelSelection">
+                    <div class="training-overview">
+                        <div class="program-info">
+                            <h3>🎯 TRAINING OBJECTIVES</h3>
+                            <div class="objectives-grid">
+                                <div class="objective-item">
+                                    <div class="objective-icon">🔍</div>
+                                    <div class="objective-text">Master password vulnerability assessment</div>
+                                </div>
+                                <div class="objective-item">
+                                    <div class="objective-icon">⚡</div>
+                                    <div class="objective-text">Understand attack vectors and methodologies</div>
+                                </div>
+                                <div class="objective-item">
+                                    <div class="objective-icon">🛡️</div>
+                                    <div class="objective-text">Implement professional defense strategies</div>
+                                </div>
+                                <div class="objective-item">
+                                    <div class="objective-icon">🏗️</div>
+                                    <div class="objective-text">Design secure authentication systems</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="trainee-dashboard">
+                            <h3>👤 TRAINEE PROFILE</h3>
+                            <div class="profile-stats">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="traineeRank">Junior Analyst</div>
+                                    <div class="stat-label">Current Rank</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="completedLevels">0/10</div>
+                                    <div class="stat-label">Modules Complete</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="overallScore">0%</div>
+                                    <div class="stat-label">Overall Score</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="levels-grid" id="passwordLevelsGrid">
+                        <!-- Professional training levels will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Professional Training Screen -->
+                <div class="password-game-screen" id="passwordGameScreen" style="display: none;">
+                    <!-- Training Header -->
+                    <div class="password-level-header">
+                        <div class="level-info">
+                            <div class="current-level" id="passwordCurrentLevel">Level 1</div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="passwordProgressFill"></div>
+                                </div>
+                                <span class="progress-text" id="passwordProgressText">0%</span>
+                            </div>
+                        </div>
+                        <div class="level-objective" id="passwordLevelObjective">
+                            Professional cybersecurity training objective
+                        </div>
+                    </div>
+
+                    <!-- Training Content -->
+                    <div class="password-game-content" id="passwordGameContent">
+                        <!-- Professional training content will be loaded here -->
+                    </div>
+
+                    <!-- Training Controls -->
+                    <div class="password-game-controls">
+                        <button class="btn btn-secondary" onclick="backToSecurityLevels()">
+                            ← Back to Training Menu
+                        </button>
+                        <div class="control-buttons">
+                            <button class="btn btn-primary" id="passwordCheckBtn" onclick="checkSecurityLevel()" style="display: none;">
+                                Submit Assessment
+                            </button>
+                            <button class="btn btn-success" id="passwordContinueBtn" onclick="nextSecurityLevel()" style="display: none;">
+                                Continue Training →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/network-background.js"></script>
+    <script src="js/cybersecurity-training-system.js"></script>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            const status = document.getElementById('test-status');
+            status.innerHTML += '<br>' + message;
+        }
+
+        function testSecurityTraining() {
+            log('🧪 Testing Professional Cybersecurity Training...');
+            
+            try {
+                showSecurityTraining();
+                log('✅ Security training started successfully');
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function testLevel1() {
+            log('🧪 Testing Level 1...');
+            
+            try {
+                startSecurityLevel(1);
+                log('✅ Level 1 started successfully');
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function testClassification() {
+            log('🧪 Testing password classification...');
+            
+            try {
+                // Simulate classifying first few passwords
+                classifyPassword(0, 'VULNERABLE'); // admin
+                classifyPassword(1, 'SECURE'); // P@ssw0rd2024!
+                classifyPassword(2, 'VULNERABLE'); // 123456789
+                log('✅ Classifications applied successfully');
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function showScreen(screenId) {
+            log(`📺 Switching to screen: ${screenId}`);
+            
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+                screen.style.display = 'none';
+            });
+            
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                targetScreen.style.display = 'block';
+                log(`✅ Screen switched to: ${screenId}`);
+            } else {
+                log(`❌ Screen not found: ${screenId}`);
+            }
+        }
+
+        // Handle category selection
+        document.addEventListener('click', (e) => {
+            const categoryCard = e.target.closest('[data-category]');
+            if (categoryCard) {
+                const category = categoryCard.dataset.category;
+                log(`🎯 Category selected: ${category}`);
+                
+                if (category === 'password') {
+                    try {
+                        showSecurityTraining();
+                        log('✅ Security training shown via category click');
+                    } catch (error) {
+                        log(`❌ Error showing security training: ${error.message}`);
+                    }
+                }
+            }
+        });
+
+        // Initialize background
+        try {
+            const canvas = document.getElementById('bg-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                function animate() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(0, 243, 255, 0.03)';
+                    for (let i = 0; i < 5; i++) {
+                        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+                    }
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+        } catch (error) {
+            log(`Background error: ${error.message}`);
+        }
+
+        // Auto-start test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🎮 Professional Cybersecurity Training Test loaded');
+                log('Click "Start Training" to begin');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

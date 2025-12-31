@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Progression Fix Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #00f3ff;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #00f3ff;
+            border-radius: 10px;
+            background: rgba(0, 243, 255, 0.1);
+        }
+        .debug-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 12px;
+        }
+        .debug-title {
+            color: #00ff41;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            background: #1a1a1a;
+            border: 2px solid #00f3ff;
+            color: #00f3ff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .test-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+        .test-btn.success {
+            border-color: #00ff41;
+            color: #00ff41;
+        }
+        .test-btn.success:hover {
+            background: rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🔧 LEVEL PROGRESSION FIX TEST</h1>
+            <p>Testing the cybersecurity training level progression and unlocking system</p>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">🔍 CURRENT TRAINING STATE</div>
+            <div id="stateDebug">Loading...</div>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn" onclick="showCurrentState()">📊 Show Current State</button>
+            <button class="test-btn" onclick="simulateLevel1Completion()">✅ Simulate Level 1 Completion</button>
+            <button class="test-btn" onclick="simulateLevel2Completion()">✅ Simulate Level 2 Completion</button>
+            <button class="test-btn" onclick="resetTrainingState()">🔄 Reset Training State</button>
+            <button class="test-btn success" onclick="testLevelProgression()">🧪 Run Full Progression Test</button>
+        </div>
+
+        <!-- Password Training Container -->
+        <div id="password-training-container">
+            <div class="password-level-selection" id="passwordLevelSelection">
+                <div class="levels-grid" id="passwordLevelsGrid">
+                    <!-- Levels will be populated here -->
+                </div>
+            </div>
+
+            <div class="password-game-screen" id="passwordGameScreen" style="display: none;">
+                <div class="password-level-header">
+                    <div class="level-info">
+                        <div class="current-level" id="passwordCurrentLevel">Level 1</div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="passwordProgressFill"></div>
+                            </div>
+                            <span class="progress-text" id="passwordProgressText">0%</span>
+                        </div>
+                    </div>
+                    <div class="level-objective" id="passwordLevelObjective">
+                        Professional cybersecurity training objective
+                    </div>
+                </div>
+
+                <div class="password-game-content" id="passwordGameContent">
+                    <!-- Training content will be loaded here -->
+                </div>
+
+                <div class="password-game-controls">
+                    <button class="btn btn-secondary" onclick="backToSecurityLevels()">
+                        ← Back to Training Menu
+                    </button>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" id="passwordCheckBtn" onclick="checkSecurityLevel()" style="display: none;">
+                            Submit Assessment
+                        </button>
+                        <button class="btn btn-success" id="passwordContinueBtn" onclick="nextSecurityLevel()" style="display: none;">
+                            Continue Training →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/cybersecurity-training-system.js"></script>
+    <script>
+        // Test functions
+        function showCurrentState() {
+            const state = window.securityTrainingState || {};
+            const debug = document.getElementById('stateDebug');
+            debug.innerHTML = `
+                <strong>Current Level:</strong> ${state.currentLevel || 'Not set'}<br>
+                <strong>Completed Levels:</strong> [${(state.completedLevels || []).join(', ')}]<br>
+                <strong>Unlocked Levels:</strong> [${(state.unlockedLevels || []).join(', ')}]<br>
+                <strong>Trainee Rank:</strong> ${state.traineeProfile?.rank || 'Not set'}<br>
+                <strong>Total Score:</strong> ${state.traineeProfile?.totalScore || 0}%
+            `;
+        }
+
+        function simulateLevel1Completion() {
+            console.log('🧪 Simulating Level 1 completion...');
+            
+            // Ensure state exists
+            if (!window.securityTrainingState) {
+                console.error('❌ Security training state not found');
+                return;
+            }
+            
+            // Mark level 1 as completed and unlock level 2
+            if (!window.securityTrainingState.completedLevels.includes(1)) {
+                window.securityTrainingState.completedLevels.push(1);
+            }
+            if (!window.securityTrainingState.unlockedLevels.includes(2)) {
+                window.securityTrainingState.unlockedLevels.push(2);
+            }
+            
+            // Update level state
+            window.securityTrainingState.levelStates.password_awareness = {
+                completed: true,
+                score: 85,
+                attempts: 1
+            };
+            
+            console.log('✅ Level 1 marked as completed, Level 2 unlocked');
+            
+            // Refresh the display
+            if (typeof window.renderSecurityLevels === 'function') {
+                window.renderSecurityLevels();
+            }
+            if (typeof window.updateTraineeDashboard === 'function') {
+                window.updateTraineeDashboard();
+            }
+            
+            showCurrentState();
+        }
+
+        function simulateLevel2Completion() {
+            console.log('🧪 Simulating Level 2 completion...');
+            
+            // First complete level 1 if not already done
+            simulateLevel1Completion();
+            
+            // Mark level 2 as completed and unlock level 3
+            if (!window.securityTrainingState.completedLevels.includes(2)) {
+                window.securityTrainingState.completedLevels.push(2);
+            }
+            if (!window.securityTrainingState.unlockedLevels.includes(3)) {
+                window.securityTrainingState.unlockedLevels.push(3);
+            }
+            
+            // Update level state
+            window.securityTrainingState.levelStates.dictionary_attack = {
+                completed: true,
+                score: 90,
+                attempts: 1
+            };
+            
+            console.log('✅ Level 2 marked as completed, Level 3 unlocked');
+            
+            // Refresh the display
+            if (typeof window.renderSecurityLevels === 'function') {
+                window.renderSecurityLevels();
+            }
+            if (typeof window.updateTraineeDashboard === 'function') {
+                window.updateTraineeDashboard();
+            }
+            
+            showCurrentState();
+        }
+
+        function resetTrainingState() {
+            console.log('🔄 Resetting training state...');
+            
+            if (window.securityTrainingState) {
+                window.securityTrainingState.currentLevel = 1;
+                window.securityTrainingState.completedLevels = [];
+                window.securityTrainingState.unlockedLevels = [1];
+                window.securityTrainingState.traineeProfile.totalScore = 0;
+                
+                // Reset all level states
+                Object.keys(window.securityTrainingState.levelStates).forEach(key => {
+                    window.securityTrainingState.levelStates[key] = {
+                        completed: false,
+                        score: 0,
+                        attempts: 0
+                    };
+                });
+            }
+            
+            console.log('✅ Training state reset');
+            
+            // Refresh the display
+            if (typeof window.renderSecurityLevels === 'function') {
+                window.renderSecurityLevels();
+            }
+            if (typeof window.updateTraineeDashboard === 'function') {
+                window.updateTraineeDashboard();
+            }
+            
+            showCurrentState();
+        }
+
+        function testLevelProgression() {
+            console.log('🧪 Running full level progression test...');
+            
+            // Reset first
+            resetTrainingState();
+            
+            setTimeout(() => {
+                console.log('Step 1: Complete Level 1');
+                simulateLevel1Completion();
+                
+                setTimeout(() => {
+                    console.log('Step 2: Try to access Level 2');
+                    if (window.securityTrainingState.unlockedLevels.includes(2)) {
+                        console.log('✅ Level 2 is unlocked - progression working!');
+                        
+                        setTimeout(() => {
+                            console.log('Step 3: Complete Level 2');
+                            simulateLevel2Completion();
+                            
+                            setTimeout(() => {
+                                console.log('Step 4: Check Level 3 unlock');
+                                if (window.securityTrainingState.unlockedLevels.includes(3)) {
+                                    console.log('✅ Level 3 is unlocked - full progression working!');
+                                    alert('🎉 Level progression test PASSED! All levels unlock correctly.');
+                                } else {
+                                    console.error('❌ Level 3 not unlocked after Level 2 completion');
+                                    alert('❌ Level progression test FAILED at Level 3 unlock');
+                                }
+                            }, 500);
+                        }, 1000);
+                    } else {
+                        console.error('❌ Level 2 not unlocked after Level 1 completion');
+                        alert('❌ Level progression test FAILED at Level 2 unlock');
+                    }
+                }, 500);
+            }, 500);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Level progression test page loaded');
+            
+            // Wait for security training system to initialize
+            setTimeout(() => {
+                if (typeof window.renderSecurityLevels === 'function') {
+                    window.renderSecurityLevels();
+                    showCurrentState();
+                    console.log('✅ Test page initialized with security training system');
+                } else {
+                    console.error('❌ Security training system not available');
+                    document.getElementById('stateDebug').innerHTML = '<span style="color: #ff006e;">❌ Security training system not loaded</span>';
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

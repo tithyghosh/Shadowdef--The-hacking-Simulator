@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Progression Test - SHADOWDEF</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #00f3ff;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #00f3ff;
+            border-radius: 10px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            background: #1a1a1a;
+            border: 2px solid #00f3ff;
+            color: #00f3ff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .test-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+        }
+        .test-btn.success {
+            border-color: #00ff41;
+            color: #00ff41;
+        }
+        .test-btn.danger {
+            border-color: #ff006e;
+            color: #ff006e;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🔧 LEVEL PROGRESSION TEST</h1>
+        <p>Testing cybersecurity training level unlocking system</p>
+    </div>
+
+    <div class="test-controls">
+        <button class="test-btn" onclick="window.debugShowState()">📊 Show State</button>
+        <button class="test-btn success" onclick="window.debugCompleteLevel(1)">✅ Complete Level 1</button>
+        <button class="test-btn success" onclick="window.debugCompleteLevel(2)">✅ Complete Level 2</button>
+        <button class="test-btn success" onclick="window.debugCompleteLevel(3)">✅ Complete Level 3</button>
+        <button class="test-btn danger" onclick="window.debugResetState()">🔄 Reset State</button>
+        <button class="test-btn" onclick="testProgression()">🧪 Auto Test</button>
+    </div>
+
+    <!-- Training Container -->
+    <div id="password-training-container">
+        <div class="password-level-selection" id="passwordLevelSelection">
+            <div class="levels-grid" id="passwordLevelsGrid">
+                <!-- Levels will be populated here -->
+            </div>
+        </div>
+
+        <div class="password-game-screen" id="passwordGameScreen" style="display: none;">
+            <div class="password-level-header">
+                <div class="level-info">
+                    <div class="current-level" id="passwordCurrentLevel">Level 1</div>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="passwordProgressFill"></div>
+                        </div>
+                        <span class="progress-text" id="passwordProgressText">0%</span>
+                    </div>
+                </div>
+                <div class="level-objective" id="passwordLevelObjective">
+                    Professional cybersecurity training objective
+                </div>
+            </div>
+
+            <div class="password-game-content" id="passwordGameContent">
+                <!-- Training content will be loaded here -->
+            </div>
+
+            <div class="password-game-controls">
+                <button class="btn btn-secondary" onclick="backToSecurityLevels()">
+                    ← Back to Training Menu
+                </button>
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="passwordCheckBtn" onclick="checkSecurityLevel()" style="display: none;">
+                        Submit Assessment
+                    </button>
+                    <button class="btn btn-success" id="passwordContinueBtn" onclick="nextSecurityLevel()" style="display: none;">
+                        Continue Training →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/cybersecurity-training-system.js"></script>
+    <script>
+        function testProgression() {
+            console.log('🧪 Starting automatic progression test...');
+            
+            // Reset first
+            window.debugResetState();
+            
+            setTimeout(() => {
+                console.log('Step 1: Complete Level 1');
+                window.debugCompleteLevel(1);
+                
+                setTimeout(() => {
+                    if (window.securityTrainingState.unlockedLevels.includes(2)) {
+                        console.log('✅ Level 2 unlocked successfully');
+                        
+                        setTimeout(() => {
+                            console.log('Step 2: Complete Level 2');
+                            window.debugCompleteLevel(2);
+                            
+                            setTimeout(() => {
+                                if (window.securityTrainingState.unlockedLevels.includes(3)) {
+                                    console.log('✅ Level 3 unlocked successfully');
+                                    alert('🎉 Level progression test PASSED!');
+                                } else {
+                                    console.error('❌ Level 3 not unlocked');
+                                    alert('❌ Level progression test FAILED at Level 3');
+                                }
+                            }, 500);
+                        }, 1000);
+                    } else {
+                        console.error('❌ Level 2 not unlocked');
+                        alert('❌ Level progression test FAILED at Level 2');
+                    }
+                }, 500);
+            }, 500);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Level progression test initialized');
+            
+            setTimeout(() => {
+                if (typeof window.renderSecurityLevels === 'function') {
+                    window.renderSecurityLevels();
+                    console.log('✅ Security levels rendered');
+                } else {
+                    console.error('❌ Security training system not available');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

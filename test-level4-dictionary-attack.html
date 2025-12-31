@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Level 4 - Dictionary Attack Defense</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/password-training.css">
+    <style>
+        .test-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.95);
+            color: #00ff41;
+            padding: 15px;
+            border: 1px solid #00ff41;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        .test-btn {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        .test-btn:hover { background: #00f3ff; }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="test-panel">
+        <div><strong>Level 4 Test</strong></div>
+        <button class="test-btn" onclick="testLevel4()">Start Level 4</button>
+        <button class="test-btn" onclick="quickTest('password')">Test: password</button>
+        <button class="test-btn" onclick="quickTest('qwerty123')">Test: qwerty123</button>
+        <button class="test-btn" onclick="quickTest('MySecure2024!')">Test: MySecure2024!</button>
+        <div id="test-status" style="margin-top: 10px; font-size: 10px;"></div>
+    </div>
+    
+    <div id="game-container" class="game-container">
+        <!-- Password Cracking Missions -->
+        <div id="password-missions" class="screen active">
+            <div class="mission-header">
+                <h2>PASSWORD SECURITY TRAINING</h2>
+                <p class="subtitle">Level 4: Dictionary Attack Defense</p>
+            </div>
+            
+            <!-- Password Training Game Container -->
+            <div id="password-training-container">
+                <!-- Password Game Screen -->
+                <div class="password-game-screen" id="passwordGameScreen" style="display: flex;">
+                    <div class="password-level-header">
+                        <div class="level-info">
+                            <div class="current-level" id="passwordCurrentLevel">Level 4: Dictionary Attack Defense</div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="passwordProgressFill"></div>
+                                </div>
+                                <span class="progress-text" id="passwordProgressText">0%</span>
+                            </div>
+                        </div>
+                        <div class="level-objective" id="passwordLevelObjective">
+                            Create a password that survives the dictionary attack simulation
+                        </div>
+                    </div>
+                    <div class="password-game-content" id="passwordGameContent">
+                        <!-- Level 4 content will be loaded here -->
+                    </div>
+                    <div class="password-game-controls">
+                        <button class="btn btn-secondary" onclick="showScreen('password-missions')">
+                            ← Back to Levels
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/network-background.js"></script>
+    <script src="js/password-training-complete.js"></script>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            const status = document.getElementById('test-status');
+            status.innerHTML += '<br>' + message;
+        }
+
+        function testLevel4() {
+            log('🧪 Testing Level 4...');
+            
+            // Set up level 4 state
+            passwordGameState.currentLevel = 4;
+            
+            // Load level 4 content
+            const level = passwordLevels[4];
+            if (level) {
+                log('✅ Level 4 data found: ' + level.title);
+                log('Type: ' + level.type);
+                loadPasswordLevelContent(level);
+                log('✅ Level 4 content loaded');
+            } else {
+                log('❌ Level 4 data not found');
+            }
+        }
+
+        function quickTest(password) {
+            log(`🧪 Quick testing: ${password}`);
+            
+            const input = document.getElementById('dictionaryPasswordInput');
+            if (input) {
+                input.value = password;
+                analyzeDictionaryPassword();
+                setTimeout(() => {
+                    runDictionaryAttack();
+                }, 500);
+                log('✅ Dictionary attack started');
+            } else {
+                log('❌ Dictionary input not found');
+            }
+        }
+
+        function showScreen(screenId) {
+            log(`📺 Switching to screen: ${screenId}`);
+        }
+
+        // Initialize background
+        try {
+            const canvas = document.getElementById('bg-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                function animate() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(255, 0, 110, 0.03)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+                    }
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+        } catch (error) {
+            log(`Background error: ${error.message}`);
+        }
+
+        // Auto-start level 4 test
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🎮 Level 4 test page loaded');
+                testLevel4();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

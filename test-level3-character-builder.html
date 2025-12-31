@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Level 3 - Character Builder</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/password-training.css">
+    <style>
+        .test-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.95);
+            color: #00ff41;
+            padding: 15px;
+            border: 1px solid #00ff41;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        .test-btn {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        .test-btn:hover { background: #00f3ff; }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="test-panel">
+        <div><strong>Level 3 Test</strong></div>
+        <button class="test-btn" onclick="testLevel3()">Start Level 3</button>
+        <button class="test-btn" onclick="testPassword('Hello123!')">Test: Hello123!</button>
+        <button class="test-btn" onclick="testPassword('MyP@ssw0rd2024')">Test: MyP@ssw0rd2024</button>
+        <div id="test-status" style="margin-top: 10px; font-size: 10px;"></div>
+    </div>
+    
+    <div id="game-container" class="game-container">
+        <!-- Password Cracking Missions -->
+        <div id="password-missions" class="screen active">
+            <div class="mission-header">
+                <h2>PASSWORD SECURITY TRAINING</h2>
+                <p class="subtitle">Level 3: Character Complexity</p>
+            </div>
+            
+            <!-- Password Training Game Container -->
+            <div id="password-training-container">
+                <!-- Password Game Screen -->
+                <div class="password-game-screen" id="passwordGameScreen" style="display: flex;">
+                    <div class="password-level-header">
+                        <div class="level-info">
+                            <div class="current-level" id="passwordCurrentLevel">Level 3: Character Complexity</div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="passwordProgressFill"></div>
+                                </div>
+                                <span class="progress-text" id="passwordProgressText">0%</span>
+                            </div>
+                        </div>
+                        <div class="level-objective" id="passwordLevelObjective">
+                            Build a password using all 4 character types for maximum security
+                        </div>
+                    </div>
+                    <div class="password-game-content" id="passwordGameContent">
+                        <!-- Level 3 content will be loaded here -->
+                    </div>
+                    <div class="password-game-controls">
+                        <button class="btn btn-secondary" onclick="showScreen('password-missions')">
+                            ← Back to Levels
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/network-background.js"></script>
+    <script src="js/password-training-complete.js"></script>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            const status = document.getElementById('test-status');
+            status.innerHTML += '<br>' + message;
+        }
+
+        function testLevel3() {
+            log('🧪 Testing Level 3...');
+            
+            // Set up level 3 state
+            passwordGameState.currentLevel = 3;
+            
+            // Load level 3 content
+            const level = passwordLevels[3];
+            if (level) {
+                log('✅ Level 3 data found: ' + level.title);
+                loadPasswordLevelContent(level);
+                log('✅ Level 3 content loaded');
+            } else {
+                log('❌ Level 3 data not found');
+            }
+        }
+
+        function testPassword(password) {
+            log(`🧪 Testing password: ${password}`);
+            
+            const input = document.getElementById('passwordBuilder');
+            if (input) {
+                input.value = password;
+                analyzePasswordBuilder();
+                log('✅ Password analyzed');
+            } else {
+                log('❌ Password input not found');
+            }
+        }
+
+        function showScreen(screenId) {
+            log(`📺 Switching to screen: ${screenId}`);
+        }
+
+        // Initialize background
+        try {
+            const canvas = document.getElementById('bg-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                function animate() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.03)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+                    }
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+        } catch (error) {
+            log(`Background error: ${error.message}`);
+        }
+
+        // Auto-start level 3 test
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🎮 Level 3 test page loaded');
+                testLevel3();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

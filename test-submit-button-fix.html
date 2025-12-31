@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Button Fix Test</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/cybersecurity-training.css">
+    <style>
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.95);
+            color: #00ff41;
+            padding: 15px;
+            border: 1px solid #00ff41;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .debug-btn {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 4px 8px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 10px;
+        }
+        .debug-btn:hover { background: #00f3ff; }
+        .debug-log { 
+            max-height: 200px; 
+            overflow-y: auto; 
+            margin-top: 10px;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="debug-panel">
+        <div><strong>Submit Button Debug</strong></div>
+        <button class="debug-btn" onclick="startTest()">Start Level 1</button>
+        <button class="debug-btn" onclick="classifyAll()">Classify All</button>
+        <button class="debug-btn" onclick="testSubmit()">Test Submit</button>
+        <button class="debug-btn" onclick="checkButtons()">Check Buttons</button>
+        <button class="debug-btn" onclick="clearLog()">Clear Log</button>
+        <div id="debug-log" class="debug-log"></div>
+    </div>
+    
+    <div id="game-container" class="game-container">
+        <!-- Professional Cybersecurity Training -->
+        <div id="password-missions" class="screen active">
+            <div class="mission-header">
+                <h2>CYBERSECURITY TRAINING PROGRAM</h2>
+                <p class="subtitle">Submit Button Functionality Test</p>
+            </div>
+            
+            <div id="password-training-container">
+                <div class="password-level-selection" id="passwordLevelSelection">
+                    <div class="levels-grid" id="passwordLevelsGrid">
+                        <!-- Levels will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="password-game-screen" id="passwordGameScreen" style="display: none;">
+                    <div class="password-level-header">
+                        <div class="level-info">
+                            <div class="current-level" id="passwordCurrentLevel">Level 1</div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="passwordProgressFill"></div>
+                                </div>
+                                <span class="progress-text" id="passwordProgressText">0%</span>
+                            </div>
+                        </div>
+                        <div class="level-objective" id="passwordLevelObjective">
+                            Testing submit button functionality
+                        </div>
+                    </div>
+
+                    <div class="password-game-content" id="passwordGameContent">
+                        <!-- Training content will be loaded here -->
+                    </div>
+
+                    <div class="password-game-controls">
+                        <button class="btn btn-secondary" onclick="backToSecurityLevels()">
+                            ← Back to Training Menu
+                        </button>
+                        <div class="control-buttons">
+                            <button class="btn btn-primary" id="passwordCheckBtn" onclick="checkSecurityLevel()" style="display: none;">
+                                Submit Assessment
+                            </button>
+                            <button class="btn btn-success" id="passwordContinueBtn" onclick="nextSecurityLevel()" style="display: none;">
+                                Continue Training →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/network-background.js"></script>
+    <script src="js/cybersecurity-training-system.js"></script>
+    
+    <script>
+        let logCount = 0;
+        
+        function log(message, type = 'info') {
+            logCount++;
+            console.log(message);
+            const logEl = document.getElementById('debug-log');
+            const color = type === 'error' ? '#ff006e' : type === 'warning' ? '#fbbf24' : type === 'success' ? '#00ff41' : '#e0e6ed';
+            logEl.innerHTML += `<div style="color: ${color}">${logCount}. ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('debug-log').innerHTML = '';
+            logCount = 0;
+        }
+
+        function startTest() {
+            log('🧪 Starting Level 1 test...', 'info');
+            try {
+                showSecurityTraining();
+                setTimeout(() => {
+                    startSecurityLevel(1);
+                    log('✅ Level 1 started successfully', 'success');
+                }, 500);
+            } catch (error) {
+                log('❌ Error starting test: ' + error.message, 'error');
+            }
+        }
+
+        function classifyAll() {
+            log('🧪 Classifying all passwords...', 'info');
+            try {
+                // Classify all 10 passwords with correct answers
+                const correctAnswers = [
+                    'VULNERABLE', // admin
+                    'SECURE',     // P@ssw0rd2024!
+                    'VULNERABLE', // 123456789
+                    'VULNERABLE', // MyDog2023
+                    'SECURE',     // Tr0ub4dor&3
+                    'VULNERABLE', // password
+                    'VULNERABLE', // qwerty123
+                    'SECURE',     // X9$mK2#vL8@pQ
+                    'VULNERABLE', // welcome123
+                    'SECURE'      // Cyber$ec2024!
+                ];
+                
+                for (let i = 0; i < 10; i++) {
+                    classifyPassword(i, correctAnswers[i]);
+                }
+                log('✅ All passwords classified', 'success');
+            } catch (error) {
+                log('❌ Error classifying: ' + error.message, 'error');
+            }
+        }
+
+        function testSubmit() {
+            log('🧪 Testing submit functionality...', 'info');
+            try {
+                checkSecurityLevel();
+                log('✅ Submit function called', 'success');
+            } catch (error) {
+                log('❌ Submit error: ' + error.message, 'error');
+            }
+        }
+
+        function checkButtons() {
+            log('🧪 Checking button states...', 'info');
+            
+            const checkBtn = document.getElementById('passwordCheckBtn');
+            const continueBtn = document.getElementById('passwordContinueBtn');
+            const assessmentBtn = document.getElementById('assessmentSubmitBtn');
+            
+            if (checkBtn) {
+                log(`✅ Check button: display=${checkBtn.style.display}, disabled=${checkBtn.disabled}, text="${checkBtn.textContent}"`, 'info');
+            } else {
+                log('❌ Check button not found', 'error');
+            }
+            
+            if (continueBtn) {
+                log(`✅ Continue button: display=${continueBtn.style.display}, disabled=${continueBtn.disabled}`, 'info');
+            } else {
+                log('❌ Continue button not found', 'error');
+            }
+            
+            if (assessmentBtn) {
+                log(`✅ Assessment button: disabled=${assessmentBtn.disabled}, text="${assessmentBtn.textContent}"`, 'info');
+            } else {
+                log('⚠️ Assessment button not found (normal if not in level)', 'warning');
+            }
+            
+            // Check global state
+            if (typeof passwordClassifications !== 'undefined') {
+                log(`✅ Classifications: ${Object.keys(passwordClassifications).length} made`, 'info');
+            } else {
+                log('❌ passwordClassifications not defined', 'error');
+            }
+            
+            if (typeof assessmentSubmitted !== 'undefined') {
+                log(`✅ Assessment submitted: ${assessmentSubmitted}`, 'info');
+            } else {
+                log('❌ assessmentSubmitted not defined', 'error');
+            }
+        }
+
+        // Initialize background
+        try {
+            const canvas = document.getElementById('bg-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                function animate() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(0, 243, 255, 0.02)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+                    }
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+        } catch (error) {
+            log(`Background error: ${error.message}`, 'warning');
+        }
+
+        // Auto-start when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🎮 Submit Button Test loaded', 'success');
+                log('Click "Start Level 1" to begin testing', 'info');
+            }, 500);
+        });
+
+        // Override console.log to capture system logs
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('🔍')) {
+                log('System: ' + args.join(' '), 'info');
+            }
+        };
+
+        // Override console.error to capture errors
+        const originalError = console.error;
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log('System Error: ' + args.join(' '), 'error');
+        };
+    </script>
+</body>
+</html>
