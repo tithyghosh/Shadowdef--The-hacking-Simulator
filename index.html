@@ -7,7 +7,12 @@
     <meta name="description" content="SHADOWDEF - Cybersecurity Training Simulator">
     <title>SHADOWDEF - Hack the Invisible</title>
 
-    <!-- Social Login Scripts -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Social Login Scripts (Optional - Firebase handles these now) -->
     <script src="https://apis.google.com/js/platform.js" async defer></script>
     <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
 
@@ -758,6 +763,9 @@
                     switch (action) {
                         case 'mission-select':
                             game.showMissionCategories();
+                            break;
+                        case 'back':
+                            game.goBack();
                             break;
                         case 'back-to-categories':
                             game.showMissionCategories();

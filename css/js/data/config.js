@@ -51,12 +51,24 @@ export const CONFIG = {
     
     // Authentication
     AUTH: {
+        // Firebase Configuration (get these from Firebase Console)
+        FIREBASE_API_KEY: 'AIzaSyBRE1PmnP-f58u66E8W0fpJXRYcdejJ_h8',
+        FIREBASE_AUTH_DOMAIN: 'shadowdef-6a79f.firebaseapp.com',
+        FIREBASE_PROJECT_ID: 'shadowdef-6a79f',
+        FIREBASE_STORAGE_BUCKET: 'shadowdef-6a79f.firebasestorage.app',
+        FIREBASE_MESSAGING_SENDER_ID: '908068416658',
+        FIREBASE_APP_ID: '1:908068416658:web:5e744dd793d70937820a4b',
+        
+        // Legacy Social Login (optional, Firebase handles these)
         GOOGLE_CLIENT_ID: 'your-google-client-id-here',
         FACEBOOK_APP_ID: 'your-facebook-app-id-here',
+        
+        // Settings
         SESSION_DURATION: 24 * 60 * 60 * 1000, // 24 hours
         AUTO_SYNC_INTERVAL: 5 * 60 * 1000, // 5 minutes
         ENABLE_GUEST_MODE: true,
-        REQUIRE_EMAIL_VERIFICATION: false
+        REQUIRE_EMAIL_VERIFICATION: false,
+        USE_FIREBASE: true // Enable Firebase authentication
     },
     
     // Difficulty Modifiers

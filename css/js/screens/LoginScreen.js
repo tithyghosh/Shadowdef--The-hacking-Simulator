@@ -258,11 +258,16 @@ export class LoginScreen {
                 userData = await this.auth.loginWithFacebook();
             }
 
-            this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+            if (userData && userData.name) {
+                this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+            } else {
+                this.ui.showNotification(`Welcome! Login successful.`, 'success');
+            }
 
         } catch (error) {
             console.error(`${provider} login failed:`, error);
-            this.ui.showNotification(`${provider} login failed. Please try again.`, 'error');
+            const errorMessage = error.message || `${provider} login failed. Please try again.`;
+            this.ui.showNotification(errorMessage, 'error');
         } finally {
             this.hideLoading();
         }
