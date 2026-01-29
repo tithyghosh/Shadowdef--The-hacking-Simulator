@@ -4,6 +4,7 @@
 
 import { AuthManager } from '../core/AuthManager.js';
 import { UIManager } from '../ui/UIManager.js';
+import { CONFIG } from '../data/config.js';
 
 export class LoginScreen {
     constructor(game) {
@@ -60,15 +61,16 @@ export class LoginScreen {
                             </button>
                         </div>
                     </div>
-
+                    ${CONFIG.AUTH.ENABLE_GUEST_MODE ? `
                     <div class="guest-option">
                         <button class="btn-link" id="continue-as-guest">
                             Continue as Guest
                         </button>
                         <p class="guest-warning">
-                            ⚠️ Progress won't be saved without an account
+                            ?????? Progress won't be saved without an account
                         </p>
                     </div>
+                    ` : ''}
                 </div>
 
                 <div class="login-benefits">
