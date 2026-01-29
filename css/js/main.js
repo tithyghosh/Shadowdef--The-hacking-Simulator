@@ -25,30 +25,30 @@ let profileScreen = null;
  */
 function initLoading() {
     console.log('🎮 SHADOWDEF Starting...');
-    
+
     try {
         // Initialize loading manager
         loadingManager = new LoadingManager();
-        
+
         // Start loading process
         loadingManager.startLoading(() => {
             // Loading complete - check authentication
             console.log('🎯 Game ready - checking authentication...');
             checkAuthenticationState();
         });
-        
+
         // Initialize game systems during loading
         setTimeout(() => {
             initGameSystems();
         }, 500);
-        
+
     } catch (error) {
         console.error('❌ Loading initialization failed:', error);
-        
+
         // Fallback: skip loading and go directly to game initialization
         console.log('🔄 Falling back to direct initialization...');
         initGameSystems();
-        
+
         // Wait a bit then check authentication
         setTimeout(() => {
             checkAuthenticationState();
@@ -103,7 +103,7 @@ function initGameSystems() {
  */
 function checkAuthenticationState() {
     console.log('🔐 Checking authentication state...');
-    
+
     if (authManager.isUserAuthenticated()) {
         // User is logged in, load their progress and go to main menu
         game.loadProgress();
@@ -167,19 +167,19 @@ function setupEventListeners() {
         if (e.key === 'Escape') {
             if (game) game.handleEscape();
         }
-        
+
         // F11 for fullscreen
         if (e.key === 'F11') {
             e.preventDefault();
             toggleFullscreen();
         }
-        
+
         // Skip loading screen (development shortcut)
         if (e.key === 'Enter' && loadingManager && loadingManager.isLoadingInProgress()) {
             console.log('⏭️ Skipping loading screen...');
             loadingManager.skipLoading();
         }
-        
+
         // Force start loading if stuck (F5 key)
         if (e.key === 'F5' && loadingManager) {
             e.preventDefault();
@@ -267,6 +267,12 @@ function handleAction(action, event) {
         case 'back':
             game.goBack();
             break;
+        case 'back-to-categories':
+            game.showMissionCategories();
+            break;
+        case 'back-to-levels':
+            game.backToCurrentCategoryLevels();
+            break;
         case 'pause':
             game.pauseGame();
             break;
@@ -284,7 +290,7 @@ function handleAction(action, event) {
 function showCreditsStore() {
     const user = authManager.getCurrentUser();
     const credits = user?.gameStats?.credits || 0;
-    
+
     game.ui.showModal('Gaming Credits', `
         <div class="credits-store">
             <div class="current-credits">
@@ -357,19 +363,25 @@ function updateMainMenuStatus() {
     const user = authManager.getCurrentUser();
 
     if (isAuthenticated && user) {
-        // Update user info
-        if (userName) userName.textContent = user.name;
-        if (userStatus) userStatus.textContent = 'Logged in';
+        // Update user info - show logged in user's name
+        if (userName) userName.textContent = user.name || 'User';
+
+        // Hide status line when logged in
+        if (userStatus) {
+            userStatus.textContent = '';
+            userStatus.style.display = 'none';
+        }
+
         if (userAvatar) {
             if (user.avatar) {
                 userAvatar.innerHTML = `<img src="${user.avatar}" alt="${user.name}">`;
             } else {
-                userAvatar.textContent = user.name.charAt(0).toUpperCase();
+                userAvatar.textContent = (user.name || 'U').charAt(0).toUpperCase();
             }
         }
         if (loginLogoutBtn) {
             loginLogoutBtn.textContent = 'LOGOUT';
-            loginLogoutBtn.dataset.action = 'login';
+            loginLogoutBtn.dataset.action = 'login'; // Handler checks auth state
         }
 
         // Update stats
@@ -386,7 +398,10 @@ function updateMainMenuStatus() {
     } else {
         // Guest user
         if (userName) userName.textContent = 'Guest Player';
-        if (userStatus) userStatus.textContent = 'Not logged in';
+        if (userStatus) {
+            userStatus.textContent = 'Not logged in';
+            userStatus.style.display = ''; // Show status for guest users
+        }
         if (userAvatar) userAvatar.textContent = '👤';
         if (loginLogoutBtn) {
             loginLogoutBtn.textContent = 'LOGIN';
@@ -443,16 +458,16 @@ export function awardCredits(amount, reason = 'Game completion') {
     if (authManager && authManager.isUserAuthenticated()) {
         const currentStats = authManager.getUserStats();
         const newCredits = (currentStats.credits || 0) + amount;
-        
-        authManager.updateGameStats({ 
-            credits: newCredits 
+
+        authManager.updateGameStats({
+            credits: newCredits
         });
-        
+
         // Show notification
         if (game && game.ui) {
             game.ui.showNotification(`+${amount} credits earned! (${reason})`, 'success');
         }
-        
+
         console.log(`💰 Awarded ${amount} credits: ${reason}`);
     }
 }
@@ -466,26 +481,26 @@ export function awardExperience(xp, reason = 'Mission completion') {
         const currentXP = currentStats.experience || 0;
         const currentLevel = currentStats.level || 1;
         const newXP = currentXP + xp;
-        
+
         // Calculate new level
         const newLevel = Math.floor(newXP / 1000) + 1;
         const leveledUp = newLevel > currentLevel;
-        
-        authManager.updateGameStats({ 
+
+        authManager.updateGameStats({
             experience: newXP,
             level: newLevel
         });
-        
+
         // Show notifications
         if (game && game.ui) {
             game.ui.showNotification(`+${xp} XP earned! (${reason})`, 'success');
-            
+
             if (leveledUp) {
                 game.ui.showNotification(`🎉 Level Up! You are now level ${newLevel}!`, 'success', 5000);
                 awardCredits(100, 'Level up bonus');
             }
         }
-        
+
         console.log(`⭐ Awarded ${xp} XP: ${reason}`);
     }
 }
@@ -498,4 +513,4 @@ if (document.readyState === 'loading') {
 }
 
 // Export for debugging and game integration
-export { game, loadingManager, authManager, updateUserStats, awardCredits, awardExperience, updateMainMenuStatus };
+export { game, loadingManager, authManager, updateMainMenuStatus };
