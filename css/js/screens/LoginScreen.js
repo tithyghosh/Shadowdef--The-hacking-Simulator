@@ -72,17 +72,6 @@ export class LoginScreen {
                     </div>
                     ` : ''}
                 </div>
-
-                <div class="login-benefits">
-                    <h3>Why Create an Account?</h3>
-                    <ul class="benefits-list">
-                        <li>💾 Save progress across devices</li>
-                        <li>🏆 Track achievements and scores</li>
-                        <li>💰 Earn and keep gaming credits</li>
-                        <li>🎯 Unlock exclusive missions</li>
-                        <li>📊 View detailed statistics</li>
-                    </ul>
-                </div>
             </div>
         `;
 
