@@ -45,12 +45,13 @@
 }
 
 .login-container {
-    max-width: 1200px;
+    max-width: 720px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: var(--spacing-xl);
-    align-items: start;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    align-items: center;
+    margin: 0 auto;
     position: relative;
     z-index: 1;
 }
@@ -83,10 +84,11 @@
     background: var(--panel-bg);
     border: 1px solid rgba(0, 243, 255, 0.6);
     box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 0 1px rgba(255, 0, 110, 0.08);
-    padding: var(--spacing-xl);
+    padding: calc(var(--spacing-xl) + 6px);
     backdrop-filter: blur(10px);
     position: relative;
     overflow: hidden;
+    border-radius: 12px;
 }
 
 .login-content::before {
@@ -133,7 +135,7 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     border-bottom: 2px solid transparent;
-    border-radius: 6px 6px 0 0;
+    border-radius: 8px 8px 0 0;
 }
 
 .auth-tab.active {
@@ -175,6 +177,7 @@
     color: var(--text-primary);
     transition: all var(--transition-fast);
     box-sizing: border-box;
+    border-radius: 8px;
 }
 
 .form-group input:focus {
@@ -192,6 +195,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-lg);
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
 }
 
 .checkbox-label {
@@ -249,6 +254,7 @@
     justify-content: center;
     gap: var(--spacing-sm);
     box-shadow: 0 10px 30px rgba(0, 243, 255, 0.12);
+    border-radius: 10px;
 }
 
 .btn-loader {
@@ -316,6 +322,7 @@
     letter-spacing: 1px;
     cursor: pointer;
     transition: all var(--transition-fast);
+    border-radius: 10px;
 }
 
 .social-btn:hover {
@@ -349,40 +356,6 @@
     color: var(--cyber-orange);
     font-size: var(--font-size-sm);
     margin-top: var(--spacing-xs);
-}
-
-/* Login Benefits */
-.login-benefits {
-    background: rgba(6, 8, 24, 0.75);
-    border: 1px solid rgba(139, 92, 246, 0.5);
-    padding: var(--spacing-xl);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 35px rgba(139, 92, 246, 0.12);
-}
-
-.login-benefits h3 {
-    color: var(--cyber-pink);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--spacing-md);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.benefits-list {
-    list-style: none;
-    padding: 0;
-}
-
-.benefits-list li {
-    padding: var(--spacing-sm) 0;
-    color: var(--text-secondary);
-    font-size: var(--font-size-base);
-    border-bottom: 1px solid rgba(139, 92, 246, 0.25);
-}
-
-.benefits-list li:last-child {
-    border-bottom: none;
 }
 
 /* Profile Screen */
@@ -791,7 +764,6 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
     .login-container {
-        grid-template-columns: 1fr;
         max-width: 600px;
     }
     
@@ -805,6 +777,10 @@
 }
 
 @media (max-width: 768px) {
+    #login-screen {
+        padding: var(--spacing-lg);
+    }
+
     .profile-header {
         flex-direction: column;
         text-align: center;
@@ -831,6 +807,11 @@
 }
 
 @media (max-width: 480px) {
+    .login-content {
+        padding: var(--spacing-lg);
+        border-radius: 10px;
+    }
+
     .login-header .logo-text {
         font-size: 2rem;
         letter-spacing: 3px;
