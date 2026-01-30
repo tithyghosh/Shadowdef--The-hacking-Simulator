@@ -263,6 +263,7 @@ export class LoginScreen {
         try {
             const email = formData.get('email');
             const password = formData.get('password');
+            const rememberMe = !!document.getElementById('remember-me')?.checked;
 
             if (!email || !password) {
                 this.ui.showNotification('Please fill in all fields', 'error');
@@ -271,7 +272,7 @@ export class LoginScreen {
 
             this.showLoading('Signing in...');
 
-            const userData = await this.auth.loginWithEmail(email, password);
+            const userData = await this.auth.loginWithEmail(email, password, rememberMe);
             this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
 
         } catch (error) {
@@ -353,12 +354,21 @@ export class LoginScreen {
                 {
                     text: 'SEND RESET LINK',
                     class: 'btn-primary',
-                    onClick: () => {
+                    onClick: async () => {
                         const email = document.getElementById('reset-email').value;
-                        if (email) {
-                            this.ui.showNotification('Reset link sent to your email!', 'success');
-                        } else {
+                        if (!email) {
                             this.ui.showNotification('Please enter your email address', 'error');
+                            return;
+                        }
+
+                        try {
+                            this.showLoading('Sending reset link...');
+                            await this.auth.resetPassword(email);
+                            this.ui.showNotification('Reset link sent to your email!', 'success');
+                        } catch (error) {
+                            this.ui.showNotification(error.message || 'Failed to send reset link.', 'error');
+                        } finally {
+                            this.hideLoading();
                         }
                     }
                 },

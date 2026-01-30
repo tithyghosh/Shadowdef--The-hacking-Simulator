@@ -207,9 +207,17 @@ export class AuthManager {
     /**
      * Login with email and password (using Firebase)
      */
-    async loginWithEmail(email, password) {
+    async loginWithEmail(email, password, rememberMe = false) {
         try {
             if (this.useFirebase && this.firebaseAuth) {
+                // Apply persistence based on "Remember me"
+                if (this.firebaseAuth.setPersistence && window.firebase?.auth?.Auth?.Persistence) {
+                    const persistence = rememberMe
+                        ? window.firebase.auth.Auth.Persistence.LOCAL
+                        : window.firebase.auth.Auth.Persistence.SESSION;
+                    await this.firebaseAuth.setPersistence(persistence);
+                }
+
                 const result = await this.firebaseAuth.signInWithEmailAndPassword(email, password);
                 const firebaseUser = result.user;
                 
@@ -239,7 +247,7 @@ export class AuthManager {
                     provider: 'email',
                     token: response.token
                 };
-                await this.handleSuccessfulLogin(userData);
+                await this.handleSuccessfulLogin(userData, rememberMe);
                 return userData;
             }
         } catch (error) {
@@ -359,7 +367,7 @@ export class AuthManager {
     /**
      * Handle successful login (for localStorage fallback only)
      */
-    async handleSuccessfulLogin(userData) {
+    async handleSuccessfulLogin(userData, rememberMe = false) {
         this.currentUser = {
             ...userData,
             loginTime: Date.now(),
@@ -373,6 +381,7 @@ export class AuthManager {
         if (!this.useFirebase) {
             const sessionData = {
                 ...this.currentUser,
+                rememberMe: !!rememberMe,
                 sessionSaved: Date.now()
             };
             localStorage.setItem('shadowdef_user_session', JSON.stringify(sessionData));
@@ -443,8 +452,8 @@ export class AuthManager {
 
             const session = JSON.parse(sessionData);
             
-            // Check if session is still valid
-            if (Date.now() - session.loginTime > CONFIG.AUTH.SESSION_DURATION) {
+            // Check if session is still valid (skip expiry when "Remember me" was enabled)
+            if (!session.rememberMe && Date.now() - session.loginTime > CONFIG.AUTH.SESSION_DURATION) {
                 localStorage.removeItem('shadowdef_user_session');
                 return;
             }
@@ -801,6 +810,33 @@ export class AuthManager {
                 });
             }, 1000);
         });
+    }
+
+    /**
+     * Send password reset email
+     */
+    async resetPassword(email) {
+        const normalizedEmail = (email || '').toLowerCase().trim();
+        if (!normalizedEmail) {
+            throw new Error('Please enter your email address.');
+        }
+
+        if (this.useFirebase && this.firebaseAuth) {
+            try {
+                await this.firebaseAuth.sendPasswordResetEmail(normalizedEmail);
+                return true;
+            } catch (error) {
+                throw this.handleFirebaseError(error);
+            }
+        }
+
+        // Fallback: validate local user exists
+        const users = this.getLocalUsers();
+        if (!users[normalizedEmail]) {
+            throw new Error('No account found with this email address.');
+        }
+
+        throw new Error('Password reset is unavailable in offline mode. Please sign in on an online device.');
     }
 
     /**
