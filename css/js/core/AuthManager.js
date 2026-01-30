@@ -443,8 +443,8 @@ export class AuthManager {
 
             const session = JSON.parse(sessionData);
             
-            // Check if session is still valid (24 hours)
-            if (Date.now() - session.loginTime > 24 * 60 * 60 * 1000) {
+            // Check if session is still valid
+            if (Date.now() - session.loginTime > CONFIG.AUTH.SESSION_DURATION) {
                 localStorage.removeItem('shadowdef_user_session');
                 return;
             }
@@ -735,17 +735,32 @@ export class AuthManager {
     async mockEmailLogin(email, password) {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                // Simple validation
-                if (email && password.length >= 6) {
-                    resolve({
-                        userId: this.hashCode(email),
-                        name: email.split('@')[0],
-                        token: 'mock_token_' + Date.now(),
-                        avatar: null
-                    });
-                } else {
+                const normalizedEmail = (email || '').toLowerCase().trim();
+                const passwordHash = this.hashCode((password || '').trim());
+                const users = this.getLocalUsers();
+                const user = users[normalizedEmail];
+
+                if (!normalizedEmail || (password || '').length < 6) {
                     reject(new Error('Invalid email or password'));
+                    return;
                 }
+
+                if (!user) {
+                    reject(new Error('No account found with this email. Please register first.'));
+                    return;
+                }
+
+                if (user.passwordHash !== passwordHash) {
+                    reject(new Error('Incorrect password.'));
+                    return;
+                }
+
+                resolve({
+                    userId: user.userId,
+                    name: user.name || normalizedEmail.split('@')[0],
+                    token: 'mock_token_' + Date.now(),
+                    avatar: null
+                });
             }, 1000);
         });
     }
@@ -756,16 +771,60 @@ export class AuthManager {
     async mockEmailRegister(name, email, password) {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                if (name && email && password.length >= 6) {
-                    resolve({
-                        userId: this.hashCode(email),
-                        token: 'mock_token_' + Date.now()
-                    });
-                } else {
+                const normalizedEmail = (email || '').toLowerCase().trim();
+                const passwordHash = this.hashCode((password || '').trim());
+
+                if (!name || !normalizedEmail || (password || '').length < 6) {
                     reject(new Error('Invalid registration data'));
+                    return;
                 }
+
+                const users = this.getLocalUsers();
+                if (users[normalizedEmail]) {
+                    reject(new Error('An account with this email already exists.'));
+                    return;
+                }
+
+                const userId = this.hashCode(normalizedEmail);
+                users[normalizedEmail] = {
+                    userId,
+                    name,
+                    email: normalizedEmail,
+                    passwordHash,
+                    createdAt: Date.now()
+                };
+                this.saveLocalUsers(users);
+
+                resolve({
+                    userId,
+                    token: 'mock_token_' + Date.now()
+                });
             }, 1000);
         });
+    }
+
+    /**
+     * Get registered local users (fallback only)
+     */
+    getLocalUsers() {
+        try {
+            const raw = localStorage.getItem('shadowdef_users');
+            return raw ? JSON.parse(raw) : {};
+        } catch (error) {
+            console.error('Failed to read local users:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Save registered local users (fallback only)
+     */
+    saveLocalUsers(users) {
+        try {
+            localStorage.setItem('shadowdef_users', JSON.stringify(users || {}));
+        } catch (error) {
+            console.error('Failed to save local users:', error);
+        }
     }
 
     /**

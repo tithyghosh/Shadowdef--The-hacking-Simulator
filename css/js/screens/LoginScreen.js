@@ -51,12 +51,12 @@ export class LoginScreen {
                         
                         <div class="social-buttons">
                             <button class="social-btn google-btn" data-provider="google">
-                                <div class="social-icon">🔍</div>
+                                <div class="social-icon">G</div>
                                 <span>Google</span>
                             </button>
                             
                             <button class="social-btn facebook-btn" data-provider="facebook">
-                                <div class="social-icon">📘</div>
+                                <div class="social-icon">f</div>
                                 <span>Facebook</span>
                             </button>
                         </div>
@@ -67,7 +67,7 @@ export class LoginScreen {
                             Continue as Guest
                         </button>
                         <p class="guest-warning">
-                            ?????? Progress won't be saved without an account
+                            Your progress won't be saved without an account.
                         </p>
                     </div>
                     ` : ''}
@@ -142,14 +142,6 @@ export class LoginScreen {
                         <label for="register-confirm">Confirm Password</label>
                         <input type="password" id="register-confirm" name="confirmPassword" required 
                                placeholder="Confirm your password">
-                    </div>
-                    
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="agree-terms" required>
-                            <span class="checkmark"></span>
-                            I agree to the <a href="#" class="btn-link">Terms of Service</a>
-                        </label>
                     </div>
                     
                     <button type="submit" class="btn btn-primary auth-submit" id="register-submit">

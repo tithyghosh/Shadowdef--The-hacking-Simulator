@@ -199,38 +199,6 @@
     flex-wrap: wrap;
 }
 
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-}
-
-.checkmark {
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--cyber-blue);
-    background: transparent;
-    position: relative;
-    cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
-    content: '✓';
-    position: absolute;
-    top: -2px;
-    left: 2px;
-    color: var(--cyber-green);
-    font-size: 14px;
-}
-
 .btn-link {
     background: none;
     border: none;
