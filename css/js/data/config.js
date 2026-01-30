@@ -61,8 +61,6 @@ export const CONFIG = {
         
         // Legacy Social Login (optional, Firebase handles these)
         GOOGLE_CLIENT_ID: 'your-google-client-id-here',
-        FACEBOOK_APP_ID: 'your-facebook-app-id-here',
-        
         // Settings
         SESSION_DURATION: 24 * 60 * 60 * 1000, // 24 hours
         AUTO_SYNC_INTERVAL: 5 * 60 * 1000, // 5 minutes

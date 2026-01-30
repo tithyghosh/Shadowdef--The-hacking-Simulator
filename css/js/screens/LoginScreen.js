@@ -51,13 +51,16 @@ export class LoginScreen {
                         
                         <div class="social-buttons">
                             <button class="social-btn google-btn" data-provider="google">
-                                <div class="social-icon">G</div>
+                                <div class="social-icon">
+                                    <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.45 1.45 8.53 3.38l5.82-5.82C34.64 3.44 29.7 1.5 24 1.5 14.82 1.5 7.01 6.74 3.28 14.28l6.77 5.26C12.04 13.2 17.6 9.5 24 9.5z"/>
+                                        <path fill="#4285F4" d="M46.5 24.5c0-1.57-.14-3.08-.4-4.54H24v9.05h12.75c-.55 2.96-2.26 5.46-4.81 7.14l7.39 5.74C43.93 38.27 46.5 31.87 46.5 24.5z"/>
+                                        <path fill="#FBBC05" d="M10.05 28.54a14.8 14.8 0 0 1 0-9.08l-6.77-5.26a23.97 23.97 0 0 0 0 19.6l6.77-5.26z"/>
+                                        <path fill="#34A853" d="M24 46.5c6.2 0 11.4-2.05 15.2-5.56l-7.39-5.74c-2.05 1.38-4.68 2.2-7.81 2.2-6.4 0-11.96-3.7-13.95-9.04l-6.77 5.26C7.01 41.26 14.82 46.5 24 46.5z"/>
+                                        <path fill="none" d="M0 0h48v48H0z"/>
+                                    </svg>
+                                </div>
                                 <span>Google</span>
-                            </button>
-                            
-                            <button class="social-btn facebook-btn" data-provider="facebook">
-                                <div class="social-icon">f</div>
-                                <span>Facebook</span>
                             </button>
                         </div>
                     </div>
@@ -237,8 +240,6 @@ export class LoginScreen {
             let userData;
             if (provider === 'google') {
                 userData = await this.auth.loginWithGoogle();
-            } else if (provider === 'facebook') {
-                userData = await this.auth.loginWithFacebook();
             }
 
             if (userData && userData.name) {
