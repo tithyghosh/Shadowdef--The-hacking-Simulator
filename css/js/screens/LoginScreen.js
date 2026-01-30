@@ -32,13 +32,6 @@ export class LoginScreen {
                 </div>
 
                 <div class="login-content">
-                    <div class="auth-tabs">
-                        <button class="auth-tab ${this.currentMode === 'login' ? 'active' : ''}" 
-                                data-mode="login">LOGIN</button>
-                        <button class="auth-tab ${this.currentMode === 'register' ? 'active' : ''}" 
-                                data-mode="register">REGISTER</button>
-                    </div>
-
                     <div class="auth-form-container">
                         ${this.renderAuthForm()}
                     </div>
@@ -63,6 +56,7 @@ export class LoginScreen {
                             </button>
                         </div>
                     </div>
+                    ${this.renderSwitchText()}
                     ${CONFIG.AUTH.ENABLE_GUEST_MODE ? `
                     <div class="guest-option">
                         <button class="btn-link" id="continue-as-guest">
@@ -87,6 +81,7 @@ export class LoginScreen {
         if (this.currentMode === 'login') {
             return `
                 <form class="auth-form" id="login-form">
+                    <h2 class="auth-heading">Login in your account</h2>
                     <div class="form-group">
                         <label for="login-email">Email Address</label>
                         <input type="email" id="login-email" name="email" required 
@@ -122,6 +117,7 @@ export class LoginScreen {
         } else {
             return `
                 <form class="auth-form" id="register-form">
+                    <h2 class="auth-heading">Create Your Account</h2>
                     <div class="form-group">
                         <label for="register-name">Display Name</label>
                         <input type="text" id="register-name" name="name" required 
@@ -158,6 +154,27 @@ export class LoginScreen {
     }
 
     /**
+     * Render switch text between login/register
+     */
+    renderSwitchText() {
+        if (this.currentMode === 'login') {
+            return `
+                <p class="auth-switch-text">
+                    Don't you have an account?
+                    <button type="button" class="btn-link auth-switch" data-mode="register">Please register here.</button>
+                </p>
+            `;
+        }
+
+        return `
+            <p class="auth-switch-text">
+                Already have an account?
+                <button type="button" class="btn-link auth-switch" data-mode="login">Please login now.</button>
+            </p>
+        `;
+    }
+
+    /**
      * Setup event listeners
      */
     setupEventListeners() {
@@ -175,10 +192,10 @@ export class LoginScreen {
      * Setup form event listeners
      */
     setupFormListeners() {
-        // Tab switching
-        document.querySelectorAll('.auth-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
+        // Switch between login/register
+        document.querySelectorAll('.auth-switch').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const mode = e.currentTarget.dataset.mode;
                 if (mode !== this.currentMode) {
                     this.currentMode = mode;
                     this.render();
