@@ -28,7 +28,6 @@ export class LoginScreen {
                 <div class="login-header">
                     <div class="logo-container">
                         <div class="logo-text">SHADOWDEF</div>
-                        <div class="logo-subtitle">Secure Your Progress</div>
                     </div>
                 </div>
 
