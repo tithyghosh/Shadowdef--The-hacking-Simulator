@@ -51,12 +51,12 @@ export class LoginScreen {
                         
                         <div class="social-buttons">
                             <button class="social-btn google-btn" data-provider="google">
-                                <div class="social-icon">🔍</div>
+                                <div class="social-icon">G</div>
                                 <span>Google</span>
                             </button>
                             
                             <button class="social-btn facebook-btn" data-provider="facebook">
-                                <div class="social-icon">📘</div>
+                                <div class="social-icon">f</div>
                                 <span>Facebook</span>
                             </button>
                         </div>
@@ -67,21 +67,10 @@ export class LoginScreen {
                             Continue as Guest
                         </button>
                         <p class="guest-warning">
-                            ?????? Progress won't be saved without an account
+                            Your progress won't be saved without an account.
                         </p>
                     </div>
                     ` : ''}
-                </div>
-
-                <div class="login-benefits">
-                    <h3>Why Create an Account?</h3>
-                    <ul class="benefits-list">
-                        <li>💾 Save progress across devices</li>
-                        <li>🏆 Track achievements and scores</li>
-                        <li>💰 Earn and keep gaming credits</li>
-                        <li>🎯 Unlock exclusive missions</li>
-                        <li>📊 View detailed statistics</li>
-                    </ul>
                 </div>
             </div>
         `;
@@ -153,14 +142,6 @@ export class LoginScreen {
                         <label for="register-confirm">Confirm Password</label>
                         <input type="password" id="register-confirm" name="confirmPassword" required 
                                placeholder="Confirm your password">
-                    </div>
-                    
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="agree-terms" required>
-                            <span class="checkmark"></span>
-                            I agree to the <a href="#" class="btn-link">Terms of Service</a>
-                        </label>
                     </div>
                     
                     <button type="submit" class="btn btn-primary auth-submit" id="register-submit">
@@ -282,6 +263,7 @@ export class LoginScreen {
         try {
             const email = formData.get('email');
             const password = formData.get('password');
+            const rememberMe = !!document.getElementById('remember-me')?.checked;
 
             if (!email || !password) {
                 this.ui.showNotification('Please fill in all fields', 'error');
@@ -290,7 +272,7 @@ export class LoginScreen {
 
             this.showLoading('Signing in...');
 
-            const userData = await this.auth.loginWithEmail(email, password);
+            const userData = await this.auth.loginWithEmail(email, password, rememberMe);
             this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
 
         } catch (error) {
@@ -372,12 +354,21 @@ export class LoginScreen {
                 {
                     text: 'SEND RESET LINK',
                     class: 'btn-primary',
-                    onClick: () => {
+                    onClick: async () => {
                         const email = document.getElementById('reset-email').value;
-                        if (email) {
-                            this.ui.showNotification('Reset link sent to your email!', 'success');
-                        } else {
+                        if (!email) {
                             this.ui.showNotification('Please enter your email address', 'error');
+                            return;
+                        }
+
+                        try {
+                            this.showLoading('Sending reset link...');
+                            await this.auth.resetPassword(email);
+                            this.ui.showNotification('Reset link sent to your email!', 'success');
+                        } catch (error) {
+                            this.ui.showNotification(error.message || 'Failed to send reset link.', 'error');
+                        } finally {
+                            this.hideLoading();
                         }
                     }
                 },
