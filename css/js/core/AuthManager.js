@@ -168,43 +168,6 @@ export class AuthManager {
     }
 
     /**
-     * Login with Facebook (using Firebase)
-     */
-    async loginWithFacebook() {
-        try {
-            if (!this.useFirebase || !this.firebaseAuth) {
-                throw new Error('Firebase Auth not initialized');
-            }
-
-            const provider = new window.firebase.auth.FacebookAuthProvider();
-            provider.addScope('email');
-            
-            const result = await this.firebaseAuth.signInWithPopup(provider);
-            const firebaseUser = result.user;
-            
-            // Process login immediately
-            await this.handleFirebaseAuthState(firebaseUser);
-            
-            // Wait a bit to ensure currentUser is set
-            let attempts = 0;
-            while (!this.currentUser && attempts < 10) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!this.currentUser) {
-                throw new Error('Failed to process user data');
-            }
-            
-            return this.currentUser;
-
-        } catch (error) {
-            console.error('Facebook login failed:', error);
-            throw this.handleFirebaseError(error);
-        }
-    }
-
-    /**
      * Login with email and password (using Firebase)
      */
     async loginWithEmail(email, password, rememberMe = false) {

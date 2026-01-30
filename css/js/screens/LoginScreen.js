@@ -54,11 +54,6 @@ export class LoginScreen {
                                 <div class="social-icon">G</div>
                                 <span>Google</span>
                             </button>
-                            
-                            <button class="social-btn facebook-btn" data-provider="facebook">
-                                <div class="social-icon">f</div>
-                                <span>Facebook</span>
-                            </button>
                         </div>
                     </div>
                     ${CONFIG.AUTH.ENABLE_GUEST_MODE ? `
@@ -237,8 +232,6 @@ export class LoginScreen {
             let userData;
             if (provider === 'google') {
                 userData = await this.auth.loginWithGoogle();
-            } else if (provider === 'facebook') {
-                userData = await this.auth.loginWithFacebook();
             }
 
             if (userData && userData.name) {
