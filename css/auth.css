@@ -29,19 +29,20 @@
 
 #login-screen::before {
     background:
-        radial-gradient(900px 400px at 80% 10%, rgba(0, 243, 255, 0.12), transparent 60%),
-        radial-gradient(600px 300px at 15% 85%, rgba(255, 0, 110, 0.12), transparent 65%),
-        linear-gradient(120deg, rgba(6, 8, 24, 0.7), rgba(10, 14, 39, 0.85));
-    opacity: 0.9;
+        radial-gradient(800px 500px at 75% 20%, rgba(0, 243, 255, 0.10), transparent 70%),
+        radial-gradient(700px 420px at 25% 80%, rgba(255, 0, 110, 0.10), transparent 72%),
+        radial-gradient(900px 600px at 50% 50%, rgba(10, 18, 44, 0.55), rgba(6, 8, 24, 0.92)),
+        linear-gradient(135deg, rgba(6, 8, 24, 0.75), rgba(10, 14, 39, 0.9));
+    opacity: 0;
 }
 
 #login-screen::after {
     background-image:
         linear-gradient(rgba(0, 243, 255, 0.08) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0, 243, 255, 0.08) 1px, transparent 1px);
-    background-size: 80px 80px, 80px 80px;
-    mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 70%);
-    opacity: 0.25;
+    background-size: 90px 90px, 90px 90px;
+    mask-image: radial-gradient(circle at 50% 50%, black 10%, transparent 75%);
+    opacity: 0;
 }
 
 .login-container {
@@ -49,7 +50,7 @@
     width: 100%;
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md);
     align-items: center;
     margin: 0 auto;
     position: relative;
@@ -58,7 +59,7 @@
 
 .login-header {
     text-align: center;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
 }
 
 .login-header .logo-text {
@@ -81,11 +82,11 @@
 }
 
 .login-content {
-    background: var(--panel-bg);
+    background: rgba(10, 14, 39, 0.96);
     border: 1px solid rgba(0, 243, 255, 0.6);
     box-shadow: 0 0 30px rgba(0, 243, 255, 0.15), inset 0 0 0 1px rgba(255, 0, 110, 0.08);
     padding: calc(var(--spacing-xl) + 6px);
-    backdrop-filter: blur(10px);
+    backdrop-filter: none;
     position: relative;
     overflow: hidden;
     border-radius: 12px;
@@ -152,6 +153,19 @@
 /* Auth Form */
 .auth-form {
     margin-bottom: var(--spacing-lg);
+}
+
+#register-form {
+    margin-top: var(--spacing-lg);
+}
+
+.auth-heading {
+    text-align: center;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    letter-spacing: 1px;
 }
 
 .form-group {
@@ -306,6 +320,19 @@
 .google-btn:hover {
     background: rgba(66, 133, 244, 0.1);
     border-color: #4285f4;
+}
+
+.auth-switch-text {
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: var(--spacing-sm);
+}
+
+.auth-switch-text .btn-link {
+    padding: 0;
+    margin-left: 4px;
+    font-size: inherit;
 }
 
 /* Guest Option */
@@ -719,6 +746,28 @@
 }
 
 /* Responsive Design */
+@media (min-width: 1200px) {
+    #login-screen {
+        padding: calc(var(--spacing-xl) * 1.5);
+    }
+
+    .login-container {
+        max-width: 1100px;
+        gap: calc(var(--spacing-lg) + 8px);
+    }
+
+    .login-header .logo-text {
+        font-size: 3.4rem;
+        letter-spacing: 7px;
+    }
+
+    .login-content {
+        width: min(34vw, 520px);
+        margin: 0 auto;
+        padding: calc(var(--spacing-lg) + 6px);
+    }
+}
+
 @media (max-width: 1024px) {
     .login-container {
         max-width: 600px;
@@ -736,6 +785,19 @@
 @media (max-width: 768px) {
     #login-screen {
         padding: var(--spacing-lg);
+    }
+
+    .login-content {
+        padding: var(--spacing-lg);
+    }
+
+    .auth-tab {
+        font-size: var(--font-size-base);
+    }
+
+    .form-options {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .profile-header {
@@ -765,8 +827,18 @@
 
 @media (max-width: 480px) {
     .login-content {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         border-radius: 10px;
+    }
+
+    .auth-tabs {
+        gap: var(--spacing-xs);
+    }
+
+    .auth-tab {
+        padding: var(--spacing-sm);
+        font-size: var(--font-size-sm);
+        letter-spacing: 0.5px;
     }
 
     .login-header .logo-text {
