@@ -25,6 +25,7 @@ export class LoginScreen {
 
         loginContainer.innerHTML = `
             <div class="login-container">
+                <button class="back-btn" data-action="back">← BACK</button>
                 <div class="login-header">
                     <div class="logo-container">
                         <div class="logo-text">SHADOWDEF</div>
