@@ -431,6 +431,11 @@ export class Game {
         } else if (currentScreen === 'game-screen') {
             // Use the new back to levels functionality
             this.backToCurrentCategoryLevels();
+        } else {
+            const didGoBack = this.screens.goBack();
+            if (!didGoBack && this.ui) {
+                this.ui.showNotification('No previous screen', 'info');
+            }
         }
     }
 
