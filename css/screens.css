@@ -363,8 +363,11 @@
     border: 1px solid var(--panel-border);
     color: var(--text-primary);
     padding: 6px 10px;
+    font-family: 'Lucida Console', 'Consolas', var(--font-mono);
     font-size: var(--font-size-sm);
-    letter-spacing: 1px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
@@ -1627,6 +1630,8 @@
     50% { transform: translateY(0); opacity: 0.8; }
     100% { transform: translateY(35%); opacity: 0.2; }
 }
+
+
 
 
 
