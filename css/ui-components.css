@@ -17,6 +17,7 @@
     position: relative;
     overflow: hidden;
     white-space: nowrap;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .btn::before {
@@ -60,6 +61,65 @@
     box-shadow: none;
 }
 
+.btn.nav-icon {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    text-indent: -9999px;
+    overflow: hidden;
+    border-radius: 12px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn.nav-icon::before {
+    content: '🔐';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-indent: 0;
+    font-size: 1.4rem;
+    color: var(--cyber-blue);
+    background: transparent;
+    transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.btn.nav-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    right: calc(100% + 10px);
+    transform: translateY(-50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-size: var(--font-size-sm);
+    letter-spacing: 1px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    z-index: 5;
+}
+
+.btn.nav-icon:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-2px);
+}
+
+.btn.nav-icon:hover {
+    box-shadow: 0 0 18px rgba(0, 243, 255, 0.35);
+    transform: translateY(-2px);
+}
+
+.btn.nav-icon:hover::before {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 6px rgba(0, 243, 255, 0.6));
+}
+
 /* Button Variants */
 .btn-primary {
     border-color: var(--cyber-pink);
@@ -101,13 +161,14 @@
     font-family: var(--font-mono);
     text-transform: uppercase;
     z-index: 1000;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .back-btn:hover {
     border-color: var(--cyber-blue);
     color: var(--cyber-blue);
     transform: translateX(-3px);
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.35);
 }
 
 /* Panels */
@@ -241,13 +302,35 @@ input[type="checkbox"] {
     animation: fadeIn var(--transition-normal);
 }
 
+.modal.modal-panel {
+    justify-content: flex-end;
+    align-items: stretch;
+    background: rgba(5, 8, 20, 0.65);
+}
+
+.modal.modal-panel .modal-content {
+    width: min(420px, 92vw);
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    transform: translateX(100%);
+    transition: transform 0.35s ease;
+    text-align: left;
+    padding: var(--spacing-lg);
+    animation: none;
+}
+
+.modal.modal-panel.active .modal-content {
+    transform: translateX(0);
+}
+
 .modal-content {
     background: var(--panel-bg);
     border: 3px solid var(--cyber-pink);
     padding: var(--spacing-xl);
     max-width: 90%;
     max-height: 90%;
-    overflow-y: auto;
+    overflow: hidden;
     text-align: center;
     animation: modalSlideIn 0.4s ease;
     box-shadow: var(--shadow-lg), var(--glow-pink);
@@ -449,6 +532,18 @@ input[type="checkbox"] {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn,
+    .menu-card,
+    .menu-card.nav-icon,
+    .btn.nav-icon,
+    .back-btn,
+    .card-icon {
+        transition: none !important;
+        animation: none !important;
+    }
 }
 
 @keyframes glitch {

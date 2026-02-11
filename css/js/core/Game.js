@@ -518,7 +518,7 @@ export class Game {
                 
                 <button class="btn btn-primary" onclick="game.ui.closeModal()">SAVE & CLOSE</button>
             </div>
-        `);
+        `, { panel: true, panelPosition: 'right' });
 
         // Setup settings event listeners
         this.setupSettingsListeners();
@@ -630,7 +630,7 @@ export class Game {
                 </p>
                 <button class="btn" onclick="game.ui.closeModal()" style="margin-top: 30px;">CLOSE</button>
             </div>
-        `);
+        `, { panel: true, panelPosition: 'right' });
     }
 
     /**
