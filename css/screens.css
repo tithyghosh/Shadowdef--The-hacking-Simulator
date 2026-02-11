@@ -318,6 +318,7 @@
     text-align: center;
     border-radius: 14px;
     transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+    overflow: visible;
 }
 
 .menu-card.nav-icon .card-content {
@@ -396,6 +397,7 @@
 .menu-card.nav-icon:hover {
     transform: translateY(-4px) scale(0.97);
     box-shadow: 0 0 18px rgba(0, 243, 255, 0.35);
+    z-index: 10;
 }
 
 .menu-card.nav-icon:hover .card-icon {
@@ -1625,6 +1627,8 @@
     50% { transform: translateY(0); opacity: 0.8; }
     100% { transform: translateY(35%); opacity: 0.2; }
 }
+
+
 
 
 
