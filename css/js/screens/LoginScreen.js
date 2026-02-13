@@ -405,6 +405,11 @@ export class LoginScreen {
         // Transition to main menu
         setTimeout(() => {
             this.game.screens.showScreen('main-menu');
+            if (typeof window.updateMainMenuStatus === 'function') {
+                window.updateMainMenuStatus();
+                setTimeout(() => window.updateMainMenuStatus(), 150);
+                setTimeout(() => window.updateMainMenuStatus(), 500);
+            }
         }, 1000);
     }
 
@@ -414,6 +419,7 @@ export class LoginScreen {
     handleLogout() {
         // Return to login screen
         this.game.screens.showScreen('login-screen');
+        this.render();
     }
 
     /**

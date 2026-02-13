@@ -108,11 +108,13 @@ function checkAuthenticationState() {
         // User is logged in, load their progress and go to main menu
         game.loadProgress();
         game.screens.showScreen('main-menu');
+        syncAuthUiWithRetry();
         console.log('👤 User authenticated, proceeding to main menu');
     } else {
         // No user logged in, show login screen
         game.screens.showScreen('login-screen');
         loginScreen.render();
+        syncAuthUiWithRetry();
         console.log('🔐 No authentication, showing login screen');
     }
 }
@@ -130,6 +132,19 @@ function setupEventListeners() {
         handleAction(action, e);
     });
 
+    // Keep login/logout tooltip and icon in sync right before interaction
+    document.addEventListener('mouseenter', (e) => {
+        if (e.target.closest('#login-logout-btn')) {
+            updateMainMenuStatus();
+        }
+    }, true);
+
+    document.addEventListener('focusin', (e) => {
+        if (e.target.closest('#login-logout-btn')) {
+            updateMainMenuStatus();
+        }
+    });
+
     // Authentication event listeners
     document.addEventListener('shadowdef:auth:login', (e) => {
         console.log('🎉 User logged in:', e.detail.name);
@@ -144,21 +159,23 @@ function setupEventListeners() {
             game.audio.setSfxVolume(userPrefs.sfxVolume);
         }
         // Update main menu status
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     document.addEventListener('shadowdef:auth:logout', () => {
         console.log('👋 User logged out');
         // Clear any game state and return to login
         game.state.resetProgress();
+        game.screens.showScreen('login-screen');
+        loginScreen.render();
         // Update main menu status
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     document.addEventListener('shadowdef:auth:statsUpdate', (e) => {
         console.log('📊 User stats updated:', e.detail);
         // Update main menu status when stats change
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     // Keyboard shortcuts
@@ -236,8 +253,13 @@ function handleAction(action, event) {
             game.showMissionSelect();
             break;
         case 'profile':
-            game.screens.showScreen('profile-screen');
-            profileScreen.render();
+            if (authManager.isUserAuthenticated()) {
+                game.screens.showScreen('profile-screen');
+                profileScreen.render();
+            } else {
+                game.screens.showScreen('login-screen');
+                loginScreen.render();
+            }
             break;
         case 'credits-store':
             showCreditsStore();
@@ -249,6 +271,7 @@ function handleAction(action, event) {
             game.showCredits();
             break;
         case 'login':
+            syncLoginLogoutButtonState();
             if (authManager.isUserAuthenticated()) {
                 // User is logged in, show logout confirmation
                 game.ui.showConfirm(
@@ -347,12 +370,56 @@ function showCreditsStore() {
 /**
  * Update main menu user status and stats
  */
-function updateMainMenuStatus() {
-    const userInfo = document.getElementById('user-info');
-    const userName = document.getElementById('user-name');
-    const userStatus = document.getElementById('user-status');
-    const userAvatar = document.getElementById('user-avatar');
+const LOGIN_ICON_SVG = `
+    <svg class="icon-svg" viewBox="0 0 24 24">
+        <path d="M14 4h7v16h-7"></path>
+        <path d="M3 12h10"></path>
+        <path d="m9 8 4 4-4 4"></path>
+    </svg>
+`;
+
+const LOGOUT_ICON_SVG = `
+    <svg class="icon-svg" viewBox="0 0 24 24">
+        <path d="M12 4v7"></path>
+        <path d="M7.5 6.2a8 8 0 1 0 9 0"></path>
+    </svg>
+`;
+
+function setLoginButtonIcon(button, iconSvg) {
+    const iconContainer = button?.querySelector('.card-icon');
+    if (iconContainer) {
+        iconContainer.innerHTML = iconSvg;
+    }
+}
+
+function syncLoginLogoutButtonState() {
+    if (!authManager) return;
     const loginLogoutBtn = document.getElementById('login-logout-btn');
+    if (!loginLogoutBtn) return;
+
+    if (authManager.isUserAuthenticated()) {
+        loginLogoutBtn.dataset.tooltip = 'Logout';
+        loginLogoutBtn.removeAttribute('title');
+        loginLogoutBtn.setAttribute('aria-label', 'Logout');
+        loginLogoutBtn.classList.add('is-logout');
+        setLoginButtonIcon(loginLogoutBtn, LOGOUT_ICON_SVG);
+    } else {
+        loginLogoutBtn.dataset.tooltip = 'Login';
+        loginLogoutBtn.removeAttribute('title');
+        loginLogoutBtn.setAttribute('aria-label', 'Login');
+        loginLogoutBtn.classList.remove('is-logout');
+        setLoginButtonIcon(loginLogoutBtn, LOGIN_ICON_SVG);
+    }
+}
+
+function syncAuthUiWithRetry() {
+    updateMainMenuStatus();
+    setTimeout(() => updateMainMenuStatus(), 150);
+    setTimeout(() => updateMainMenuStatus(), 500);
+}
+
+function updateMainMenuStatus() {
+    const profileBtn = document.querySelector('[data-action="profile"]');
     const profileStats = document.getElementById('profile-stats');
     const creditsDisplay = document.getElementById('credits-display');
     const missionProgress = document.getElementById('mission-progress');
@@ -361,53 +428,34 @@ function updateMainMenuStatus() {
 
     const isAuthenticated = authManager.isUserAuthenticated();
     const user = authManager.getCurrentUser();
+    syncLoginLogoutButtonState();
 
-    if (isAuthenticated && user) {
-        // Update user info - show logged in user's name
-        if (userName) userName.textContent = user.name || 'User';
-
-        // Hide status line when logged in
-        if (userStatus) {
-            userStatus.textContent = '';
-            userStatus.style.display = 'none';
-        }
-
-        if (userAvatar) {
-            if (user.avatar) {
-                userAvatar.innerHTML = `<img src="${user.avatar}" alt="${user.name}">`;
-            } else {
-                userAvatar.textContent = (user.name || 'U').charAt(0).toUpperCase();
-            }
-        }
-        if (loginLogoutBtn) {
-            loginLogoutBtn.textContent = 'LOGOUT';
-            loginLogoutBtn.dataset.action = 'login'; // Handler checks auth state
+    if (isAuthenticated) {
+        if (profileBtn) {
+            profileBtn.dataset.tooltip = 'Profile';
+            profileBtn.setAttribute('aria-label', 'Profile');
         }
 
         // Update stats
-        const stats = user.gameStats || {};
-        if (profileStats) {
-            profileStats.textContent = `Level ${stats.level || 1} • ${stats.credits || 0} Credits`;
-        }
-        if (creditsDisplay) {
-            creditsDisplay.textContent = `${stats.credits || 0} Credits`;
-        }
-        if (missionProgress) {
-            missionProgress.textContent = `${stats.missionsCompleted || 0}/20 Completed`;
+        if (user) {
+            const stats = user.gameStats || {};
+            if (profileStats) {
+                profileStats.textContent = `Level ${stats.level || 1} - ${stats.credits || 0} Credits`;
+            }
+            if (creditsDisplay) {
+                creditsDisplay.textContent = `${stats.credits || 0} Credits`;
+            }
+            if (missionProgress) {
+                missionProgress.textContent = `${stats.missionsCompleted || 0}/20 Completed`;
+            }
         }
     } else {
-        // Guest user
-        if (userName) userName.textContent = 'Guest Player';
-        if (userStatus) {
-            userStatus.textContent = 'Not logged in';
-            userStatus.style.display = ''; // Show status for guest users
+        if (profileBtn) {
+            profileBtn.dataset.tooltip = 'Profile (Login Required)';
+            profileBtn.setAttribute('aria-label', 'Profile (Login Required)');
         }
-        if (userAvatar) userAvatar.textContent = '👤';
-        if (loginLogoutBtn) {
-            loginLogoutBtn.textContent = 'LOGIN';
-            loginLogoutBtn.dataset.action = 'login';
-        }
-        if (profileStats) profileStats.textContent = 'Level 1 • 0 Credits';
+
+        if (profileStats) profileStats.textContent = 'Login to view profile';
         if (creditsDisplay) creditsDisplay.textContent = '0 Credits';
         if (missionProgress) missionProgress.textContent = '0/20 Completed';
     }
@@ -514,3 +562,4 @@ if (document.readyState === 'loading') {
 
 // Export for debugging and game integration
 export { game, loadingManager, authManager, updateMainMenuStatus };
+
