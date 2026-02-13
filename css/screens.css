@@ -200,6 +200,203 @@
     text-transform: uppercase;
 }
 
+/* Hologram logo treatment */
+.logo.holo-logo,
+.logo-text.holo-logo {
+    position: relative;
+    display: inline-block;
+    transform-style: preserve-3d;
+    will-change: transform, filter, text-shadow, opacity;
+    animation:
+        holoTilt 8s ease-in-out infinite,
+        holoPulse 3.6s ease-in-out infinite;
+}
+
+.logo.holo-logo::after,
+.logo-text.holo-logo::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -45%;
+    width: 35%;
+    height: 140%;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+        110deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.06) 35%,
+        rgba(0, 243, 255, 0.42) 50%,
+        rgba(255, 255, 255, 0.08) 65%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    mix-blend-mode: screen;
+    transform: skewX(-18deg);
+    animation: holoReflectSweep 4.8s ease-in-out infinite;
+}
+
+.logo.holo-logo.holo-flicker,
+.logo-text.holo-logo.holo-flicker {
+    animation:
+        holoTilt 8s ease-in-out infinite,
+        holoPulse 3.6s ease-in-out infinite,
+        holoJolt 130ms steps(2, end) 1;
+    filter:
+        drop-shadow(-1px 0 rgba(0, 243, 255, 0.65))
+        drop-shadow(1px 0 rgba(255, 0, 110, 0.55))
+        brightness(1.12)
+        saturate(1.2);
+    opacity: 0.94;
+}
+
+.menu-category:nth-child(1) .mission-logo.holo-logo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+    isolation: isolate;
+}
+
+.menu-category:nth-child(1) .mission-logo.holo-logo img {
+    width: min(460px, 66vw);
+    height: auto;
+    will-change: transform, filter, opacity;
+    transform-origin: center;
+    animation:
+        holoTilt 10s ease-in-out infinite,
+        holoPulseImage 4.2s ease-in-out infinite,
+        holoFlickerLoop 7.2s linear infinite;
+    filter:
+        drop-shadow(0 0 14px rgba(0, 243, 255, 0.5))
+        drop-shadow(0 0 22px rgba(0, 243, 255, 0.28))
+        drop-shadow(0 0 12px rgba(255, 0, 110, 0.22));
+}
+
+.menu-category:nth-child(1) .mission-logo.holo-logo::after {
+    content: '';
+    position: absolute;
+    top: -6%;
+    left: -40%;
+    width: 32%;
+    height: 108%;
+    pointer-events: none;
+    opacity: 0.03;
+    background: linear-gradient(
+        110deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.08) 35%,
+        rgba(0, 243, 255, 0.34) 50%,
+        rgba(255, 255, 255, 0.1) 65%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    mix-blend-mode: screen;
+    transform: skewX(-18deg);
+    animation: holoReflectSweep 6.2s ease-in-out infinite;
+}
+
+.menu-category:nth-child(1) .mission-logo.holo-logo.holo-flicker img {
+    animation:
+        holoTilt 10s ease-in-out infinite,
+        holoPulseImage 4.2s ease-in-out infinite,
+        holoJolt 190ms steps(2, end) 1;
+    filter:
+        drop-shadow(-1px 0 rgba(0, 243, 255, 0.7))
+        drop-shadow(1px 0 rgba(255, 0, 110, 0.6))
+        drop-shadow(0 0 20px rgba(0, 243, 255, 0.45))
+        brightness(1.1)
+        saturate(1.2);
+    opacity: 0.94;
+}
+
+@keyframes holoTilt {
+    0%, 100% {
+        transform: perspective(900px) rotateX(2.3deg) rotateY(-2.1deg);
+    }
+    50% {
+        transform: perspective(900px) rotateX(-2deg) rotateY(2.2deg);
+    }
+}
+
+@keyframes holoPulse {
+    0%, 100% {
+        text-shadow:
+            0 0 14px rgba(0, 243, 255, 0.45),
+            0 0 26px rgba(0, 243, 255, 0.26),
+            0 0 42px rgba(255, 0, 110, 0.16);
+        filter: brightness(1);
+    }
+    50% {
+        text-shadow:
+            0 0 19px rgba(0, 243, 255, 0.68),
+            0 0 34px rgba(0, 243, 255, 0.37),
+            0 0 55px rgba(255, 0, 110, 0.22);
+        filter: brightness(1.08);
+    }
+}
+
+@keyframes holoPulseImage {
+    0%, 100% {
+        transform: perspective(900px) rotateX(2.3deg) rotateY(-2.7deg) scale(1);
+    }
+    50% {
+        transform: perspective(900px) rotateX(-2.1deg) rotateY(2.6deg) scale(1.018);
+    }
+}
+
+@keyframes holoReflectSweep {
+    0%, 22% {
+        left: -45%;
+        opacity: 0;
+    }
+    26% {
+        opacity: 0.13;
+    }
+    40% {
+        left: 120%;
+        opacity: 0.34;
+    }
+    48%, 100% {
+        opacity: 0;
+    }
+}
+
+@keyframes holoJolt {
+    0% { transform: perspective(900px) rotateX(2.3deg) rotateY(-2.1deg) translateX(0); }
+    35% { transform: perspective(900px) rotateX(2.3deg) rotateY(-2.1deg) translateX(-0.8px); }
+    70% { transform: perspective(900px) rotateX(2.3deg) rotateY(-2.1deg) translateX(0.8px); }
+    100% { transform: perspective(900px) rotateX(2.3deg) rotateY(-2.1deg) translateX(0); }
+}
+
+@keyframes holoFlickerLoop {
+    0%, 90% {
+        opacity: 1;
+        filter:
+            drop-shadow(0 0 14px rgba(0, 243, 255, 0.5))
+            drop-shadow(0 0 22px rgba(0, 243, 255, 0.28))
+            drop-shadow(0 0 12px rgba(255, 0, 110, 0.22));
+    }
+    91% {
+        opacity: 0.93;
+        filter:
+            drop-shadow(-1px 0 rgba(0, 243, 255, 0.68))
+            drop-shadow(1px 0 rgba(255, 0, 110, 0.56))
+            drop-shadow(0 0 18px rgba(0, 243, 255, 0.42))
+            brightness(1.08)
+            saturate(1.16);
+    }
+    92% {
+        opacity: 0.99;
+    }
+    93% {
+        opacity: 0.93;
+    }
+    94%, 100% {
+        opacity: 1;
+    }
+}
+
 /* Menu Grid Layout */
 .menu-grid {
     position: absolute;

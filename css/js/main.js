@@ -19,6 +19,29 @@ let loadingManager = null;
 let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
+let hologramFlickerTimer = null;
+
+function setupHologramLogos() {
+    const logos = document.querySelectorAll('.logo, .logo-text, .mission-logo');
+    if (!logos.length) return;
+
+    logos.forEach((logo) => {
+        logo.classList.add('holo-logo');
+    });
+
+    const scheduleFlicker = () => {
+        const delay = 5000 + Math.random() * 3000; // 5-8 seconds
+        hologramFlickerTimer = setTimeout(() => {
+            logos.forEach((logo) => logo.classList.add('holo-flicker'));
+            setTimeout(() => {
+                logos.forEach((logo) => logo.classList.remove('holo-flicker'));
+                scheduleFlicker();
+            }, 320);
+        }, delay);
+    };
+
+    scheduleFlicker();
+}
 
 /**
  * Initialize the loading screen first
@@ -61,6 +84,8 @@ function initLoading() {
  */
 function initGameSystems() {
     try {
+        setupHologramLogos();
+
         // Initialize animated background
         background = new Background('bg-canvas');
         background.start();
@@ -214,6 +239,10 @@ function setupEventListeners() {
 
     // Before unload - save progress
     window.addEventListener('beforeunload', () => {
+        if (hologramFlickerTimer) {
+            clearTimeout(hologramFlickerTimer);
+            hologramFlickerTimer = null;
+        }
         if (game) {
             game.saveProgress();
         }
