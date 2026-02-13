@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -82,7 +82,7 @@
                 <div class="menu-category">
 <div class="menu-cards">
                         
-                            <div class="mission-logo">
+                            <div class="mission-logo holo-logo">
                                 <img src="assets/file.svg" alt="Shadowdef Logo">
                             </div>
                         
@@ -92,8 +92,18 @@
                 <div class="menu-category">
                     <h3 class="category-title">Player Hub</h3>
                     <div class="menu-cards">
+                        <button class="menu-card login-card nav-icon" id="login-logout-btn" data-action="login" data-tooltip="Login" aria-label="Login">
+                            <div class="card-icon" aria-hidden="true">
+                                <svg class="icon-svg" viewBox="0 0 24 24">
+                                    <path d="M14 4h7v16h-7"></path>
+                                    <path d="M3 12h10"></path>
+                                    <path d="m9 8 4 4-4 4"></path>
+                                </svg>
+                            </div>
+                        </button>
+
                         <button class="menu-card profile-card nav-icon" data-action="profile" data-tooltip="Profile">
-                            <div class="card-icon">??</div>
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><circle cx="12" cy="10" r="2.5"></circle><path d="M8.5 16c.9-1.5 2-2.2 3.5-2.2s2.6.7 3.5 2.2"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">PROFILE</div>
                                 <div class="card-subtitle">View stats and achievements</div>
@@ -102,7 +112,7 @@
                         </button>
 
                         <button class="menu-card credits-card nav-icon" data-action="credits-store" data-tooltip="Credits">
-                            <div class="card-icon">??</div>
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><path d="M12 8v8"></path><path d="M9.5 10.2c.6-.8 1.4-1.2 2.5-1.2 1.4 0 2.5.8 2.5 1.9 0 1-.8 1.6-2.3 2l-.4.1c-1.7.5-2.4 1.1-2.4 2.2 0 1.2 1.1 2 2.7 2 1.1 0 2-.4 2.6-1.2"></path><path d="M5 5l1.2 1.2"></path><path d="M19 5l-1.2 1.2"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">CREDITS</div>
                                 <div class="card-subtitle">Manage your gaming credits</div>
@@ -116,7 +126,7 @@
                     <h3 class="category-title">System</h3>
                     <div class="menu-cards">
                         <button class="menu-card settings-card nav-icon" data-action="settings" data-tooltip="Settings">
-                            <div class="card-icon">??</div>
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"></circle><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.8 1.8 0 1 1-3.6 0v-.1a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.8 1.8 0 1 1 0-3.6h.1a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a1.8 1.8 0 1 1 3.6 0v.1a1 1 0 0 0 .6.9h.1a1 1 0 0 0 1.1-.2l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6H20a1.8 1.8 0 1 1 0 3.6h-.1a1 1 0 0 0-.9.6Z"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">SETTINGS</div>
                                 <div class="card-subtitle">Audio, preferences & account</div>
@@ -124,7 +134,7 @@
                         </button>
 
                         <button class="menu-card about-card nav-icon" data-action="credits" data-tooltip="About">
-                            <div class="card-icon">??</div>
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M7.5 9.5h2"></path><path d="M11 9.5h5.5"></path><circle cx="12" cy="12.8" r="0.8"></circle><path d="M12 15.8v-1.6"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">ABOUT</div>
                                 <div class="card-subtitle">Game info and credits</div>
@@ -133,38 +143,24 @@
                     </div>
                 </div>
             </div>
-
-            <!-- User Status Bar -->
-            <div class="user-status-bar" id="user-status-bar">
-                <div class="user-info" id="user-info">
-                    <div class="user-avatar" id="user-avatar">👤</div>
-                    <div class="user-details">
-                        <div class="user-name" id="user-name">Guest Player</div>
-                        <div class="user-status" id="user-status">Not logged in</div>
-                    </div>
-                </div>
-                <div class="quick-actions">
-                    <button class="btn btn-small nav-icon" id="login-logout-btn" data-action="login" data-tooltip="Login">LOGIN</button>
-                </div>
-            </div>
         </div>
 
         <!-- Profile Screen -->
         <div id="profile-screen" class="screen">
-            <button class="back-btn" data-action="back">← BACK</button>
+            <button class="back-btn" data-action="back">â† BACK</button>
             <!-- Profile content will be rendered by ProfileScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
         <div id="mission-select" class="screen">
-            <button class="back-btn" data-action="back">← BACK</button>
+            <button class="back-btn" data-action="back">â† BACK</button>
             <div class="mission-header">
                 <h2>TRAINING CATEGORIES</h2>
                 <p class="subtitle">Choose your specialization</p>
             </div>
             <div class="category-grid">
                 <div class="category-card" data-category="password">
-                    <div class="category-icon">🔐</div>
+                    <div class="category-icon">ðŸ”</div>
                     <div class="category-content">
                         <div class="category-title">PASSWORD CRACKING</div>
                         <div class="category-subtitle">Master the art of password analysis and decryption</div>
@@ -178,7 +174,7 @@
                 </div>
 
                 <div class="category-card" data-category="malware">
-                    <div class="category-icon">🦠</div>
+                    <div class="category-icon">ðŸ¦ </div>
                     <div class="category-content">
                         <div class="category-title">MALWARE DETECTION</div>
                         <div class="category-subtitle">Identify and neutralize malicious software threats</div>
@@ -192,7 +188,7 @@
                 </div>
 
                 <div class="category-card" data-category="network">
-                    <div class="category-icon">🌐</div>
+                    <div class="category-icon">ðŸŒ</div>
                     <div class="category-content">
                         <div class="category-title">NETWORK & PHISHING</div>
                         <div class="category-subtitle">Navigate networks and detect social engineering</div>
@@ -209,7 +205,7 @@
 
         <!-- Password Cracking Missions -->
         <div id="password-missions" class="screen">
-            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <button class="back-btn" data-action="back-to-categories">â† BACK TO CATEGORIES</button>
             <div class="mission-header">
                 <h2>PASSWORD CRACKING</h2>
                 <p class="subtitle">Master password analysis and decryption techniques</p>
@@ -219,7 +215,7 @@
 
         <!-- Malware Detection Missions -->
         <div id="malware-missions" class="screen">
-            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <button class="back-btn" data-action="back-to-categories">â† BACK TO CATEGORIES</button>
             <div class="mission-header">
                 <h2>MALWARE DETECTION</h2>
                 <p class="subtitle">Identify and neutralize malicious software threats</p>
@@ -229,7 +225,7 @@
 
         <!-- Network & Phishing Missions -->
         <div id="network-missions" class="screen">
-            <button class="back-btn" data-action="back-to-categories">← BACK TO CATEGORIES</button>
+            <button class="back-btn" data-action="back-to-categories">â† BACK TO CATEGORIES</button>
             <div class="mission-header">
                 <h2>NETWORK & PHISHING</h2>
                 <p class="subtitle">Navigate networks and detect social engineering attacks</p>
@@ -239,7 +235,7 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
-            <button class="back-btn" data-action="back">← BACK</button>
+            <button class="back-btn" data-action="back">â† BACK</button>
             <div class="game-header">
                 <div class="game-stats">
                     <div class="stat">
@@ -258,12 +254,12 @@
                 <div class="header-controls">
                     <div class="music-panel" id="music-panel">
                         <div class="music-info">
-                            <span class="music-status" id="music-status">♪ Music</span>
+                            <span class="music-status" id="music-status">â™ª Music</span>
                             <span class="music-volume" id="music-volume-indicator">30%</span>
                         </div>
                         <div class="music-buttons">
-                            <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">⏸️</button>
-                            <button class="btn-icon" id="music-volume-btn" title="Volume Control">🔊</button>
+                            <button class="btn-icon" id="music-play-pause" title="Play/Pause Music">â¸ï¸</button>
+                            <button class="btn-icon" id="music-volume-btn" title="Volume Control">ðŸ”Š</button>
                         </div>
                     </div>
                     <div class="game-nav-buttons">
@@ -477,7 +473,7 @@
         // Load the complex game systems after the loading screen is working
         setTimeout(async () => {
             try {
-                console.log('🔧 Loading game systems...');
+                console.log('ðŸ”§ Loading game systems...');
                 
                 // Import and initialize game systems
                 const { Game } = await import('./css/js/core/Game.js');
@@ -579,7 +575,7 @@
                         <div class="credits-store">
                             <div class="current-credits">
                                 <div class="credits-display-large">
-                                    <span class="credits-icon">💰</span>
+                                    <span class="credits-icon">ðŸ’°</span>
                                     <span class="credits-amount">${credits}</span>
                                     <span class="credits-label">Credits</span>
                                 </div>
@@ -588,12 +584,12 @@
                                 <h3>How to Earn Credits:</h3>
                                 <div class="earning-methods">
                                     <div class="earning-method">
-                                        <span class="method-icon">🎯</span>
+                                        <span class="method-icon">ðŸŽ¯</span>
                                         <span class="method-text">Complete missions</span>
                                         <span class="method-reward">+100-500</span>
                                     </div>
                                     <div class="earning-method">
-                                        <span class="method-icon">🏆</span>
+                                        <span class="method-icon">ðŸ†</span>
                                         <span class="method-text">Unlock achievements</span>
                                         <span class="method-reward">+200-1000</span>
                                     </div>
@@ -611,11 +607,11 @@
                     });
                 }
                 
-                console.log('✅ Game systems loaded successfully');
+                console.log('âœ… Game systems loaded successfully');
                 
             } catch (error) {
-                console.error('❌ Failed to load game systems:', error);
-                console.log('🎮 Game will work in basic mode');
+                console.error('âŒ Failed to load game systems:', error);
+                console.log('ðŸŽ® Game will work in basic mode');
             }
         }, 2000);
     </script>
@@ -725,3 +721,9 @@
 </body>
 
 </html>
+
+
+
+
+
+
