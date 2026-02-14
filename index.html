@@ -76,8 +76,6 @@
                 <div class="hub-core-scan"></div>
             </div>
             <canvas id="logo-3d-canvas" aria-hidden="true"></canvas>
-            <button class="btn btn-primary hub-play-btn" data-action="mission-select">MISSIONS</button>
-            
             <div class="menu-grid">
                 <div class="menu-category">
 <div class="menu-cards">
@@ -92,7 +90,7 @@
                 <div class="menu-category">
                     <h3 class="category-title">Player Hub</h3>
                     <div class="menu-cards">
-                        <button class="menu-card login-card nav-icon" id="login-logout-btn" data-action="login" data-tooltip="Login" aria-label="Login">
+                        <button class="menu-card login-card nav-icon" id="login-logout-btn" data-action="login" data-tooltip="Login Module" aria-label="Login">
                             <div class="card-icon" aria-hidden="true">
                                 <svg class="icon-svg" viewBox="0 0 24 24">
                                     <path d="M14 4h7v16h-7"></path>
@@ -100,23 +98,27 @@
                                     <path d="m9 8 4 4-4 4"></path>
                                 </svg>
                             </div>
+                            <div class="card-content">
+                                <div class="card-title">LOGIN</div>
+                                <div class="card-subtitle">Terminal access / operator auth</div>
+                            </div>
                         </button>
 
-                        <button class="menu-card profile-card nav-icon" data-action="profile" data-tooltip="Profile">
+                        <button class="menu-card profile-card nav-icon" data-action="profile" data-tooltip="Profile Module">
                             <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><circle cx="12" cy="10" r="2.5"></circle><path d="M8.5 16c.9-1.5 2-2.2 3.5-2.2s2.6.7 3.5 2.2"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">PROFILE</div>
-                                <div class="card-subtitle">View stats and achievements</div>
+                                <div class="card-subtitle">ID badge / operator dossier</div>
                                 <div class="card-stats" id="profile-stats">Level 1 ? 0 Credits</div>
                             </div>
                         </button>
 
-                        <button class="menu-card credits-card nav-icon" data-action="credits-store" data-tooltip="Credits">
-                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><path d="M12 8v8"></path><path d="M9.5 10.2c.6-.8 1.4-1.2 2.5-1.2 1.4 0 2.5.8 2.5 1.9 0 1-.8 1.6-2.3 2l-.4.1c-1.7.5-2.4 1.1-2.4 2.2 0 1.2 1.1 2 2.7 2 1.1 0 2-.4 2.6-1.2"></path><path d="M5 5l1.2 1.2"></path><path d="M19 5l-1.2 1.2"></path></svg></div>
+                        <button class="menu-card mission-link-card nav-icon" data-action="mission-select" data-tooltip="Mission Module">
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><path d="m4 18 3.2-10.8L20 4l-3.2 10.8z"></path><path d="m11.8 12.2 3.4 3.4"></path><path d="M5 19h4"></path></svg></div>
                             <div class="card-content">
-                                <div class="card-title">CREDITS</div>
-                                <div class="card-subtitle">Manage your gaming credits</div>
-                                <div class="card-credits" id="credits-display">1000 Credits</div>
+                                <div class="card-title">MISSION</div>
+                                <div class="card-subtitle">Deploy objective pipeline</div>
+                                <div class="card-progress" id="mission-progress">0/20 Completed</div>
                             </div>
                         </button>
                     </div>
@@ -125,19 +127,28 @@
                 <div class="menu-category">
                     <h3 class="category-title">System</h3>
                     <div class="menu-cards">
-                        <button class="menu-card settings-card nav-icon" data-action="settings" data-tooltip="Settings">
+                        <button class="menu-card settings-card nav-icon" data-action="settings" data-tooltip="Settings Module">
                             <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"></circle><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.8 1.8 0 1 1-3.6 0v-.1a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.8 1.8 0 1 1 0-3.6h.1a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a1.8 1.8 0 1 1 3.6 0v.1a1 1 0 0 0 .6.9h.1a1 1 0 0 0 1.1-.2l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6H20a1.8 1.8 0 1 1 0 3.6h-.1a1 1 0 0 0-.9.6Z"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">SETTINGS</div>
-                                <div class="card-subtitle">Audio, preferences & account</div>
+                                <div class="card-subtitle">Configure core system parameters</div>
                             </div>
                         </button>
 
-                        <button class="menu-card about-card nav-icon" data-action="credits" data-tooltip="About">
+                        <button class="menu-card credits-card nav-icon" data-action="credits-store" data-tooltip="Credits Module">
+                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><path d="M12 8v8"></path><path d="M9.5 10.2c.6-.8 1.4-1.2 2.5-1.2 1.4 0 2.5.8 2.5 1.9 0 1-.8 1.6-2.3 2l-.4.1c-1.7.5-2.4 1.1-2.4 2.2 0 1.2 1.1 2 2.7 2 1.1 0 2-.4 2.6-1.2"></path><path d="M5 5l1.2 1.2"></path><path d="M19 5l-1.2 1.2"></path></svg></div>
+                            <div class="card-content">
+                                <div class="card-title">CREDITS</div>
+                                <div class="card-subtitle">Economy ledger and rewards</div>
+                                <div class="card-credits" id="credits-display">1000 Credits</div>
+                            </div>
+                        </button>
+
+                        <button class="menu-card about-card nav-icon" data-action="credits" data-tooltip="About Module">
                             <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M7.5 9.5h2"></path><path d="M11 9.5h5.5"></path><circle cx="12" cy="12.8" r="0.8"></circle><path d="M12 15.8v-1.6"></path></svg></div>
                             <div class="card-content">
                                 <div class="card-title">ABOUT</div>
-                                <div class="card-subtitle">Game info and credits</div>
+                                <div class="card-subtitle">Build info and operator manual</div>
                             </div>
                         </button>
                     </div>
