@@ -20,6 +20,7 @@ let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
 let hologramFlickerTimer = null;
+let lastHologramHoverAt = 0;
 
 function setupHologramLogos() {
     const logos = document.querySelectorAll('.logo, .logo-text, .mission-logo');
@@ -148,13 +149,35 @@ function checkAuthenticationState() {
  * Setup global event listeners
  */
 function setupEventListeners() {
+    const hoverSoundTargets = 'button, .btn, .btn-link, .social-btn, .menu-card, [data-action], .holo-logo, .logo-text';
+
     // Button click delegation
     document.addEventListener('click', (e) => {
+        const interactiveTarget = e.target.closest(hoverSoundTargets);
+        if (interactiveTarget && game?.audio) {
+            game.audio.playButtonClick();
+        }
+
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
 
         const action = btn.dataset.action;
         handleAction(action, e);
+    });
+
+    // Hologram activation sound on hover
+    document.addEventListener('mouseover', (e) => {
+        const hoverTarget = e.target.closest(hoverSoundTargets);
+        if (!hoverTarget || !game?.audio) return;
+
+        const fromTarget = e.relatedTarget?.closest?.(hoverSoundTargets);
+        if (fromTarget === hoverTarget) return;
+
+        const now = performance.now();
+        if (now - lastHologramHoverAt < 110) return;
+
+        lastHologramHoverAt = now;
+        game.audio.playHologramActivate();
     });
 
     // Keep login/logout tooltip and icon in sync right before interaction
