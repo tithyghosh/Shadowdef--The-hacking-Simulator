@@ -859,7 +859,7 @@ export class AudioManager {
 
         const t = this.audioContext.currentTime;
         const sampleRate = this.audioContext.sampleRate;
-        const clickBuffer = this.audioContext.createBuffer(1, Math.floor(sampleRate * 0.018), sampleRate);
+        const clickBuffer = this.audioContext.createBuffer(1, Math.floor(sampleRate * 0.028), sampleRate);
         const data = clickBuffer.getChannelData(0);
         for (let i = 0; i < data.length; i += 1) {
             const decay = 1 - (i / data.length);
@@ -874,16 +874,16 @@ export class AudioManager {
 
         clickSource.buffer = clickBuffer;
         clickFilter.type = 'highpass';
-        clickFilter.frequency.value = 1400;
+        clickFilter.frequency.value = 1200;
 
-        clickGain.gain.setValueAtTime(volume * 0.7, t);
-        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.02);
+        clickGain.gain.setValueAtTime(volume * 0.95, t);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
 
         clickPop.type = 'sine';
-        clickPop.frequency.setValueAtTime(260, t);
-        clickPop.frequency.exponentialRampToValueAtTime(120, t + 0.02);
-        popGain.gain.setValueAtTime(volume * 0.2, t);
-        popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+        clickPop.frequency.setValueAtTime(210, t);
+        clickPop.frequency.exponentialRampToValueAtTime(82, t + 0.04);
+        popGain.gain.setValueAtTime(volume * 0.45, t);
+        popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
 
         clickSource.connect(clickFilter);
         clickFilter.connect(clickGain);
@@ -892,10 +892,22 @@ export class AudioManager {
         clickPop.connect(popGain);
         popGain.connect(this.audioContext.destination);
 
+        const crackOsc = this.audioContext.createOscillator();
+        const crackGain = this.audioContext.createGain();
+        crackOsc.type = 'square';
+        crackOsc.frequency.setValueAtTime(2400, t);
+        crackOsc.frequency.exponentialRampToValueAtTime(1200, t + 0.012);
+        crackGain.gain.setValueAtTime(volume * 0.3, t);
+        crackGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
+        crackOsc.connect(crackGain);
+        crackGain.connect(this.audioContext.destination);
+
         clickSource.start(t);
-        clickSource.stop(t + 0.02);
+        clickSource.stop(t + 0.03);
         clickPop.start(t);
-        clickPop.stop(t + 0.025);
+        clickPop.stop(t + 0.045);
+        crackOsc.start(t);
+        crackOsc.stop(t + 0.014);
     }
 
     playSynthGlitch(volume = 0.3) {
