@@ -3,14 +3,18 @@
  */
 
 import { AuthManager } from '../core/AuthManager.js';
+import { AudioManager } from '../core/AudioManager.js';
 import { UIManager } from '../ui/UIManager.js';
+import { CONFIG } from '../data/config.js';
 
 export class LoginScreen {
     constructor(game) {
         this.game = game;
         this.auth = AuthManager.getInstance();
+        this.audio = AudioManager.getInstance();
         this.ui = new UIManager();
         this.currentMode = 'login'; // 'login' or 'register'
+        this.systemHudTimers = [];
         
         this.setupEventListeners();
     }
@@ -21,24 +25,18 @@ export class LoginScreen {
     render() {
         const loginContainer = document.getElementById('login-screen');
         if (!loginContainer) return;
+        this.stopSystemHudAnimation();
 
         loginContainer.innerHTML = `
             <div class="login-container">
+                <button class="back-btn" data-action="back">← BACK</button>
                 <div class="login-header">
                     <div class="logo-container">
                         <div class="logo-text">SHADOWDEF</div>
-                        <div class="logo-subtitle">Secure Your Progress</div>
                     </div>
                 </div>
 
                 <div class="login-content">
-                    <div class="auth-tabs">
-                        <button class="auth-tab ${this.currentMode === 'login' ? 'active' : ''}" 
-                                data-mode="login">LOGIN</button>
-                        <button class="auth-tab ${this.currentMode === 'register' ? 'active' : ''}" 
-                                data-mode="register">REGISTER</button>
-                    </div>
-
                     <div class="auth-form-container">
                         ${this.renderAuthForm()}
                     </div>
@@ -50,41 +48,45 @@ export class LoginScreen {
                         
                         <div class="social-buttons">
                             <button class="social-btn google-btn" data-provider="google">
-                                <div class="social-icon">🔍</div>
+                                <div class="social-icon">
+                                    <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.45 1.45 8.53 3.38l5.82-5.82C34.64 3.44 29.7 1.5 24 1.5 14.82 1.5 7.01 6.74 3.28 14.28l6.77 5.26C12.04 13.2 17.6 9.5 24 9.5z"/>
+                                        <path fill="#4285F4" d="M46.5 24.5c0-1.57-.14-3.08-.4-4.54H24v9.05h12.75c-.55 2.96-2.26 5.46-4.81 7.14l7.39 5.74C43.93 38.27 46.5 31.87 46.5 24.5z"/>
+                                        <path fill="#FBBC05" d="M10.05 28.54a14.8 14.8 0 0 1 0-9.08l-6.77-5.26a23.97 23.97 0 0 0 0 19.6l6.77-5.26z"/>
+                                        <path fill="#34A853" d="M24 46.5c6.2 0 11.4-2.05 15.2-5.56l-7.39-5.74c-2.05 1.38-4.68 2.2-7.81 2.2-6.4 0-11.96-3.7-13.95-9.04l-6.77 5.26C7.01 41.26 14.82 46.5 24 46.5z"/>
+                                        <path fill="none" d="M0 0h48v48H0z"/>
+                                    </svg>
+                                </div>
                                 <span>Google</span>
-                            </button>
-                            
-                            <button class="social-btn facebook-btn" data-provider="facebook">
-                                <div class="social-icon">📘</div>
-                                <span>Facebook</span>
                             </button>
                         </div>
                     </div>
-
+                    ${this.renderSwitchText()}
+                    ${CONFIG.AUTH.ENABLE_GUEST_MODE ? `
                     <div class="guest-option">
                         <button class="btn-link" id="continue-as-guest">
                             Continue as Guest
                         </button>
                         <p class="guest-warning">
-                            ⚠️ Progress won't be saved without an account
+                            Your progress won't be saved without an account.
                         </p>
                     </div>
+                    ` : ''}
                 </div>
 
-                <div class="login-benefits">
-                    <h3>Why Create an Account?</h3>
-                    <ul class="benefits-list">
-                        <li>💾 Save progress across devices</li>
-                        <li>🏆 Track achievements and scores</li>
-                        <li>💰 Earn and keep gaming credits</li>
-                        <li>🎯 Unlock exclusive missions</li>
-                        <li>📊 View detailed statistics</li>
-                    </ul>
+                <div class="system-hud" aria-hidden="true">
+                    <div class="system-hud-title">SYSTEM MONITOR</div>
+                    <div class="system-hud-line" data-text="SYSTEM ONLINE"></div>
+                    <div class="system-hud-line" data-text="IP TRACE: ACTIVE"></div>
+                    <div class="system-hud-line" data-text="ENCRYPTION: AES-256"></div>
+                    <div class="system-hud-line" data-text="NETWORK LOAD: 78%"></div>
+                    <span class="hud-cursor">_</span>
                 </div>
             </div>
         `;
 
         this.setupFormListeners();
+        this.startSystemHudAnimation();
     }
 
     /**
@@ -94,6 +96,7 @@ export class LoginScreen {
         if (this.currentMode === 'login') {
             return `
                 <form class="auth-form" id="login-form">
+                    <h2 class="auth-heading">Login in your account</h2>
                     <div class="form-group">
                         <label for="login-email">Email Address</label>
                         <input type="email" id="login-email" name="email" required 
@@ -129,6 +132,7 @@ export class LoginScreen {
         } else {
             return `
                 <form class="auth-form" id="register-form">
+                    <h2 class="auth-heading">Create Your Account</h2>
                     <div class="form-group">
                         <label for="register-name">Display Name</label>
                         <input type="text" id="register-name" name="name" required 
@@ -153,14 +157,6 @@ export class LoginScreen {
                                placeholder="Confirm your password">
                     </div>
                     
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="agree-terms" required>
-                            <span class="checkmark"></span>
-                            I agree to the <a href="#" class="btn-link">Terms of Service</a>
-                        </label>
-                    </div>
-                    
                     <button type="submit" class="btn btn-primary auth-submit" id="register-submit">
                         <span class="btn-text">CREATE ACCOUNT</span>
                         <div class="btn-loader" style="display: none;">
@@ -170,6 +166,27 @@ export class LoginScreen {
                 </form>
             `;
         }
+    }
+
+    /**
+     * Render switch text between login/register
+     */
+    renderSwitchText() {
+        if (this.currentMode === 'login') {
+            return `
+                <p class="auth-switch-text">
+                    Don't you have an account?
+                    <button type="button" class="btn-link auth-switch" data-mode="register">Please register here.</button>
+                </p>
+            `;
+        }
+
+        return `
+            <p class="auth-switch-text">
+                Already have an account?
+                <button type="button" class="btn-link auth-switch" data-mode="login">Please login now.</button>
+            </p>
+        `;
     }
 
     /**
@@ -190,11 +207,12 @@ export class LoginScreen {
      * Setup form event listeners
      */
     setupFormListeners() {
-        // Tab switching
-        document.querySelectorAll('.auth-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
+        // Switch between login/register
+        document.querySelectorAll('.auth-switch').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const mode = e.currentTarget.dataset.mode;
                 if (mode !== this.currentMode) {
+                    this.audio.playGlitch();
                     this.currentMode = mode;
                     this.render();
                 }
@@ -254,15 +272,18 @@ export class LoginScreen {
             let userData;
             if (provider === 'google') {
                 userData = await this.auth.loginWithGoogle();
-            } else if (provider === 'facebook') {
-                userData = await this.auth.loginWithFacebook();
             }
 
-            this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+            if (userData && userData.name) {
+                this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+            } else {
+                this.ui.showNotification(`Welcome! Login successful.`, 'success');
+            }
 
         } catch (error) {
             console.error(`${provider} login failed:`, error);
-            this.ui.showNotification(`${provider} login failed. Please try again.`, 'error');
+            const errorMessage = error.message || `${provider} login failed. Please try again.`;
+            this.ui.showNotification(errorMessage, 'error');
         } finally {
             this.hideLoading();
         }
@@ -275,6 +296,7 @@ export class LoginScreen {
         try {
             const email = formData.get('email');
             const password = formData.get('password');
+            const rememberMe = !!document.getElementById('remember-me')?.checked;
 
             if (!email || !password) {
                 this.ui.showNotification('Please fill in all fields', 'error');
@@ -283,7 +305,7 @@ export class LoginScreen {
 
             this.showLoading('Signing in...');
 
-            const userData = await this.auth.loginWithEmail(email, password);
+            const userData = await this.auth.loginWithEmail(email, password, rememberMe);
             this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
 
         } catch (error) {
@@ -341,6 +363,7 @@ export class LoginScreen {
             'Continue as Guest?',
             'Your progress and scores won\'t be saved. You can create an account later from the settings menu.',
             () => {
+                this.stopSystemHudAnimation();
                 // Continue to main menu without authentication
                 this.game.screens.showScreen('main-menu');
                 this.ui.showNotification('Playing as guest - progress won\'t be saved', 'warning', 5000);
@@ -365,12 +388,21 @@ export class LoginScreen {
                 {
                     text: 'SEND RESET LINK',
                     class: 'btn-primary',
-                    onClick: () => {
+                    onClick: async () => {
                         const email = document.getElementById('reset-email').value;
-                        if (email) {
-                            this.ui.showNotification('Reset link sent to your email!', 'success');
-                        } else {
+                        if (!email) {
                             this.ui.showNotification('Please enter your email address', 'error');
+                            return;
+                        }
+
+                        try {
+                            this.showLoading('Sending reset link...');
+                            await this.auth.resetPassword(email);
+                            this.ui.showNotification('Reset link sent to your email!', 'success');
+                        } catch (error) {
+                            this.ui.showNotification(error.message || 'Failed to send reset link.', 'error');
+                        } finally {
+                            this.hideLoading();
                         }
                     }
                 },
@@ -386,9 +418,15 @@ export class LoginScreen {
      * Handle successful login
      */
     handleLoginSuccess(userData) {
+        this.stopSystemHudAnimation();
         // Transition to main menu
         setTimeout(() => {
             this.game.screens.showScreen('main-menu');
+            if (typeof window.updateMainMenuStatus === 'function') {
+                window.updateMainMenuStatus();
+                setTimeout(() => window.updateMainMenuStatus(), 150);
+                setTimeout(() => window.updateMainMenuStatus(), 500);
+            }
         }, 1000);
     }
 
@@ -398,6 +436,54 @@ export class LoginScreen {
     handleLogout() {
         // Return to login screen
         this.game.screens.showScreen('login-screen');
+        this.render();
+    }
+
+    startSystemHudAnimation() {
+        const lines = Array.from(document.querySelectorAll('.system-hud-line'));
+        if (!lines.length) return;
+
+        lines.forEach((line) => {
+            line.textContent = '';
+        });
+
+        const textLines = lines.map((line) => line.dataset.text || '');
+        const addHudTimer = (callback, delay) => {
+            let timerId = null;
+            timerId = setTimeout(() => {
+                this.systemHudTimers = this.systemHudTimers.filter((timer) => timer !== timerId);
+                callback();
+            }, delay);
+            this.systemHudTimers.push(timerId);
+        };
+
+        const typeLine = (lineIndex = 0, charIndex = 0) => {
+            if (lineIndex >= lines.length) {
+                addHudTimer(() => this.startSystemHudAnimation(), 1400);
+                return;
+            }
+
+            const line = lines[lineIndex];
+            const text = textLines[lineIndex];
+            line.textContent = text.slice(0, charIndex + 1);
+
+            if (charIndex + 1 >= text.length) {
+                addHudTimer(() => typeLine(lineIndex + 1, 0), 180);
+                return;
+            }
+
+            addHudTimer(() => typeLine(lineIndex, charIndex + 1), 38);
+        };
+
+        typeLine();
+    }
+
+    stopSystemHudAnimation() {
+        this.systemHudTimers.forEach((timer) => {
+            clearInterval(timer);
+            clearTimeout(timer);
+        });
+        this.systemHudTimers = [];
     }
 
     /**

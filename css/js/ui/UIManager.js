@@ -43,12 +43,17 @@ export class UIManager {
             type = 'info', // info, success, error, warning
             buttons = [],
             closable = true,
-            width = 'auto'
+            width = 'auto',
+            panel = false,
+            panelPosition = 'right'
         } = options;
 
         // Create modal HTML
         const modal = document.createElement('div');
         modal.className = 'modal active';
+        if (panel) {
+            modal.classList.add('modal-panel', `modal-panel-${panelPosition}`);
+        }
         modal.innerHTML = `
             <div class="modal-content" style="max-width: ${width}">
                 ${closable ? '<button class="modal-close" onclick="game.ui.closeModal()">✕</button>' : ''}

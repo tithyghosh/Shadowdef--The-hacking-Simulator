@@ -452,11 +452,10 @@ export class ProfileScreen {
      */
     getProviderIcon(provider) {
         const icons = {
-            google: '🔍',
-            facebook: '📘',
-            email: '📧'
+            google: 'G',
+            email: 'E'
         };
-        return icons[provider] || '👤';
+        return icons[provider] || 'U';
     }
 
     formatPlayTime(minutes) {
