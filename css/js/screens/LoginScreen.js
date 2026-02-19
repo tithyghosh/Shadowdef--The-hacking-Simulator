@@ -3,6 +3,7 @@
  */
 
 import { AuthManager } from '../core/AuthManager.js';
+import { AudioManager } from '../core/AudioManager.js';
 import { UIManager } from '../ui/UIManager.js';
 import { CONFIG } from '../data/config.js';
 
@@ -10,8 +11,10 @@ export class LoginScreen {
     constructor(game) {
         this.game = game;
         this.auth = AuthManager.getInstance();
+        this.audio = AudioManager.getInstance();
         this.ui = new UIManager();
         this.currentMode = 'login'; // 'login' or 'register'
+        this.systemHudTimers = [];
         
         this.setupEventListeners();
     }
@@ -22,6 +25,7 @@ export class LoginScreen {
     render() {
         const loginContainer = document.getElementById('login-screen');
         if (!loginContainer) return;
+        this.stopSystemHudAnimation();
 
         loginContainer.innerHTML = `
             <div class="login-container">
@@ -69,10 +73,20 @@ export class LoginScreen {
                     </div>
                     ` : ''}
                 </div>
+
+                <div class="system-hud" aria-hidden="true">
+                    <div class="system-hud-title">SYSTEM MONITOR</div>
+                    <div class="system-hud-line" data-text="SYSTEM ONLINE"></div>
+                    <div class="system-hud-line" data-text="IP TRACE: ACTIVE"></div>
+                    <div class="system-hud-line" data-text="ENCRYPTION: AES-256"></div>
+                    <div class="system-hud-line" data-text="NETWORK LOAD: 78%"></div>
+                    <span class="hud-cursor">_</span>
+                </div>
             </div>
         `;
 
         this.setupFormListeners();
+        this.startSystemHudAnimation();
     }
 
     /**
@@ -198,6 +212,7 @@ export class LoginScreen {
             button.addEventListener('click', (e) => {
                 const mode = e.currentTarget.dataset.mode;
                 if (mode !== this.currentMode) {
+                    this.audio.playGlitch();
                     this.currentMode = mode;
                     this.render();
                 }
@@ -348,6 +363,7 @@ export class LoginScreen {
             'Continue as Guest?',
             'Your progress and scores won\'t be saved. You can create an account later from the settings menu.',
             () => {
+                this.stopSystemHudAnimation();
                 // Continue to main menu without authentication
                 this.game.screens.showScreen('main-menu');
                 this.ui.showNotification('Playing as guest - progress won\'t be saved', 'warning', 5000);
@@ -402,6 +418,7 @@ export class LoginScreen {
      * Handle successful login
      */
     handleLoginSuccess(userData) {
+        this.stopSystemHudAnimation();
         // Transition to main menu
         setTimeout(() => {
             this.game.screens.showScreen('main-menu');
@@ -420,6 +437,53 @@ export class LoginScreen {
         // Return to login screen
         this.game.screens.showScreen('login-screen');
         this.render();
+    }
+
+    startSystemHudAnimation() {
+        const lines = Array.from(document.querySelectorAll('.system-hud-line'));
+        if (!lines.length) return;
+
+        lines.forEach((line) => {
+            line.textContent = '';
+        });
+
+        const textLines = lines.map((line) => line.dataset.text || '');
+        const addHudTimer = (callback, delay) => {
+            let timerId = null;
+            timerId = setTimeout(() => {
+                this.systemHudTimers = this.systemHudTimers.filter((timer) => timer !== timerId);
+                callback();
+            }, delay);
+            this.systemHudTimers.push(timerId);
+        };
+
+        const typeLine = (lineIndex = 0, charIndex = 0) => {
+            if (lineIndex >= lines.length) {
+                addHudTimer(() => this.startSystemHudAnimation(), 1400);
+                return;
+            }
+
+            const line = lines[lineIndex];
+            const text = textLines[lineIndex];
+            line.textContent = text.slice(0, charIndex + 1);
+
+            if (charIndex + 1 >= text.length) {
+                addHudTimer(() => typeLine(lineIndex + 1, 0), 180);
+                return;
+            }
+
+            addHudTimer(() => typeLine(lineIndex, charIndex + 1), 38);
+        };
+
+        typeLine();
+    }
+
+    stopSystemHudAnimation() {
+        this.systemHudTimers.forEach((timer) => {
+            clearInterval(timer);
+            clearTimeout(timer);
+        });
+        this.systemHudTimers = [];
     }
 
     /**

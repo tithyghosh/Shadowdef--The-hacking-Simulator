@@ -59,6 +59,60 @@
     z-index: 1;
 }
 
+.system-hud {
+    position: fixed;
+    left: clamp(12px, 2vw, 24px);
+    bottom: clamp(12px, 3vh, 24px);
+    width: min(300px, 42vw);
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 243, 255, 0.45);
+    border-radius: 8px;
+    background: rgba(2, 8, 20, 0.74);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.16), inset 0 0 0 1px rgba(255, 0, 110, 0.06);
+    font-family: var(--font-mono);
+    color: var(--cyber-blue);
+    letter-spacing: 0.5px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.system-hud-title {
+    color: var(--cyber-pink);
+    font-size: 11px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.system-hud-line {
+    min-height: 1.2em;
+    font-size: 12px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.25);
+}
+
+.system-hud-line:last-of-type {
+    margin-bottom: 0;
+}
+
+.hud-cursor {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--cyber-blue);
+    animation: hud-cursor-flicker 0.75s steps(1, end) infinite;
+}
+
+@keyframes hud-cursor-flicker {
+    0%, 49% {
+        opacity: 1;
+    }
+    50%, 100% {
+        opacity: 0;
+    }
+}
+
 .login-header {
     text-align: center;
     margin-bottom: var(--spacing-md);
@@ -858,6 +912,13 @@
         gap: var(--spacing-md);
         text-align: center;
     }
+
+    .system-hud {
+        width: min(260px, 72vw);
+        left: 10px;
+        bottom: 10px;
+        padding: 10px 12px;
+    }
     
     .guest-actions {
         flex-direction: column;
@@ -883,6 +944,18 @@
     .login-header .logo-text {
         font-size: 2rem;
         letter-spacing: 3px;
+    }
+
+    .system-hud {
+        width: min(230px, 76vw);
+    }
+
+    .system-hud-title {
+        font-size: 10px;
+    }
+
+    .system-hud-line {
+        font-size: 11px;
     }
     
     .stats-grid {
