@@ -431,6 +431,11 @@ export class Game {
         } else if (currentScreen === 'game-screen') {
             // Use the new back to levels functionality
             this.backToCurrentCategoryLevels();
+        } else {
+            const didGoBack = this.screens.goBack();
+            if (!didGoBack && this.ui) {
+                this.ui.showNotification('No previous screen', 'info');
+            }
         }
     }
 
@@ -513,7 +518,7 @@ export class Game {
                 
                 <button class="btn btn-primary" onclick="game.ui.closeModal()">SAVE & CLOSE</button>
             </div>
-        `);
+        `, { panel: true, panelPosition: 'right' });
 
         // Setup settings event listeners
         this.setupSettingsListeners();
@@ -625,7 +630,7 @@ export class Game {
                 </p>
                 <button class="btn" onclick="game.ui.closeModal()" style="margin-top: 30px;">CLOSE</button>
             </div>
-        `);
+        `, { panel: true, panelPosition: 'right' });
     }
 
     /**

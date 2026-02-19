@@ -21,6 +21,7 @@ export class AudioManager {
         this.currentMusic = null;
         this.currentAudioElement = null;
         this.softToneNodes = [];
+        this.cyberHumNodes = null;
         this.audioContext = null;
         this.sounds = new Map();
         this.musicTracks = new Map();
@@ -78,7 +79,9 @@ export class AudioManager {
             hint: { file: 'assets/audio/sfx/hint.mp3', volume: 0.5 },
             typing: { file: 'assets/audio/sfx/typing.mp3', volume: 0.4 },
             timer: { file: 'assets/audio/sfx/timer.mp3', volume: 0.6 },
-            unlock: { file: 'assets/audio/sfx/unlock.mp3', volume: 0.7 }
+            unlock: { file: 'assets/audio/sfx/unlock.mp3', volume: 0.7 },
+            glitch: { file: 'assets/audio/sfx/glitch.mp3', volume: 0.35 },
+            hologram: { file: 'assets/audio/sfx/hologram-activate.mp3', volume: 0.28 }
         };
 
         // Music tracks map - using the available Halloween bell music
@@ -87,7 +90,8 @@ export class AudioManager {
             loading: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.2 },
             gameplay: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 },
             gameplay1: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 },
-            gameplay2: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 }
+            gameplay2: { file: 'assets/music/creepy-halloween-bells-loop-408748.mp3', loop: true, volume: 0.25 },
+            cyberHum: { synth: 'cyberHum', loop: true, volume: 0.22 }
         };
 
         // Preload music files
@@ -138,6 +142,10 @@ export class AudioManager {
             return;
         }
 
+        if (this.playSynthSound(soundName, volume !== null ? volume : definition.volume * this.sfxVolume)) {
+            return;
+        }
+
         // Generate simple beep as placeholder
         this.generateBeep(
             volume !== null ? volume : definition.volume * this.sfxVolume
@@ -159,6 +167,12 @@ export class AudioManager {
         // Stop current music if playing
         if (this.currentMusic) {
             this.stopMusic(fade);
+        }
+
+        if (trackName === 'cyberHum') {
+            this.playAmbientCyberHum(fade);
+            this.currentMusic = trackName;
+            return;
         }
 
         // Try to play actual audio file first
@@ -283,6 +297,12 @@ export class AudioManager {
 
         console.log(`🎵 Stopping music: ${this.currentMusic}`);
         
+        if (this.currentMusic === 'cyberHum') {
+            this.stopAmbientCyberHum(fade);
+            this.currentMusic = null;
+            return;
+        }
+
         // Stop audio file if playing
         if (this.currentAudioElement) {
             if (fade) {
@@ -307,6 +327,15 @@ export class AudioManager {
     pauseMusic() {
         if (!this.currentMusic) return;
         
+        if (this.currentMusic === 'cyberHum' && this.cyberHumNodes?.gainNode) {
+            this.cyberHumNodes.gainNode.gain.linearRampToValueAtTime(
+                0,
+                this.audioContext.currentTime + 0.3
+            );
+            console.log('â¸ï¸ Cyber hum paused');
+            return;
+        }
+
         if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             console.log('⏸️ Audio file paused');
@@ -329,6 +358,16 @@ export class AudioManager {
     resumeMusic() {
         if (!this.currentMusic) return;
         
+        if (this.currentMusic === 'cyberHum' && this.cyberHumNodes?.gainNode) {
+            const target = this.musicDefinitions.cyberHum.volume * this.musicVolume;
+            this.cyberHumNodes.gainNode.gain.linearRampToValueAtTime(
+                target,
+                this.audioContext.currentTime + 0.45
+            );
+            console.log('â–¶ï¸ Cyber hum resumed');
+            return;
+        }
+
         if (this.currentAudioElement) {
             const playPromise = this.currentAudioElement.play();
             if (playPromise !== undefined) {
@@ -545,6 +584,15 @@ export class AudioManager {
             }
         }
         
+        // Update ambient cyber hum volume
+        if (this.cyberHumNodes?.gainNode && this.currentMusic === 'cyberHum') {
+            const target = this.musicDefinitions.cyberHum.volume * this.musicVolume;
+            this.cyberHumNodes.gainNode.gain.linearRampToValueAtTime(
+                target,
+                this.audioContext.currentTime + 0.2
+            );
+        }
+
         // Update current soft tones volume
         if (this.softToneNodes) {
             this.softToneNodes.forEach(node => {
@@ -605,7 +653,8 @@ export class AudioManager {
      * Play button click sound
      */
     playButtonClick() {
-        this.playSound('buttonClick');
+        if (!this.sfxEnabled) return;
+        this.playSynthButtonClick(0.34 * this.sfxVolume);
     }
 
     /**
@@ -644,6 +693,20 @@ export class AudioManager {
     }
 
     /**
+     * Play glitch UI sound
+     */
+    playGlitch() {
+        this.playSound('glitch');
+    }
+
+    /**
+     * Play hologram activation sound
+     */
+    playHologramActivate() {
+        this.playSound('hologram');
+    }
+
+    /**
      * Crossfade between music tracks
      * @param {string} newTrack - New track to play
      */
@@ -677,6 +740,7 @@ export class AudioManager {
     destroy() {
         this.stopMusic(false);
         this.stopSoftTones();
+        this.stopAmbientCyberHum(false);
         
         // Clean up audio elements
         if (this.currentAudioElement) {
@@ -695,5 +759,237 @@ export class AudioManager {
             this.audioContext.close();
         }
         AudioManager.instance = null;
+    }
+
+    playSynthSound(soundName, volume) {
+        if (!this.audioContext) return false;
+
+        switch (soundName) {
+            case 'buttonClick':
+                this.playSynthButtonClick(volume);
+                return true;
+            case 'glitch':
+                this.playSynthGlitch(volume);
+                return true;
+            case 'hologram':
+                this.playSynthHologram(volume);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    playAmbientCyberHum(fade = true) {
+        if (!this.audioContext || !this.musicEnabled) return;
+        if (this.currentMusic === 'cyberHum' && this.cyberHumNodes) return;
+
+        if (this.currentMusic && this.currentMusic !== 'cyberHum') {
+            this.stopMusic(fade);
+        }
+
+        this.stopAmbientCyberHum(false);
+
+        const masterGain = this.audioContext.createGain();
+        const droneOsc = this.audioContext.createOscillator();
+        const shimmerOsc = this.audioContext.createOscillator();
+        const lowpass = this.audioContext.createBiquadFilter();
+        const humLfo = this.audioContext.createOscillator();
+        const lfoDepth = this.audioContext.createGain();
+
+        droneOsc.type = 'sawtooth';
+        droneOsc.frequency.value = 54;
+        shimmerOsc.type = 'triangle';
+        shimmerOsc.frequency.value = 81;
+
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 420;
+        lowpass.Q.value = 0.8;
+
+        humLfo.type = 'sine';
+        humLfo.frequency.value = 0.12;
+        lfoDepth.gain.value = 120;
+
+        humLfo.connect(lfoDepth);
+        lfoDepth.connect(lowpass.frequency);
+
+        droneOsc.connect(lowpass);
+        shimmerOsc.connect(lowpass);
+        lowpass.connect(masterGain);
+        masterGain.connect(this.audioContext.destination);
+
+        const targetVolume = this.musicDefinitions.cyberHum.volume * this.musicVolume;
+        masterGain.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
+        masterGain.gain.linearRampToValueAtTime(
+            targetVolume,
+            this.audioContext.currentTime + (fade ? 1.2 : 0.15)
+        );
+
+        droneOsc.start(this.audioContext.currentTime);
+        shimmerOsc.start(this.audioContext.currentTime);
+        humLfo.start(this.audioContext.currentTime);
+
+        this.cyberHumNodes = { masterGain, droneOsc, shimmerOsc, humLfo };
+        this.currentAudioElement = null;
+        this.currentMusic = 'cyberHum';
+    }
+
+    stopAmbientCyberHum(fade = true) {
+        if (!this.cyberHumNodes || !this.audioContext) return;
+
+        const { masterGain, droneOsc, shimmerOsc, humLfo } = this.cyberHumNodes;
+        const stopDelay = fade ? 0.65 : 0.05;
+        const endTime = this.audioContext.currentTime + stopDelay;
+
+        try {
+            masterGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+            masterGain.gain.setValueAtTime(masterGain.gain.value, this.audioContext.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.0001, endTime);
+            droneOsc.stop(endTime + 0.03);
+            shimmerOsc.stop(endTime + 0.03);
+            humLfo.stop(endTime + 0.03);
+        } catch (error) {
+            console.warn('Cyber hum stop warning:', error);
+        }
+
+        this.cyberHumNodes = null;
+    }
+
+    playSynthButtonClick(volume = 0.25) {
+        if (!this.audioContext) return;
+
+        const t = this.audioContext.currentTime;
+        const sampleRate = this.audioContext.sampleRate;
+        const clickBuffer = this.audioContext.createBuffer(1, Math.floor(sampleRate * 0.028), sampleRate);
+        const data = clickBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i += 1) {
+            const decay = 1 - (i / data.length);
+            data[i] = (Math.random() * 2 - 1) * decay;
+        }
+
+        const clickSource = this.audioContext.createBufferSource();
+        const clickFilter = this.audioContext.createBiquadFilter();
+        const clickGain = this.audioContext.createGain();
+        const clickPop = this.audioContext.createOscillator();
+        const popGain = this.audioContext.createGain();
+
+        clickSource.buffer = clickBuffer;
+        clickFilter.type = 'highpass';
+        clickFilter.frequency.value = 1200;
+
+        clickGain.gain.setValueAtTime(volume * 0.95, t);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+        clickPop.type = 'sine';
+        clickPop.frequency.setValueAtTime(210, t);
+        clickPop.frequency.exponentialRampToValueAtTime(82, t + 0.04);
+        popGain.gain.setValueAtTime(volume * 0.45, t);
+        popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+
+        clickSource.connect(clickFilter);
+        clickFilter.connect(clickGain);
+        clickGain.connect(this.audioContext.destination);
+
+        clickPop.connect(popGain);
+        popGain.connect(this.audioContext.destination);
+
+        const crackOsc = this.audioContext.createOscillator();
+        const crackGain = this.audioContext.createGain();
+        crackOsc.type = 'square';
+        crackOsc.frequency.setValueAtTime(2400, t);
+        crackOsc.frequency.exponentialRampToValueAtTime(1200, t + 0.012);
+        crackGain.gain.setValueAtTime(volume * 0.3, t);
+        crackGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
+        crackOsc.connect(crackGain);
+        crackGain.connect(this.audioContext.destination);
+
+        clickSource.start(t);
+        clickSource.stop(t + 0.03);
+        clickPop.start(t);
+        clickPop.stop(t + 0.045);
+        crackOsc.start(t);
+        crackOsc.stop(t + 0.014);
+    }
+
+    playSynthGlitch(volume = 0.3) {
+        if (!this.audioContext) return;
+
+        const t = this.audioContext.currentTime;
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+        const bandpass = this.audioContext.createBiquadFilter();
+        const noiseBuffer = this.audioContext.createBuffer(
+            1,
+            Math.floor(this.audioContext.sampleRate * 0.08),
+            this.audioContext.sampleRate
+        );
+        const noiseData = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < noiseData.length; i += 1) {
+            noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length);
+        }
+        const noise = this.audioContext.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const noiseGain = this.audioContext.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(240, t);
+        osc.frequency.exponentialRampToValueAtTime(90, t + 0.08);
+
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 1100;
+        bandpass.Q.value = 2.8;
+
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+
+        noiseGain.gain.setValueAtTime(volume * 0.6, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+
+        osc.connect(bandpass);
+        bandpass.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        noise.connect(noiseGain);
+        noiseGain.connect(this.audioContext.destination);
+
+        osc.start(t);
+        osc.stop(t + 0.13);
+        noise.start(t);
+        noise.stop(t + 0.09);
+    }
+
+    playSynthHologram(volume = 0.22) {
+        if (!this.audioContext) return;
+
+        const t = this.audioContext.currentTime;
+        const oscA = this.audioContext.createOscillator();
+        const oscB = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+        const bandpass = this.audioContext.createBiquadFilter();
+
+        oscA.type = 'sine';
+        oscB.type = 'triangle';
+        oscA.frequency.setValueAtTime(460, t);
+        oscA.frequency.exponentialRampToValueAtTime(980, t + 0.16);
+        oscB.frequency.setValueAtTime(920, t);
+        oscB.frequency.exponentialRampToValueAtTime(1280, t + 0.16);
+
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 1500;
+        bandpass.Q.value = 1.2;
+
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+
+        oscA.connect(bandpass);
+        oscB.connect(bandpass);
+        bandpass.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        oscA.start(t);
+        oscB.start(t);
+        oscA.stop(t + 0.22);
+        oscB.stop(t + 0.22);
     }
 }

@@ -19,36 +19,60 @@ let loadingManager = null;
 let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
+let hologramFlickerTimer = null;
+let lastHologramHoverAt = 0;
+
+function setupHologramLogos() {
+    const logos = document.querySelectorAll('.logo, .logo-text, .mission-logo');
+    if (!logos.length) return;
+
+    logos.forEach((logo) => {
+        logo.classList.add('holo-logo');
+    });
+
+    const scheduleFlicker = () => {
+        const delay = 5000 + Math.random() * 3000; // 5-8 seconds
+        hologramFlickerTimer = setTimeout(() => {
+            logos.forEach((logo) => logo.classList.add('holo-flicker'));
+            setTimeout(() => {
+                logos.forEach((logo) => logo.classList.remove('holo-flicker'));
+                scheduleFlicker();
+            }, 320);
+        }, delay);
+    };
+
+    scheduleFlicker();
+}
 
 /**
  * Initialize the loading screen first
  */
 function initLoading() {
     console.log('🎮 SHADOWDEF Starting...');
-    
+
     try {
         // Initialize loading manager
         loadingManager = new LoadingManager();
-        
+
         // Start loading process
         loadingManager.startLoading(() => {
             // Loading complete - check authentication
             console.log('🎯 Game ready - checking authentication...');
             checkAuthenticationState();
         });
-        
+
         // Initialize game systems during loading
         setTimeout(() => {
             initGameSystems();
         }, 500);
-        
+
     } catch (error) {
         console.error('❌ Loading initialization failed:', error);
-        
+
         // Fallback: skip loading and go directly to game initialization
         console.log('🔄 Falling back to direct initialization...');
         initGameSystems();
-        
+
         // Wait a bit then check authentication
         setTimeout(() => {
             checkAuthenticationState();
@@ -61,6 +85,8 @@ function initLoading() {
  */
 function initGameSystems() {
     try {
+        setupHologramLogos();
+
         // Initialize animated background
         background = new Background('bg-canvas');
         background.start();
@@ -103,16 +129,18 @@ function initGameSystems() {
  */
 function checkAuthenticationState() {
     console.log('🔐 Checking authentication state...');
-    
+
     if (authManager.isUserAuthenticated()) {
         // User is logged in, load their progress and go to main menu
         game.loadProgress();
         game.screens.showScreen('main-menu');
+        syncAuthUiWithRetry();
         console.log('👤 User authenticated, proceeding to main menu');
     } else {
         // No user logged in, show login screen
         game.screens.showScreen('login-screen');
         loginScreen.render();
+        syncAuthUiWithRetry();
         console.log('🔐 No authentication, showing login screen');
     }
 }
@@ -121,13 +149,48 @@ function checkAuthenticationState() {
  * Setup global event listeners
  */
 function setupEventListeners() {
+    const hoverSoundTargets = 'button, .btn, .btn-link, .social-btn, .menu-card, [data-action], .holo-logo, .logo-text';
+
     // Button click delegation
     document.addEventListener('click', (e) => {
+        const interactiveTarget = e.target.closest(hoverSoundTargets);
+        if (interactiveTarget && game?.audio) {
+            game.audio.playButtonClick();
+        }
+
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
 
         const action = btn.dataset.action;
         handleAction(action, e);
+    });
+
+    // Hologram activation sound on hover
+    document.addEventListener('mouseover', (e) => {
+        const hoverTarget = e.target.closest(hoverSoundTargets);
+        if (!hoverTarget || !game?.audio) return;
+
+        const fromTarget = e.relatedTarget?.closest?.(hoverSoundTargets);
+        if (fromTarget === hoverTarget) return;
+
+        const now = performance.now();
+        if (now - lastHologramHoverAt < 110) return;
+
+        lastHologramHoverAt = now;
+        game.audio.playHologramActivate();
+    });
+
+    // Keep login/logout tooltip and icon in sync right before interaction
+    document.addEventListener('mouseenter', (e) => {
+        if (e.target.closest('#login-logout-btn')) {
+            updateMainMenuStatus();
+        }
+    }, true);
+
+    document.addEventListener('focusin', (e) => {
+        if (e.target.closest('#login-logout-btn')) {
+            updateMainMenuStatus();
+        }
     });
 
     // Authentication event listeners
@@ -144,21 +207,23 @@ function setupEventListeners() {
             game.audio.setSfxVolume(userPrefs.sfxVolume);
         }
         // Update main menu status
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     document.addEventListener('shadowdef:auth:logout', () => {
         console.log('👋 User logged out');
         // Clear any game state and return to login
         game.state.resetProgress();
+        game.screens.showScreen('login-screen');
+        loginScreen.render();
         // Update main menu status
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     document.addEventListener('shadowdef:auth:statsUpdate', (e) => {
         console.log('📊 User stats updated:', e.detail);
         // Update main menu status when stats change
-        updateMainMenuStatus();
+        syncAuthUiWithRetry();
     });
 
     // Keyboard shortcuts
@@ -167,19 +232,19 @@ function setupEventListeners() {
         if (e.key === 'Escape') {
             if (game) game.handleEscape();
         }
-        
+
         // F11 for fullscreen
         if (e.key === 'F11') {
             e.preventDefault();
             toggleFullscreen();
         }
-        
+
         // Skip loading screen (development shortcut)
         if (e.key === 'Enter' && loadingManager && loadingManager.isLoadingInProgress()) {
             console.log('⏭️ Skipping loading screen...');
             loadingManager.skipLoading();
         }
-        
+
         // Force start loading if stuck (F5 key)
         if (e.key === 'F5' && loadingManager) {
             e.preventDefault();
@@ -197,6 +262,10 @@ function setupEventListeners() {
 
     // Before unload - save progress
     window.addEventListener('beforeunload', () => {
+        if (hologramFlickerTimer) {
+            clearTimeout(hologramFlickerTimer);
+            hologramFlickerTimer = null;
+        }
         if (game) {
             game.saveProgress();
         }
@@ -236,8 +305,13 @@ function handleAction(action, event) {
             game.showMissionSelect();
             break;
         case 'profile':
-            game.screens.showScreen('profile-screen');
-            profileScreen.render();
+            if (authManager.isUserAuthenticated()) {
+                game.screens.showScreen('profile-screen');
+                profileScreen.render();
+            } else {
+                game.screens.showScreen('login-screen');
+                loginScreen.render();
+            }
             break;
         case 'credits-store':
             showCreditsStore();
@@ -249,6 +323,7 @@ function handleAction(action, event) {
             game.showCredits();
             break;
         case 'login':
+            syncLoginLogoutButtonState();
             if (authManager.isUserAuthenticated()) {
                 // User is logged in, show logout confirmation
                 game.ui.showConfirm(
@@ -267,6 +342,12 @@ function handleAction(action, event) {
         case 'back':
             game.goBack();
             break;
+        case 'back-to-categories':
+            game.showMissionCategories();
+            break;
+        case 'back-to-levels':
+            game.backToCurrentCategoryLevels();
+            break;
         case 'pause':
             game.pauseGame();
             break;
@@ -284,7 +365,7 @@ function handleAction(action, event) {
 function showCreditsStore() {
     const user = authManager.getCurrentUser();
     const credits = user?.gameStats?.credits || 0;
-    
+
     game.ui.showModal('Gaming Credits', `
         <div class="credits-store">
             <div class="current-credits">
@@ -341,12 +422,56 @@ function showCreditsStore() {
 /**
  * Update main menu user status and stats
  */
-function updateMainMenuStatus() {
-    const userInfo = document.getElementById('user-info');
-    const userName = document.getElementById('user-name');
-    const userStatus = document.getElementById('user-status');
-    const userAvatar = document.getElementById('user-avatar');
+const LOGIN_ICON_SVG = `
+    <svg class="icon-svg" viewBox="0 0 24 24">
+        <path d="M14 4h7v16h-7"></path>
+        <path d="M3 12h10"></path>
+        <path d="m9 8 4 4-4 4"></path>
+    </svg>
+`;
+
+const LOGOUT_ICON_SVG = `
+    <svg class="icon-svg" viewBox="0 0 24 24">
+        <path d="M12 4v7"></path>
+        <path d="M7.5 6.2a8 8 0 1 0 9 0"></path>
+    </svg>
+`;
+
+function setLoginButtonIcon(button, iconSvg) {
+    const iconContainer = button?.querySelector('.card-icon');
+    if (iconContainer) {
+        iconContainer.innerHTML = iconSvg;
+    }
+}
+
+function syncLoginLogoutButtonState() {
+    if (!authManager) return;
     const loginLogoutBtn = document.getElementById('login-logout-btn');
+    if (!loginLogoutBtn) return;
+
+    if (authManager.isUserAuthenticated()) {
+        loginLogoutBtn.dataset.tooltip = 'Logout';
+        loginLogoutBtn.removeAttribute('title');
+        loginLogoutBtn.setAttribute('aria-label', 'Logout');
+        loginLogoutBtn.classList.add('is-logout');
+        setLoginButtonIcon(loginLogoutBtn, LOGOUT_ICON_SVG);
+    } else {
+        loginLogoutBtn.dataset.tooltip = 'Login';
+        loginLogoutBtn.removeAttribute('title');
+        loginLogoutBtn.setAttribute('aria-label', 'Login');
+        loginLogoutBtn.classList.remove('is-logout');
+        setLoginButtonIcon(loginLogoutBtn, LOGIN_ICON_SVG);
+    }
+}
+
+function syncAuthUiWithRetry() {
+    updateMainMenuStatus();
+    setTimeout(() => updateMainMenuStatus(), 150);
+    setTimeout(() => updateMainMenuStatus(), 500);
+}
+
+function updateMainMenuStatus() {
+    const profileBtn = document.querySelector('[data-action="profile"]');
     const profileStats = document.getElementById('profile-stats');
     const creditsDisplay = document.getElementById('credits-display');
     const missionProgress = document.getElementById('mission-progress');
@@ -355,44 +480,34 @@ function updateMainMenuStatus() {
 
     const isAuthenticated = authManager.isUserAuthenticated();
     const user = authManager.getCurrentUser();
+    syncLoginLogoutButtonState();
 
-    if (isAuthenticated && user) {
-        // Update user info
-        if (userName) userName.textContent = user.name;
-        if (userStatus) userStatus.textContent = 'Logged in';
-        if (userAvatar) {
-            if (user.avatar) {
-                userAvatar.innerHTML = `<img src="${user.avatar}" alt="${user.name}">`;
-            } else {
-                userAvatar.textContent = user.name.charAt(0).toUpperCase();
-            }
-        }
-        if (loginLogoutBtn) {
-            loginLogoutBtn.textContent = 'LOGOUT';
-            loginLogoutBtn.dataset.action = 'login';
+    if (isAuthenticated) {
+        if (profileBtn) {
+            profileBtn.dataset.tooltip = 'Profile';
+            profileBtn.setAttribute('aria-label', 'Profile');
         }
 
         // Update stats
-        const stats = user.gameStats || {};
-        if (profileStats) {
-            profileStats.textContent = `Level ${stats.level || 1} • ${stats.credits || 0} Credits`;
-        }
-        if (creditsDisplay) {
-            creditsDisplay.textContent = `${stats.credits || 0} Credits`;
-        }
-        if (missionProgress) {
-            missionProgress.textContent = `${stats.missionsCompleted || 0}/20 Completed`;
+        if (user) {
+            const stats = user.gameStats || {};
+            if (profileStats) {
+                profileStats.textContent = `Level ${stats.level || 1} - ${stats.credits || 0} Credits`;
+            }
+            if (creditsDisplay) {
+                creditsDisplay.textContent = `${stats.credits || 0} Credits`;
+            }
+            if (missionProgress) {
+                missionProgress.textContent = `${stats.missionsCompleted || 0}/20 Completed`;
+            }
         }
     } else {
-        // Guest user
-        if (userName) userName.textContent = 'Guest Player';
-        if (userStatus) userStatus.textContent = 'Not logged in';
-        if (userAvatar) userAvatar.textContent = '👤';
-        if (loginLogoutBtn) {
-            loginLogoutBtn.textContent = 'LOGIN';
-            loginLogoutBtn.dataset.action = 'login';
+        if (profileBtn) {
+            profileBtn.dataset.tooltip = 'Profile (Login Required)';
+            profileBtn.setAttribute('aria-label', 'Profile (Login Required)');
         }
-        if (profileStats) profileStats.textContent = 'Level 1 • 0 Credits';
+
+        if (profileStats) profileStats.textContent = 'Login to view profile';
         if (creditsDisplay) creditsDisplay.textContent = '0 Credits';
         if (missionProgress) missionProgress.textContent = '0/20 Completed';
     }
@@ -443,16 +558,16 @@ export function awardCredits(amount, reason = 'Game completion') {
     if (authManager && authManager.isUserAuthenticated()) {
         const currentStats = authManager.getUserStats();
         const newCredits = (currentStats.credits || 0) + amount;
-        
-        authManager.updateGameStats({ 
-            credits: newCredits 
+
+        authManager.updateGameStats({
+            credits: newCredits
         });
-        
+
         // Show notification
         if (game && game.ui) {
             game.ui.showNotification(`+${amount} credits earned! (${reason})`, 'success');
         }
-        
+
         console.log(`💰 Awarded ${amount} credits: ${reason}`);
     }
 }
@@ -466,26 +581,26 @@ export function awardExperience(xp, reason = 'Mission completion') {
         const currentXP = currentStats.experience || 0;
         const currentLevel = currentStats.level || 1;
         const newXP = currentXP + xp;
-        
+
         // Calculate new level
         const newLevel = Math.floor(newXP / 1000) + 1;
         const leveledUp = newLevel > currentLevel;
-        
-        authManager.updateGameStats({ 
+
+        authManager.updateGameStats({
             experience: newXP,
             level: newLevel
         });
-        
+
         // Show notifications
         if (game && game.ui) {
             game.ui.showNotification(`+${xp} XP earned! (${reason})`, 'success');
-            
+
             if (leveledUp) {
                 game.ui.showNotification(`🎉 Level Up! You are now level ${newLevel}!`, 'success', 5000);
                 awardCredits(100, 'Level up bonus');
             }
         }
-        
+
         console.log(`⭐ Awarded ${xp} XP: ${reason}`);
     }
 }
@@ -498,4 +613,5 @@ if (document.readyState === 'loading') {
 }
 
 // Export for debugging and game integration
-export { game, loadingManager, authManager, updateUserStats, awardCredits, awardExperience, updateMainMenuStatus };
+export { game, loadingManager, authManager, updateMainMenuStatus };
+

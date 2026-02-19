@@ -1,4 +1,4 @@
-/* ======================
+﻿/* ======================
    UI Components
    ====================== */
 
@@ -17,6 +17,7 @@
     position: relative;
     overflow: hidden;
     white-space: nowrap;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .btn::before {
@@ -60,6 +61,120 @@
     box-shadow: none;
 }
 
+.btn.nav-icon {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    overflow: visible;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn.nav-icon::before {
+    content: none;
+}
+
+.btn.nav-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    right: calc(100% + 10px);
+    transform: translateY(-50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-family: 'Lucida Console', 'Consolas', var(--font-mono);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    z-index: 5;
+}
+
+.btn.nav-icon:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-2px);
+}
+
+.btn.nav-icon:hover {
+    box-shadow: 0 0 18px rgba(0, 243, 255, 0.35);
+    transform: translateY(-2px) scale(0.97);
+}
+
+.btn.nav-icon .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.btn.nav-icon .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--cyber-blue);
+}
+
+.btn.nav-icon .icon-svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: loginIconGlitch 1.4s steps(2, end) infinite;
+    filter:
+        drop-shadow(-1px 0 rgba(0, 243, 255, 0.75))
+        drop-shadow(1px 0 rgba(255, 0, 110, 0.75))
+        drop-shadow(0 0 6px rgba(0, 243, 255, 0.28));
+}
+
+.btn.nav-icon:hover .icon-svg,
+.btn.nav-icon:focus-visible .icon-svg {
+    animation-duration: 420ms;
+    filter:
+        drop-shadow(-1px 0 rgba(0, 243, 255, 0.9))
+        drop-shadow(1px 0 rgba(255, 0, 110, 0.9))
+        drop-shadow(0 0 8px rgba(0, 243, 255, 0.35));
+}
+
+@keyframes loginIconGlitch {
+    0% {
+        transform: translate(0, 0);
+    }
+    20% {
+        transform: translate(-1px, 1px) skewX(-2deg);
+    }
+    40% {
+        transform: translate(1px, -1px) skewX(2deg);
+    }
+    60% {
+        transform: translate(-1px, 0) skewY(1deg);
+    }
+    80% {
+        transform: translate(1px, 1px) skewY(-1deg);
+    }
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
 /* Button Variants */
 .btn-primary {
     border-color: var(--cyber-pink);
@@ -101,13 +216,14 @@
     font-family: var(--font-mono);
     text-transform: uppercase;
     z-index: 1000;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .back-btn:hover {
     border-color: var(--cyber-blue);
     color: var(--cyber-blue);
     transform: translateX(-3px);
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.35);
 }
 
 /* Panels */
@@ -241,13 +357,35 @@ input[type="checkbox"] {
     animation: fadeIn var(--transition-normal);
 }
 
+.modal.modal-panel {
+    justify-content: flex-end;
+    align-items: stretch;
+    background: rgba(5, 8, 20, 0.65);
+}
+
+.modal.modal-panel .modal-content {
+    width: min(420px, 92vw);
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    transform: translateX(100%);
+    transition: transform 0.35s ease;
+    text-align: left;
+    padding: var(--spacing-lg);
+    animation: none;
+}
+
+.modal.modal-panel.active .modal-content {
+    transform: translateX(0);
+}
+
 .modal-content {
     background: var(--panel-bg);
     border: 3px solid var(--cyber-pink);
     padding: var(--spacing-xl);
     max-width: 90%;
     max-height: 90%;
-    overflow-y: auto;
+    overflow: hidden;
     text-align: center;
     animation: modalSlideIn 0.4s ease;
     box-shadow: var(--shadow-lg), var(--glow-pink);
@@ -449,6 +587,18 @@ input[type="checkbox"] {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn,
+    .menu-card,
+    .menu-card.nav-icon,
+    .btn.nav-icon,
+    .back-btn,
+    .card-icon {
+        transition: none !important;
+        animation: none !important;
+    }
 }
 
 @keyframes glitch {
@@ -712,3 +862,4 @@ input[type="checkbox"] {
         font-size: 2rem;
     }
 }
+

@@ -61,8 +61,8 @@
 }
 
 html, body {
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
 }
 
@@ -88,13 +88,16 @@ body {
 }
 
 /* Main Game Container */
+#game-container,
 .game-container {
-    position: relative;
+    position: fixed;
+    inset: 0;
     z-index: 1;
-    width: 100%;
+    width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Screen Management */
@@ -103,9 +106,11 @@ body {
     width: 100%;
     height: 100%;
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     z-index: 1;
+    overflow: hidden;
+    min-height: 0;
+    min-width: 0;
 }
 
 .screen.active {

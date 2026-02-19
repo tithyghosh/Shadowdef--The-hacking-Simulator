@@ -11,7 +11,7 @@
     width: 100%;
     max-width: 700px;
     max-height: 100%;           
-    overflow-y: auto;         
+    overflow: hidden;         
 }
 
 .puzzle-title {
@@ -274,7 +274,7 @@
 
 .file-list {
     max-height: 450px;
-    overflow-y: auto;
+    overflow: hidden;
     background: var(--darker-bg);
     border: 2px solid var(--cyber-blue);
     padding: 15px;
@@ -341,7 +341,7 @@
     padding: 20px;
     margin-bottom: 20px;
     max-height: 400px;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .email-header {
