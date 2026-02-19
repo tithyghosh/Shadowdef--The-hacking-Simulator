@@ -1,4 +1,4 @@
-/* ======================
+﻿/* ======================
    SHADOWDEF - Loading Screen Styles
    ====================== */
 
@@ -155,7 +155,9 @@
     }
 }
 
-.progress-label {
+#loading-screen .progress-label {
+    display: block;
+    text-align: center;
     font-size: var(--font-size-base);
     color: var(--text-primary);
     margin-bottom: var(--spacing-md);
@@ -314,8 +316,14 @@
         font-size: var(--font-size-sm);
         letter-spacing: 1px;
     }
+
+    .progress-bar-bg {
+        width: calc(100% - 16px);
+        margin-left: 8px;
+        margin-right: 8px;
+    }
     
-    .progress-label {
+    #loading-screen .progress-label {
         font-size: var(--font-size-sm);
     }
     
@@ -332,3 +340,5 @@
         opacity: 1;
     }
 }
+
+

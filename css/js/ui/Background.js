@@ -1,8 +1,13 @@
 /**
- * Background - Animated particle background
- * Creates a cyberpunk-style animated canvas background
+ * Background - Three.js cyber background
+ * Effects:
+ * - Slowly moving network nodes and links
+ * - Floating binary sprites
+ * - Faint horizontal scan line
+ * - Random glitch flashes
  */
 
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { CONFIG } from '../data/config.js';
 
 export class Background {
@@ -13,410 +18,448 @@ export class Background {
             return;
         }
 
-        this.ctx = this.canvas.getContext('2d');
-        this.particles = [];
+        this.renderer = null;
+        this.scene = null;
+        this.camera = null;
+        this.clock = new THREE.Clock();
         this.animationId = null;
         this.isRunning = false;
-        
-        this.config = CONFIG.BACKGROUND;
-        
-        // Initialize
+
+        this.config = CONFIG.BACKGROUND || {};
+        this.nodeCount = Math.max(30, this.config.PARTICLE_COUNT || 80);
+        this.connectionDistance = this.config.CONNECTION_DISTANCE || 200;
+
+        this.worldHeight = 100;
+        this.worldWidth = 100;
+
+        this.nodes = [];
+        this.nodePositions = null;
+        this.nodeGeometry = null;
+        this.haloGeometry = null;
+        this.linkGeometry = null;
+        this.linkPairsMax = this.nodeCount * 8;
+        this.linkPositions = null;
+
+        this.binarySprites = [];
+        this.scanLine = null;
+        this.glitchFlash = null;
+        this.glitchBars = [];
+        this.glitchTimer = 0;
+        this.nextGlitchAt = 0.8 + Math.random() * 1.8;
+
+        this.onResize = this.resize.bind(this);
+
+        this.initThree();
         this.resize();
-        this.createParticles();
-        
-        // Setup resize listener
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', this.onResize);
     }
 
-    /**
-     * Resize canvas to window size
-     */
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        
-        // Recreate particles to fill new screen size
-        this.createParticles();
-    }
-
-    /**
-     * Create particle system
-     */
-    createParticles() {
-        this.particles = [];
-        
-        const count = CONFIG.PERFORMANCE.ENABLE_PARTICLES 
-            ? this.config.PARTICLE_COUNT 
-            : 30;
-        
-        // Calculate particle density based on screen size
-        const screenArea = this.canvas.width * this.canvas.height;
-        const baseArea = 1920 * 1080; // Base resolution
-        const densityMultiplier = Math.sqrt(screenArea / baseArea);
-        const adjustedCount = Math.floor(count * densityMultiplier * this.config.NETWORK_DENSITY);
-        
-        for (let i = 0; i < adjustedCount; i++) {
-            this.particles.push(this.createParticle());
-        }
-        
-        console.log(`🌐 Created ${adjustedCount} network particles for ${this.canvas.width}x${this.canvas.height}`);
-    }
-
-    /**
-     * Create a single particle
-     * @returns {Object} Particle object
-     */
-    createParticle() {
-        return {
-            x: Math.random() * this.canvas.width,
-            y: Math.random() * this.canvas.height,
-            vx: (Math.random() - 0.5) * this.config.PARTICLE_SPEED,
-            vy: (Math.random() - 0.5) * this.config.PARTICLE_SPEED,
-            size: Math.random() * 
-                (this.config.PARTICLE_SIZE_MAX - this.config.PARTICLE_SIZE_MIN) + 
-                this.config.PARTICLE_SIZE_MIN,
-            opacity: Math.random() * 0.5 + 0.3
-        };
-    }
-
-    /**
-     * Update particle positions
-     */
-    updateParticles() {
-        this.particles.forEach(particle => {
-            // Update position
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-
-            // Bounce off walls
-            if (particle.x < 0 || particle.x > this.canvas.width) {
-                particle.vx *= -1;
-                particle.x = Math.max(0, Math.min(this.canvas.width, particle.x));
-            }
-            if (particle.y < 0 || particle.y > this.canvas.height) {
-                particle.vy *= -1;
-                particle.y = Math.max(0, Math.min(this.canvas.height, particle.y));
-            }
+    initThree() {
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance'
         });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        this.renderer.setClearColor(0x060a24, 1);
+
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.OrthographicCamera(-50, 50, 50, -50, -100, 100);
+        this.camera.position.z = 10;
+
+        this.buildNetwork();
+        this.buildBinarySprites();
+        this.buildScanLine();
+        this.buildGlitch();
     }
 
-    /**
-     * Draw particles and connections
-     */
-    drawParticles() {
-        // Clear canvas with dark background
-        this.ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    buildNetwork() {
+        this.nodePositions = new Float32Array(this.nodeCount * 3);
+        this.nodeGeometry = new THREE.BufferGeometry();
+        this.haloGeometry = new THREE.BufferGeometry();
 
-        // Draw network connections first (behind particles)
-        this.drawNetworkConnections();
-        
-        // Draw particles on top
-        this.drawNetworkNodes();
+        const baseSpeed = Math.max(0.03, this.config.PARTICLE_SPEED || 0.3) * 0.12;
+        for (let i = 0; i < this.nodeCount; i++) {
+            this.nodes.push({
+                x: 0,
+                y: 0,
+                vx: (Math.random() - 0.5) * baseSpeed,
+                vy: (Math.random() - 0.5) * baseSpeed,
+                pulse: Math.random() * Math.PI * 2
+            });
+        }
+
+        this.nodeGeometry.setAttribute('position', new THREE.BufferAttribute(this.nodePositions, 3));
+        this.haloGeometry.setAttribute('position', new THREE.BufferAttribute(this.nodePositions, 3));
+
+        const nodeMaterial = new THREE.PointsMaterial({
+            color: 0x00f3ff,
+            size: 3,
+            sizeAttenuation: false,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
+        const nodePoints = new THREE.Points(this.nodeGeometry, nodeMaterial);
+        this.scene.add(nodePoints);
+
+        const haloMaterial = new THREE.PointsMaterial({
+            color: 0x7a4dff,
+            size: 10,
+            sizeAttenuation: false,
+            transparent: true,
+            opacity: 0.14,
+            blending: THREE.AdditiveBlending
+        });
+        const haloPoints = new THREE.Points(this.haloGeometry, haloMaterial);
+        this.scene.add(haloPoints);
+
+        this.linkPositions = new Float32Array(this.linkPairsMax * 2 * 3);
+        this.linkGeometry = new THREE.BufferGeometry();
+        this.linkGeometry.setAttribute('position', new THREE.BufferAttribute(this.linkPositions, 3));
+        this.linkGeometry.setDrawRange(0, 0);
+
+        const linkMaterial = new THREE.LineBasicMaterial({
+            color: 0x36b9ff,
+            transparent: true,
+            opacity: 0.22,
+            blending: THREE.AdditiveBlending
+        });
+        const links = new THREE.LineSegments(this.linkGeometry, linkMaterial);
+        this.scene.add(links);
     }
 
-    /**
-     * Draw network connections between particles
-     */
-    drawNetworkConnections() {
-        this.ctx.lineWidth = 1;
+    buildBinarySprites() {
+        const binaryCount = Math.min(70, Math.max(25, Math.floor(this.nodeCount * 0.55)));
+        for (let i = 0; i < binaryCount; i++) {
+            const texture = this.makeBinaryTexture();
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                color: 0x9cecff,
+                transparent: true,
+                opacity: 0.18,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const sprite = new THREE.Sprite(material);
+            sprite.userData = {
+                drift: (Math.random() - 0.5) * 0.25,
+                rise: 0.08 + Math.random() * 0.12,
+                wobble: Math.random() * Math.PI * 2
+            };
+            sprite.scale.set(7 + Math.random() * 4, 3.2 + Math.random() * 2, 1);
+            this.binarySprites.push(sprite);
+            this.scene.add(sprite);
+        }
+    }
 
-        for (let i = 0; i < this.particles.length; i++) {
-            const p1 = this.particles[i];
+    makeBinaryTexture() {
+        const c = document.createElement('canvas');
+        c.width = 128;
+        c.height = 64;
+        const g = c.getContext('2d');
+        g.clearRect(0, 0, c.width, c.height);
+        g.font = 'bold 34px Consolas, monospace';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillStyle = 'rgba(150, 236, 255, 0.95)';
+        const len = 2 + Math.floor(Math.random() * 5);
+        let txt = '';
+        for (let i = 0; i < len; i++) txt += Math.random() > 0.5 ? '1' : '0';
+        g.fillText(txt, c.width / 2, c.height / 2);
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        return tex;
+    }
 
-            for (let j = i + 1; j < this.particles.length; j++) {
-                const p2 = this.particles[j];
-                const dx = p1.x - p2.x;
-                const dy = p1.y - p2.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+    buildScanLine() {
+        const geom = new THREE.PlaneGeometry(1, 2.2);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0x1fd7ff,
+            transparent: true,
+            opacity: 0.12,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        this.scanLine = new THREE.Mesh(geom, mat);
+        this.scene.add(this.scanLine);
+    }
 
-                if (distance < this.config.CONNECTION_DISTANCE) {
-                    const opacity = (1 - (distance / this.config.CONNECTION_DISTANCE)) * 0.4;
-                    
-                    // Create gradient line for better visual effect
-                    const gradient = this.ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
-                    gradient.addColorStop(0, `rgba(0, 243, 255, ${opacity * p1.opacity})`);
-                    gradient.addColorStop(0.5, `rgba(139, 92, 246, ${opacity * 0.8})`);
-                    gradient.addColorStop(1, `rgba(255, 0, 110, ${opacity * p2.opacity})`);
-                    
-                    this.ctx.strokeStyle = gradient;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(p1.x, p1.y);
-                    this.ctx.lineTo(p2.x, p2.y);
-                    this.ctx.stroke();
+    buildGlitch() {
+        const flashGeom = new THREE.PlaneGeometry(1, 1);
+        const flashMat = new THREE.MeshBasicMaterial({
+            color: 0x93d7ff,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        this.glitchFlash = new THREE.Mesh(flashGeom, flashMat);
+        this.scene.add(this.glitchFlash);
+
+        for (let i = 0; i < 5; i++) {
+            const barGeom = new THREE.PlaneGeometry(1, 0.8 + Math.random() * 1.2);
+            const barMat = new THREE.MeshBasicMaterial({
+                color: i % 2 === 0 ? 0xff2d83 : 0x58dbff,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const bar = new THREE.Mesh(barGeom, barMat);
+            bar.visible = false;
+            this.glitchBars.push(bar);
+            this.scene.add(bar);
+        }
+    }
+
+    resize() {
+        if (!this.renderer || !this.canvas) return;
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        this.renderer.setSize(width, height, false);
+
+        this.worldWidth = (width / height) * this.worldHeight;
+        this.camera.left = -this.worldWidth / 2;
+        this.camera.right = this.worldWidth / 2;
+        this.camera.top = this.worldHeight / 2;
+        this.camera.bottom = -this.worldHeight / 2;
+        this.camera.updateProjectionMatrix();
+
+        // Re-seed node/sprite positions into current viewport bounds.
+        for (let i = 0; i < this.nodes.length; i++) {
+            this.nodes[i].x = (Math.random() - 0.5) * this.worldWidth;
+            this.nodes[i].y = (Math.random() - 0.5) * this.worldHeight;
+        }
+        for (let i = 0; i < this.binarySprites.length; i++) {
+            const s = this.binarySprites[i];
+            s.position.x = (Math.random() - 0.5) * this.worldWidth;
+            s.position.y = (Math.random() - 0.5) * this.worldHeight;
+        }
+
+        this.scanLine.scale.set(this.worldWidth, 1, 1);
+        this.glitchFlash.scale.set(this.worldWidth, this.worldHeight, 1);
+        for (const bar of this.glitchBars) {
+            bar.scale.set(this.worldWidth * (0.6 + Math.random() * 0.45), 1, 1);
+            bar.position.x = (Math.random() - 0.5) * this.worldWidth * 0.2;
+        }
+    }
+
+    updateNetwork(delta, elapsed) {
+        const halfW = this.worldWidth / 2;
+        const halfH = this.worldHeight / 2;
+        const distScale = this.connectionDistance / 200;
+        const threshold = 10 * distScale;
+
+        for (let i = 0; i < this.nodes.length; i++) {
+            const n = this.nodes[i];
+            n.x += n.vx * delta * 60;
+            n.y += n.vy * delta * 60;
+
+            if (n.x < -halfW || n.x > halfW) n.vx *= -1;
+            if (n.y < -halfH || n.y > halfH) n.vy *= -1;
+            n.x = Math.max(-halfW, Math.min(halfW, n.x));
+            n.y = Math.max(-halfH, Math.min(halfH, n.y));
+
+            const p = i * 3;
+            this.nodePositions[p] = n.x;
+            this.nodePositions[p + 1] = n.y;
+            this.nodePositions[p + 2] = 0;
+        }
+
+        this.nodeGeometry.attributes.position.needsUpdate = true;
+        this.haloGeometry.attributes.position.needsUpdate = true;
+
+        let cursor = 0;
+        let segs = 0;
+        for (let i = 0; i < this.nodes.length; i++) {
+            const a = this.nodes[i];
+            for (let j = i + 1; j < this.nodes.length; j++) {
+                if (segs >= this.linkPairsMax) break;
+                const b = this.nodes[j];
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                if ((dx * dx + dy * dy) <= threshold * threshold) {
+                    this.linkPositions[cursor++] = a.x;
+                    this.linkPositions[cursor++] = a.y;
+                    this.linkPositions[cursor++] = 0;
+                    this.linkPositions[cursor++] = b.x;
+                    this.linkPositions[cursor++] = b.y;
+                    this.linkPositions[cursor++] = 0;
+                    segs++;
                 }
             }
         }
-    }
+        this.linkGeometry.setDrawRange(0, segs * 2);
+        this.linkGeometry.attributes.position.needsUpdate = true;
 
-    /**
-     * Draw network nodes (particles)
-     */
-    drawNetworkNodes() {
-        this.particles.forEach(particle => {
-            // Main particle
-            this.ctx.fillStyle = `rgba(0, 243, 255, ${particle.opacity})`;
-            this.ctx.beginPath();
-            this.ctx.arc(
-                particle.x,
-                particle.y,
-                particle.size,
-                0,
-                Math.PI * 2
-            );
-            this.ctx.fill();
-
-            // Enhanced glow effect
-            const glowSize = particle.size * 4;
-            const gradient = this.ctx.createRadialGradient(
-                particle.x,
-                particle.y,
-                0,
-                particle.x,
-                particle.y,
-                glowSize
-            );
-            
-            const glowOpacity = particle.opacity * this.config.GLOW_INTENSITY;
-            gradient.addColorStop(0, `rgba(0, 243, 255, ${glowOpacity})`);
-            gradient.addColorStop(0.4, `rgba(139, 92, 246, ${glowOpacity * 0.6})`);
-            gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
-            
-            this.ctx.fillStyle = gradient;
-            this.ctx.beginPath();
-            this.ctx.arc(
-                particle.x,
-                particle.y,
-                glowSize,
-                0,
-                Math.PI * 2
-            );
-            this.ctx.fill();
-
-            // Add pulsing effect for larger particles
-            if (particle.size > 2.5) {
-                const pulseSize = particle.size * 6;
-                const pulseOpacity = (Math.sin(Date.now() * 0.003 + particle.x * 0.01) + 1) * 0.1 * particle.opacity;
-                
-                const pulseGradient = this.ctx.createRadialGradient(
-                    particle.x,
-                    particle.y,
-                    0,
-                    particle.x,
-                    particle.y,
-                    pulseSize
-                );
-                
-                pulseGradient.addColorStop(0, `rgba(255, 0, 110, ${pulseOpacity})`);
-                pulseGradient.addColorStop(1, 'rgba(255, 0, 110, 0)');
-                
-                this.ctx.fillStyle = pulseGradient;
-                this.ctx.beginPath();
-                this.ctx.arc(
-                    particle.x,
-                    particle.y,
-                    pulseSize,
-                    0,
-                    Math.PI * 2
-                );
-                this.ctx.fill();
-            }
+        // Subtle global pulse.
+        const pulse = 0.18 + (Math.sin(elapsed * 0.8) + 1) * 0.06;
+        this.scene.children.forEach((obj) => {
+            if (obj.isLineSegments && obj.material) obj.material.opacity = pulse;
         });
     }
 
-    /**
-     * Animation loop
-     */
+    updateBinarySprites(delta, elapsed) {
+        const halfW = this.worldWidth / 2;
+        const halfH = this.worldHeight / 2;
+
+        for (const s of this.binarySprites) {
+            const d = s.userData;
+            s.position.y += d.rise * delta * 60;
+            s.position.x += Math.sin(elapsed * 0.4 + d.wobble) * d.drift * delta * 60;
+            if (s.position.y > halfH + 4) {
+                s.position.y = -halfH - 4;
+                s.position.x = (Math.random() - 0.5) * this.worldWidth;
+            }
+        }
+    }
+
+    updateScanLine(elapsed) {
+        const t = (elapsed * 0.07) % 1;
+        this.scanLine.position.y = (0.5 - t) * this.worldHeight;
+        this.scanLine.material.opacity = 0.08 + Math.sin(elapsed * 4.2) * 0.015;
+    }
+
+    triggerGlitch() {
+        this.glitchTimer = 0.08 + Math.random() * 0.06;
+        this.glitchFlash.material.opacity = 0.08 + Math.random() * 0.12;
+
+        for (const bar of this.glitchBars) {
+            bar.visible = Math.random() > 0.45;
+            bar.position.y = (Math.random() - 0.5) * this.worldHeight;
+            bar.material.opacity = bar.visible ? 0.05 + Math.random() * 0.14 : 0;
+        }
+    }
+
+    updateGlitch(delta, elapsed) {
+        this.nextGlitchAt -= delta;
+        if (this.nextGlitchAt <= 0) {
+            this.triggerGlitch();
+            this.nextGlitchAt = 0.8 + Math.random() * 2.6;
+        }
+
+        if (this.glitchTimer > 0) {
+            this.glitchTimer -= delta;
+            const fade = Math.max(0, this.glitchTimer * 9);
+            this.glitchFlash.material.opacity *= (0.85 + fade * 0.02);
+            for (const bar of this.glitchBars) {
+                if (bar.visible) {
+                    bar.material.opacity *= 0.76;
+                    if (bar.material.opacity < 0.01) {
+                        bar.visible = false;
+                        bar.material.opacity = 0;
+                    }
+                }
+            }
+        } else {
+            this.glitchFlash.material.opacity = Math.max(0, this.glitchFlash.material.opacity * 0.8);
+        }
+
+        // Rare tiny chromatic jitter.
+        this.scene.position.x = Math.sin(elapsed * 47.0) * 0.02;
+    }
+
     animate() {
-        if (!this.isRunning) return;
+        if (!this.isRunning || !this.renderer) return;
 
-        this.updateParticles();
-        this.drawParticles();
+        const delta = Math.min(this.clock.getDelta(), 0.05);
+        const elapsed = this.clock.elapsedTime;
+        this.updateNetwork(delta, elapsed);
+        this.updateBinarySprites(delta, elapsed);
+        this.updateScanLine(elapsed);
+        this.updateGlitch(delta, elapsed);
 
+        this.renderer.render(this.scene, this.camera);
         this.animationId = requestAnimationFrame(() => this.animate());
     }
 
-    /**
-     * Start animation
-     */
     start() {
         if (this.isRunning) return;
-        
         this.isRunning = true;
+        this.clock.start();
         this.animate();
-        console.log('🎨 Background animation started');
+        console.log('Background animation started (Three.js)');
     }
 
-    /**
-     * Stop animation
-     */
     stop() {
         this.isRunning = false;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
-        console.log('🎨 Background animation stopped');
     }
 
-    /**
-     * Pause animation
-     */
     pause() {
-        this.isRunning = false;
+        this.stop();
     }
 
-    /**
-     * Resume animation
-     */
     resume() {
-        if (!this.isRunning) {
-            this.start();
+        this.start();
+    }
+
+    clear() {
+        if (this.renderer) {
+            this.renderer.clear();
         }
     }
 
-    /**
-     * Clear canvas
-     */
-    clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    /**
-     * Update particle count
-     * @param {number} count - New particle count
-     */
+    // Kept for compatibility with callers.
     setParticleCount(count) {
-        this.config.PARTICLE_COUNT = count;
-        this.createParticles();
+        this.nodeCount = Math.max(10, count | 0);
     }
 
-    /**
-     * Change background color
-     * @param {string} color - Background color
-     */
+    // Kept for compatibility with callers.
     setBackgroundColor(color) {
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        if (!this.renderer) return;
+        this.renderer.setClearColor(new THREE.Color(color), 1);
     }
 
-    /**
-     * Add particle at specific position (for effects)
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     */
     addParticleAt(x, y) {
-        const particle = this.createParticle();
-        particle.x = x;
-        particle.y = y;
-        this.particles.push(particle);
+        if (!this.nodes.length) return;
+        const idx = Math.floor(Math.random() * this.nodes.length);
+        const nx = ((x / window.innerWidth) - 0.5) * this.worldWidth;
+        const ny = (0.5 - (y / window.innerHeight)) * this.worldHeight;
+        this.nodes[idx].x = nx;
+        this.nodes[idx].y = ny;
     }
 
-    /**
-     * Create burst effect at position
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} count - Particle count
-     */
     createBurst(x, y, count = 10) {
         for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i) / count;
-            const speed = 2;
-            
-            const particle = {
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                size: 3,
-                opacity: 1,
-                lifetime: 60 // frames
-            };
-            
-            this.particles.push(particle);
+            this.addParticleAt(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40);
         }
     }
 
-    /**
-     * Clean up expired particles
-     */
-    cleanupParticles() {
-        this.particles = this.particles.filter(p => {
-            if (p.lifetime !== undefined) {
-                p.lifetime--;
-                p.opacity = p.lifetime / 60;
-                return p.lifetime > 0;
-            }
-            return true;
-        });
-    }
+    cleanupParticles() {}
 
-    /**
-     * Destroy background and clean up
-     */
     destroy() {
         this.stop();
-        this.clear();
-        window.removeEventListener('resize', () => this.resize());
-    }
-}
+        window.removeEventListener('resize', this.onResize);
 
-/**
- * Static background patterns (optional alternative to animated)
- */
-export class StaticBackground {
-    static drawGrid(canvas) {
-        const ctx = canvas.getContext('2d');
-        const gridSize = 50;
-        
-        ctx.strokeStyle = 'rgba(0, 243, 255, 0.1)';
-        ctx.lineWidth = 1;
-        
-        // Vertical lines
-        for (let x = 0; x < canvas.width; x += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, canvas.height);
-            ctx.stroke();
-        }
-        
-        // Horizontal lines
-        for (let y = 0; y < canvas.height; y += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
-        }
-    }
-
-    static drawCircuit(canvas) {
-        const ctx = canvas.getContext('2d');
-        const nodeCount = 20;
-        
-        ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
-        ctx.fillStyle = 'rgba(0, 243, 255, 0.5)';
-        ctx.lineWidth = 2;
-        
-        // Random circuit nodes
-        for (let i = 0; i < nodeCount; i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            
-            // Draw node
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw connections
-            if (i > 0) {
-                const prevX = Math.random() * canvas.width;
-                const prevY = Math.random() * canvas.height;
-                
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(prevX, prevY);
-                ctx.stroke();
+        if (!this.scene) return;
+        this.scene.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach((m) => m.dispose());
+                } else {
+                    obj.material.dispose();
+                }
             }
+            if (obj.material && obj.material.map) obj.material.map.dispose();
+        });
+
+        if (this.renderer) {
+            this.renderer.dispose();
+            this.renderer = null;
         }
     }
 }
+
+export class StaticBackground {
+    static drawGrid() {}
+    static drawCircuit() {}
+}
+
