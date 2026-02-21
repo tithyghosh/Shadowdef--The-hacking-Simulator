@@ -386,6 +386,9 @@ input[type="checkbox"] {
     max-width: 90%;
     max-height: 90%;
     overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
     text-align: center;
     animation: modalSlideIn 0.4s ease;
     box-shadow: var(--shadow-lg), var(--glow-pink);
@@ -530,6 +533,10 @@ input[type="checkbox"] {
 .modal-body {
     margin: var(--spacing-lg) 0;
     text-align: left;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 /* Modal Buttons */
@@ -537,7 +544,10 @@ input[type="checkbox"] {
     display: flex;
     gap: var(--spacing-md);
     justify-content: center;
-    margin-top: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--panel-border);
+    flex-shrink: 0;
 }
 
 /* Animations */

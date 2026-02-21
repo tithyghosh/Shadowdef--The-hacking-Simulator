@@ -346,8 +346,10 @@ export class Game {
             if (window.authManager && window.authManager.isUserAuthenticated()) {
                 // Award XP based on mission difficulty and performance
                 const baseXP = 100;
-                const difficultyMultiplier = this.currentMission.difficulty === 'hard' ? 1.5 : 
-                                           this.currentMission.difficulty === 'easy' ? 0.8 : 1.0;
+                const missionDifficulty = String(this.currentMission.difficulty || '').toLowerCase();
+                const difficultyMultiplier = missionDifficulty === 'pro' ? 1.7 :
+                                           missionDifficulty === 'hard' ? 1.5 :
+                                           missionDifficulty === 'easy' ? 0.8 : 1.0;
                 const performanceBonus = stats.hintsUsed === 0 ? 1.2 : 1.0;
                 const xpAwarded = Math.floor(baseXP * difficultyMultiplier * performanceBonus);
                 

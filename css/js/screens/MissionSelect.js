@@ -63,7 +63,8 @@ export class MissionSelect {
         card.className = `mission-card ${mission.locked ? 'locked' : ''} ${mission.completed ? 'completed' : ''}`;
         
         // Difficulty styling
-        const difficultyClass = mission.difficulty.toLowerCase();
+        const normalizedDifficulty = String(mission.difficulty || '').toLowerCase();
+        const difficultyClass = normalizedDifficulty;
         
         // Lock icon for locked missions
         const lockIcon = mission.locked ? '<div class="lock-icon">🔒</div>' : '';
@@ -76,7 +77,7 @@ export class MissionSelect {
                 <div class="mission-desc">${mission.desc}</div>
             </div>
             <div class="mission-meta">
-                <span class="mission-difficulty ${difficultyClass}">${mission.difficulty.toUpperCase()}</span>
+                <span class="mission-difficulty ${difficultyClass}">${String(mission.difficulty || '').toUpperCase()}</span>
                 <span class="mission-time">⏱️ ${mission.estimatedTime}</span>
                 ${mission.bestScore > 0 ? `
                     <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--panel-border);">
@@ -125,6 +126,7 @@ export class MissionSelect {
      * @param {Object} mission - Mission data
      */
     showBriefing(mission) {
+        const normalizedDifficulty = String(mission.difficulty || '').toLowerCase();
         const objectivesList = mission.objectives
             .map(obj => `<li style="margin-bottom: 8px;">→ ${obj}</li>`)
             .join('');
@@ -136,8 +138,8 @@ export class MissionSelect {
                     <div style="margin-bottom: 20px;">
                         <p style="color: var(--text-secondary); margin-bottom: 10px;">${mission.desc}</p>
                         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                            <span class="badge badge-${mission.difficulty === 'easy' ? 'success' : mission.difficulty === 'medium' ? 'warning' : 'danger'}">
-                                ${mission.difficulty.toUpperCase()}
+                            <span class="badge badge-${normalizedDifficulty === 'easy' ? 'success' : normalizedDifficulty === 'medium' ? 'warning' : 'danger'}">
+                                ${String(mission.difficulty || '').toUpperCase()}
                             </span>
                             <span class="badge badge-info">
                                 ⏱️ ${mission.estimatedTime}
@@ -266,9 +268,9 @@ export class MissionSelect {
 
         switch (sortBy) {
             case 'difficulty':
-                const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
+                const difficultyOrder = { easy: 1, medium: 2, hard: 3, pro: 4 };
                 sorted.sort((a, b) => 
-                    (difficultyOrder[a.difficulty] || 0) - (difficultyOrder[b.difficulty] || 0)
+                    (difficultyOrder[String(a.difficulty || '').toLowerCase()] || 0) - (difficultyOrder[String(b.difficulty || '').toLowerCase()] || 0)
                 );
                 break;
             case 'score':

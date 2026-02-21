@@ -209,9 +209,9 @@ loadPuzzle() {
     }
     
     // Create new puzzle based on type
-    switch (this.currentMission.type) {
+        switch (this.currentMission.type) {
         case 'password':
-            this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this);
+            this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this, this.currentMission);
             break;
         case 'firewall':
             this.activePuzzle = new FirewallBypass(this.currentMission.puzzle, this);
@@ -319,6 +319,20 @@ loadPuzzle() {
         const rank = this.game.score.getScoreRank(finalScore);
         const xp = this.game.score.calculateXP(finalScore, this.currentMission);
         const credits = this.game.score.calculateCredits(finalScore, this.currentMission);
+        const failedPasswordReveal = !success &&
+            this.currentMission?.type === 'password' &&
+            this.currentMission?.puzzle?.revealAnswerOnFail !== false &&
+            this.activePuzzle?.password
+            ? `
+                <div class="divider"></div>
+                <div class="modal-stat">
+                    <span>Correct Answer:</span>
+                    <span style="color: var(--cyber-orange); font-family: var(--font-mono); letter-spacing: 1px;">
+                        ${this.activePuzzle.password}
+                    </span>
+                </div>
+            `
+            : '';
         
         const modal = this.ui.showModal(
             success ? 'MISSION COMPLETE' : 'MISSION FAILED',
@@ -349,6 +363,7 @@ loadPuzzle() {
                         <span>Rank:</span>
                         <span style="color: ${rank.color}">${rank.rank} - ${rank.name}</span>
                     </div>
+                    ${failedPasswordReveal}
                     ${success ? `
                         <div class="divider"></div>
                         <div class="modal-stat">

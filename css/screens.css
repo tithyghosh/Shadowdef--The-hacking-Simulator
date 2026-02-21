@@ -1287,6 +1287,12 @@
     border-color: var(--cyber-pink);
 }
 
+.mission-difficulty.pro {
+    background: rgba(139, 92, 246, 0.25);
+    color: #c7b7ff;
+    border-color: #b196ff;
+}
+
 /* Game Screen */
 #game-screen {
     flex-direction: column;
@@ -1448,7 +1454,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;  
-    overflow: hidden;
+    overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;  
 }

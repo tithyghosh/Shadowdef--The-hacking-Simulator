@@ -53,6 +53,210 @@
     max-width: 600px;
 }
 
+.password-brief {
+    background: var(--darker-bg);
+    border: 1px solid rgba(0, 243, 255, 0.35);
+    padding: 12px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    display: grid;
+    gap: 8px;
+    max-height: 170px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.password-brief strong {
+    color: var(--cyber-blue);
+}
+
+.security-visualizer {
+    --viz-risk: 0;
+    perspective: 900px;
+    background: linear-gradient(145deg, rgba(5, 8, 20, 0.96), rgba(10, 14, 39, 0.92));
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    margin-bottom: 16px;
+    padding: 14px;
+}
+
+.security-visualizer-3d {
+    border-color: rgba(0, 255, 65, 0.35);
+}
+
+.viz-stage {
+    transform-style: preserve-3d;
+}
+
+.viz-metric {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.visualizer-description {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.viz-vault {
+    width: 110px;
+    height: 78px;
+    margin: 0 auto;
+    border: 2px solid var(--cyber-blue);
+    transform: rotateX(18deg) rotateY(calc(var(--viz-risk) * 22deg));
+    box-shadow: 0 0 calc(8px + var(--viz-risk) * 18px) rgba(0, 243, 255, 0.45);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.security-visualizer[data-state='critical'] .viz-vault {
+    border-color: var(--cyber-pink);
+}
+
+.viz-shield {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto;
+    border: 2px solid var(--cyber-green);
+    clip-path: polygon(50% 0%, 92% 20%, 82% 82%, 50% 100%, 18% 82%, 8% 20%);
+    transform: translateZ(calc((1 - var(--viz-risk)) * 18px)) scale(calc(1.05 - var(--viz-risk) * 0.2));
+    box-shadow: 0 0 14px rgba(0, 255, 65, 0.35);
+    transition: all 0.25s ease;
+}
+
+.viz-morph {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+}
+
+.viz-plain,
+.viz-hash {
+    border: 1px solid var(--panel-border);
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    transform: translateZ(calc((1 - var(--viz-risk)) * 12px));
+    transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.viz-hash {
+    border-color: var(--cyber-green);
+}
+
+.viz-arrow {
+    color: var(--cyber-blue);
+}
+
+.viz-hash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.viz-hash-block {
+    text-align: center;
+    padding: 10px;
+    border: 1px solid var(--panel-border);
+    transform: translateZ(calc((1 - var(--viz-risk)) * 8px));
+    transition: all 0.25s ease;
+    font-size: 0.75rem;
+}
+
+.viz-hash-block.weak {
+    border-color: rgba(255, 0, 110, 0.7);
+}
+
+.viz-hash-block.strong {
+    border-color: rgba(0, 255, 65, 0.7);
+}
+
+.viz-salt-pair {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.viz-hash-shape {
+    width: 95px;
+    text-align: center;
+    padding: 8px;
+    font-size: 0.72rem;
+    border: 1px solid var(--cyber-blue);
+    transform: rotateY(calc(var(--viz-risk) * 35deg)) rotateX(8deg);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.viz-hash-shape:last-child {
+    transform: rotateY(calc(var(--viz-risk) * -35deg)) rotateX(8deg);
+    border-color: var(--cyber-green);
+}
+
+.soc-room {
+    display: grid;
+    gap: 8px;
+}
+
+.viz-log-panel {
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    padding: 8px 10px;
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    transform: translateZ(0) rotateX(0);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.viz-log-panel:hover {
+    transform: translateZ(14px) rotateX(4deg);
+    border-color: var(--cyber-blue);
+}
+
+.viz-enterprise-stack {
+    display: grid;
+    gap: 6px;
+}
+
+.viz-enterprise-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.viz-enterprise-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.viz-enterprise-controls select {
+    background: var(--darker-bg);
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 4px 6px;
+}
+
+.viz-layer {
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    padding: 7px 9px;
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    transform: translateZ(calc((1 - var(--viz-risk)) * 10px));
+    transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.viz-neutral {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
 .password-display {
     background: var(--darker-bg);
     border: 2px solid var(--cyber-green);
@@ -102,6 +306,62 @@
     margin-bottom: 20px;
 }
 
+.password-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.password-option {
+    width: 100%;
+    text-align: left;
+    background: var(--darker-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.password-option:hover {
+    border-color: var(--cyber-blue);
+    transform: translateY(-1px);
+}
+
+.password-option.selected {
+    border-color: var(--cyber-orange);
+    background: rgba(255, 107, 53, 0.12);
+    color: var(--cyber-orange);
+}
+
+.password-risk-panel {
+    margin-bottom: 14px;
+}
+
+.password-risk-header {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.guess-feedback {
+    background: rgba(5, 8, 20, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    color: var(--text-secondary);
+    padding: 10px 12px;
+    margin: 0 0 16px 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.guess-feedback strong {
+    color: var(--cyber-blue);
+}
+
 .char-input {
     width: 50px;
     height: 60px;
@@ -125,6 +385,12 @@
     border-color: var(--cyber-green);
     color: var(--cyber-green);
     background: rgba(0, 255, 65, 0.1);
+}
+
+.char-input.partial {
+    border-color: var(--cyber-orange);
+    color: var(--cyber-orange);
+    background: rgba(255, 107, 53, 0.12);
 }
 
 .char-input.incorrect {
@@ -438,6 +704,18 @@
 
     .password-input {
         gap: 5px;
+    }
+
+    .password-options-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .viz-morph {
+        flex-wrap: wrap;
+    }
+
+    .viz-enterprise-controls {
+        grid-template-columns: 1fr;
     }
     
     .char-input {
