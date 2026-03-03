@@ -32,6 +32,63 @@ export class PasswordCrack {
         this.investigationSelectedCause = null;
         this.investigationSelectedDefense = null;
         this.investigationStage = 'cause';
+        this.inspectionSelectedSystem = null;
+        this.strategySelectedDefenses = new Set();
+        this.strategySimulationResult = null;
+        this.liveVaultHealth = 100;
+        this.liveEnergy = 100;
+        this.liveRemainingTime = 60;
+        this.liveActiveAttack = null;
+        this.liveDefenseCooldowns = {};
+        this.liveAttackTimeoutId = null;
+        this.liveSpawnTimeoutId = null;
+        this.liveEnergyTimerId = null;
+        this.liveDurationTimerId = null;
+        this.liveCooldownTimerId = null;
+        this.multiVaultHealth = 100;
+        this.multiEnergy = 100;
+        this.multiRemainingTime = 90;
+        this.multiStageIndex = 0;
+        this.multiStageRemaining = 0;
+        this.multiActiveAttacks = [];
+        this.multiFlags = {
+            compromisedAccounts: 0,
+            elevatedAccess: false,
+            databaseStolen: false
+        };
+        this.multiDefenseCooldowns = {};
+        this.multiSpawnTimeoutId = null;
+        this.multiAttackResolveTimeoutId = null;
+        this.multiEnergyTimerId = null;
+        this.multiDurationTimerId = null;
+        this.multiCooldownTimerId = null;
+        this.multiStageTimerId = null;
+        this.multiUncounteredByStage = {};
+        this.threatVaultHealth = 100;
+        this.threatSystemIntegrity = 100;
+        this.threatFalsePositiveCount = 0;
+        this.threatAttackerProgress = 0;
+        this.threatDetectedMajor = new Set();
+        this.threatContainedMajor = new Set();
+        this.threatInvestigatedEvents = new Set();
+        this.threatTurn = 0;
+        this.patchMetrics = {
+            vaultHealth: 100,
+            exploitSuccessRate: 62,
+            serverLoad: 46,
+            userExperienceScore: 82,
+            vulnerabilityCountRemaining: 0
+        };
+        this.patchClosedVulns = new Set();
+        this.patchAppliedActions = new Set();
+        this.patchPrimaryFixed = false;
+        this.patchSecondaryRevealed = false;
+        this.patchTurnsSincePatch = 0;
+        this.enterpriseConfig = {};
+        this.enterpriseAttackResults = [];
+        this.enterpriseScores = null;
+        this.enterpriseRating = '';
+        this.enterpriseBadgeUnlocked = false;
         
         // Puzzle data
         const dynamicPuzzle = this.puzzleData.randomized
@@ -59,6 +116,71 @@ export class PasswordCrack {
             this.dynamicScenario = null;
             this.dynamicUserTask = null;
         } else if (this.interactionMode === 'investigation') {
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'inspection') {
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'strategyBuilder') {
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'liveDefenseSimulation') {
+            const simConfig = this.puzzleData.simulationConfig || {};
+            this.liveVaultHealth = Number(simConfig.vaultHealth || 100);
+            this.liveEnergy = Number(simConfig.playerEnergy || 100);
+            this.liveRemainingTime = Number(simConfig.simulationDuration || 60);
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'multiStageDefenseSimulation') {
+            const base = this.puzzleData.baseStats || {};
+            this.multiVaultHealth = Number(base.vaultHealth || 100);
+            this.multiEnergy = Number(base.playerEnergy || 100);
+            this.multiRemainingTime = Number(base.simulationDuration || 90);
+            this.multiStageIndex = 0;
+            this.multiFlags = { ...(this.puzzleData.escalationFlags || this.multiFlags) };
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'threatHuntSimulation') {
+            const base = this.puzzleData.baseStats || {};
+            this.threatVaultHealth = Number(base.vaultHealth || 100);
+            this.threatSystemIntegrity = Number(base.systemIntegrity || 100);
+            this.threatFalsePositiveCount = Number(base.falsePositiveCount || 0);
+            this.threatAttackerProgress = Number(base.attackerProgress || 0);
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'livePatchSimulation') {
+            this.patchMetrics = {
+                ...this.patchMetrics,
+                ...(this.puzzleData.systemMetrics || {})
+            };
+            this.patchMetrics.vulnerabilityCountRemaining = Array.isArray(this.puzzleData.vulnerabilities)
+                ? this.puzzleData.vulnerabilities.filter(v => v.status !== 'closed' && v.status !== 'hidden').length
+                : 0;
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'enterpriseArchitectureSimulation') {
+            this.enterpriseConfig = this.buildEnterpriseDefaultConfig();
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = null;
@@ -392,6 +514,34 @@ export class PasswordCrack {
             this.renderInvestigationPuzzle(container);
             return;
         }
+        if (this.interactionMode === 'inspection') {
+            this.renderInspectionPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'strategyBuilder') {
+            this.renderStrategyBuilderPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            this.renderLiveDefenseSimulationPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'multiStageDefenseSimulation') {
+            this.renderMultiStageDefenseSimulationPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'threatHuntSimulation') {
+            this.renderThreatHuntSimulationPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'livePatchSimulation') {
+            this.renderLivePatchSimulationPuzzle(container);
+            return;
+        }
+        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
+            this.renderEnterpriseArchitectureSimulationPuzzle(container);
+            return;
+        }
 
         const showVisualizer = this.visualProfile && this.visualMode !== '2D';
         const effectDescription = this.mission.threeDEffectDescription
@@ -657,6 +807,468 @@ export class PasswordCrack {
         `;
 
         this.setupInvestigationEventListeners();
+    }
+
+    /**
+     * Render storage inspection mode
+     * @param {HTMLElement} container
+     */
+    renderInspectionPuzzle(container) {
+        const systems = Array.isArray(this.puzzleData.systems) ? this.puzzleData.systems : [];
+        const choices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
+
+        const systemsMarkup = systems.map(system => `
+            <div class="password-hints" style="margin-top: 14px;">
+                <strong style="color: var(--cyber-blue);">${system.name}</strong>
+                <div class="puzzle-actions" style="margin-top:8px;">
+                    <button class="btn btn-small" data-action="view-db" data-system-id="${system.id}">VIEW DATABASE</button>
+                    <button class="btn btn-small" data-action="simulate-breach" data-system-id="${system.id}">SIMULATE BREACH</button>
+                </div>
+                <div id="db-${system.id}" class="guess-feedback" style="display:none; text-align:left; margin-top:8px;"></div>
+                <div id="breach-${system.id}" class="guess-feedback" style="display:none; text-align:left; margin-top:8px;"></div>
+            </div>
+        `).join('');
+
+        const choiceMarkup = choices.map(choice => `
+            <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
+                <input type="radio" name="inspection-choice" value="${choice.id}" style="margin-right:8px;" />
+                ${choice.label}
+            </label>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">STORAGE AUDIT</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                ${systemsMarkup}
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">QUESTION: Which system is safer?</strong>
+                </div>
+                <div class="password-options-grid">
+                    ${choiceMarkup}
+                </div>
+                <div class="puzzle-actions">
+                    <button class="btn btn-primary" id="submit-inspection-choice">CHOOSE SAFER SYSTEM</button>
+                </div>
+                <div class="guess-feedback" id="guess-feedback">
+                    Use "View Database" and "Simulate Breach" first, then choose.
+                </div>
+                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
+                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                </div>
+            </div>
+        `;
+
+        this.setupInspectionEventListeners();
+    }
+
+    /**
+     * Render strategy builder mode
+     * @param {HTMLElement} container
+     */
+    renderStrategyBuilderPuzzle(container) {
+        const intro = this.puzzleData.initialScenarioDisplay || {};
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const waves = Array.isArray(this.puzzleData.attackWaves) ? this.puzzleData.attackWaves : [];
+        const totalBudget = this.getStrategyTotalBudget();
+
+        const defenseMarkup = defenses.map(defense => `
+            <button class="password-option" data-defense-id="${defense.id}" type="button">
+                ${defense.name} (${defense.cost} pts)
+            </button>
+        `).join('');
+
+        const waveMarkup = waves.map((wave, idx) => `
+            <div id="strategy-wave-${wave.id}" style="display:flex; justify-content:space-between; gap: 10px; padding: 6px 0; border-bottom: ${idx === waves.length - 1 ? 'none' : '1px solid rgba(0,255,255,0.16)'};">
+                <span>${wave.name}</span>
+                <span id="strategy-wave-status-${wave.id}" style="color: var(--text-secondary);">Pending</span>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">DEFENSE STRATEGY BUILDER</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${intro.message || this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-risk-panel">
+                    <div class="password-risk-header">
+                        <span>${intro.budgetLabel || 'Total Security Budget'}</span>
+                        <span id="strategy-budget-text">0 / ${totalBudget}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="strategy-budget-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">DEFENSE OPTIONS:</strong>
+                </div>
+                <div class="password-options-grid" id="strategy-defense-grid">
+                    ${defenseMarkup}
+                </div>
+                <div class="password-hints" style="margin-top: 14px;">
+                    <strong style="color: var(--cyber-blue);">ATTACK WAVES:</strong>
+                    <div class="guess-feedback" style="text-align:left;">${waveMarkup}</div>
+                </div>
+                <div class="guess-feedback" id="guess-feedback">
+                    Choose defenses within budget, then run simulation.
+                </div>
+                <div class="puzzle-actions">
+                    <button class="btn btn-primary" id="run-strategy-simulation">RUN SIMULATION</button>
+                    <button class="btn" id="clear-strategy-selection">RESET DEFENSES</button>
+                </div>
+                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
+                    Simulations: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                </div>
+            </div>
+        `;
+
+        this.updateStrategyBudgetUI();
+        this.setupStrategyBuilderEventListeners();
+    }
+
+    /**
+     * Render live defense simulation mode
+     * @param {HTMLElement} container
+     */
+    renderLiveDefenseSimulationPuzzle(container) {
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const defenseMarkup = defenses.map(defense => `
+            <button class="password-option" data-live-defense="${defense.name}" type="button">
+                ${defense.name}
+                <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 4px;">
+                    Energy: ${defense.energyCost} | CD: ${defense.cooldown}s
+                </div>
+                <div id="live-cd-${this.sanitizeId(defense.name)}" style="font-size: var(--font-size-xs); color: var(--cyber-blue); margin-top: 4px;">
+                    READY
+                </div>
+            </button>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">LIVE DEFENSE SIMULATION</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-risk-panel">
+                    <div class="password-risk-header">
+                        <span>Vault Health</span>
+                        <span id="live-vault-text">${Math.max(0, Math.floor(this.liveVaultHealth))}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="live-vault-fill" style="width: ${Math.max(0, Math.min(100, this.liveVaultHealth))}%;"></div>
+                    </div>
+                    <div class="password-risk-header" style="margin-top: 10px;">
+                        <span>Player Energy</span>
+                        <span id="live-energy-text">${Math.max(0, Math.floor(this.liveEnergy))}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="live-energy-fill" style="width: ${Math.max(0, Math.min(100, this.liveEnergy))}%;"></div>
+                    </div>
+                    <div class="password-risk-header" style="margin-top: 10px;">
+                        <span>Time Left</span>
+                        <span id="live-time-text">${Math.max(0, Math.floor(this.liveRemainingTime))}s</span>
+                    </div>
+                </div>
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">INCOMING ATTACK:</strong>
+                    <div class="guess-feedback" id="live-current-attack" style="text-align:left;">Waiting for first wave...</div>
+                </div>
+                <div class="password-options-grid" id="live-defense-grid">
+                    ${defenseMarkup}
+                </div>
+                <div class="guess-feedback" id="guess-feedback" style="max-height: 170px; overflow:auto; text-align:left;">
+                    Simulation started. Prepare your defenses.
+                </div>
+                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
+                    Live defense active
+                </div>
+            </div>
+        `;
+
+        this.setupLiveDefenseEventListeners();
+        this.startLiveDefenseSimulation();
+    }
+
+    /**
+     * Render multi-stage boss simulation mode
+     * @param {HTMLElement} container
+     */
+    renderMultiStageDefenseSimulationPuzzle(container) {
+        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
+        const buttons = modules.map(defense => `
+            <button class="password-option" data-multi-defense="${defense.name}" type="button">
+                ${defense.name}
+                <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 4px;">
+                    Energy: ${defense.energyCost} | CD: ${defense.cooldown}s
+                </div>
+                <div id="multi-cd-${this.sanitizeId(defense.name)}" style="font-size: var(--font-size-xs); color: var(--cyber-blue); margin-top: 4px;">
+                    READY
+                </div>
+            </button>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">APT ASSAULT - BOSS CAMPAIGN</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-risk-panel">
+                    <div class="password-risk-header">
+                        <span>Vault Health</span>
+                        <span id="multi-vault-text">${Math.floor(this.multiVaultHealth)}%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="multi-vault-fill" style="width:${this.multiVaultHealth}%"></div></div>
+                    <div class="password-risk-header" style="margin-top:10px;">
+                        <span>Player Energy</span>
+                        <span id="multi-energy-text">${Math.floor(this.multiEnergy)}%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="multi-energy-fill" style="width:${this.multiEnergy}%"></div></div>
+                    <div class="password-risk-header" style="margin-top:10px;">
+                        <span>Total Time Left</span>
+                        <span id="multi-time-text">${Math.floor(this.multiRemainingTime)}s</span>
+                    </div>
+                    <div class="password-risk-header" style="margin-top:10px;">
+                        <span id="multi-stage-label">Stage 1/4</span>
+                        <span id="multi-stage-time">20s</span>
+                    </div>
+                </div>
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">ACTIVE THREATS:</strong>
+                    <div class="guess-feedback" id="multi-current-attacks" style="text-align:left;">Campaign initializing...</div>
+                </div>
+                <div class="password-options-grid">${buttons}</div>
+                <div class="guess-feedback" id="guess-feedback" style="max-height:170px; overflow:auto; text-align:left;">
+                    Stage chain loaded. Prevent early escalation.
+                </div>
+                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">Boss simulation active</div>
+            </div>
+        `;
+
+        this.setupMultiStageDefenseEventListeners();
+        this.startMultiStageDefenseSimulation();
+    }
+
+    /**
+     * Render threat hunt simulation mode
+     * @param {HTMLElement} container
+     */
+    renderThreatHuntSimulationPuzzle(container) {
+        const panels = Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
+        const panelMarkup = panels.map(panel => {
+            const rows = (panel.entries || []).map(entry => `
+                <div class="guess-feedback" style="margin-top:8px; text-align:left;">
+                    <div><strong>${entry.id}</strong> | ${entry.timestamp} | ${entry.user}</div>
+                    <div>${entry.action}</div>
+                    <div>${entry.locationOrIP} | ${entry.status}</div>
+                    <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn btn-small" data-threat-action="mark_suspicious" data-event-id="${entry.id}">MARK</button>
+                        <button class="btn btn-small" data-threat-action="investigate" data-event-id="${entry.id}">INVESTIGATE</button>
+                        <button class="btn btn-small" data-threat-action="isolate_account" data-event-id="${entry.id}">ISOLATE ACCOUNT</button>
+                        <button class="btn btn-small" data-threat-action="block_ip" data-event-id="${entry.id}">BLOCK IP</button>
+                        <button class="btn btn-small" data-threat-action="ignore" data-event-id="${entry.id}">IGNORE</button>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="password-hints" style="margin-top:14px;">
+                    <strong style="color: var(--cyber-blue);">${panel.title}</strong>
+                    ${rows}
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">ENTERPRISE THREAT HUNT</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-risk-panel">
+                    <div class="password-risk-header"><span>Vault Health</span><span id="threat-vault-text">${Math.floor(this.threatVaultHealth)}%</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="threat-vault-fill" style="width:${this.threatVaultHealth}%"></div></div>
+                    <div class="password-risk-header" style="margin-top:10px;"><span>System Integrity</span><span id="threat-integrity-text">${Math.floor(this.threatSystemIntegrity)}%</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="threat-integrity-fill" style="width:${this.threatSystemIntegrity}%"></div></div>
+                    <div class="password-risk-header" style="margin-top:10px;"><span>False Positives</span><span id="threat-fp-text">${this.threatFalsePositiveCount}</span></div>
+                    <div class="password-risk-header" style="margin-top:6px;"><span>Attacker Progress</span><span id="threat-progress-text">${this.threatAttackerProgress}</span></div>
+                </div>
+                ${panelMarkup}
+                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
+                    Threat hunt initialized. Review evidence and act carefully.
+                </div>
+                <div class="puzzle-actions">
+                    <button class="btn btn-primary" id="threat-finalize">FINALIZE HUNT</button>
+                </div>
+                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
+                    Investigation actions: <span style="color: var(--cyber-blue);">0</span>
+                </div>
+            </div>
+        `;
+
+        this.setupThreatHuntEventListeners();
+        this.updateThreatHuntUI();
+    }
+
+    /**
+     * Render zero-day live patch simulation mode
+     * @param {HTMLElement} container
+     */
+    renderLivePatchSimulationPuzzle(container) {
+        const modules = Array.isArray(this.puzzleData.architectureModules) ? this.puzzleData.architectureModules : [];
+        const moduleMarkup = modules
+            .sort((a, b) => Number(a.flowOrder || 0) - Number(b.flowOrder || 0))
+            .map(m => `
+                <div class="guess-feedback" style="text-align:left; margin-top:8px;">
+                    <div><strong>[ ${m.name} ]</strong>${m.editable ? ' (editable)' : ''}</div>
+                    <div>${m.notes || ''}</div>
+                </div>
+            `).join('');
+
+        const patchActions = (Array.isArray(this.puzzleData.patchOptions) ? this.puzzleData.patchOptions : [])
+            .map(p => `
+                <button class="btn btn-small" data-patch-action="${p.id}" style="margin:4px 6px 4px 0;">
+                    ${p.uiLabel || p.action}
+                </button>
+            `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">ZERO-DAY LIVE PATCH LAB</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">SYSTEM ARCHITECTURE FLOW:</strong>
+                    ${moduleMarkup}
+                </div>
+                <div class="password-risk-panel">
+                    <div class="password-risk-header"><span>Vault Health</span><span id="patch-vault">${Math.floor(this.patchMetrics.vaultHealth)}%</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="patch-vault-fill" style="width:${Math.max(0, Math.min(100, this.patchMetrics.vaultHealth))}%"></div></div>
+                    <div class="password-risk-header" style="margin-top:8px;"><span>Exploit Success Rate</span><span id="patch-exploit">${Math.floor(this.patchMetrics.exploitSuccessRate)}%</span></div>
+                    <div class="password-risk-header"><span>Server Load</span><span id="patch-load">${Math.floor(this.patchMetrics.serverLoad)}%</span></div>
+                    <div class="password-risk-header"><span>User Experience</span><span id="patch-ux">${Math.floor(this.patchMetrics.userExperienceScore)}%</span></div>
+                    <div class="password-risk-header"><span>Vulnerabilities Remaining</span><span id="patch-vuln">${this.patchMetrics.vulnerabilityCountRemaining}</span></div>
+                </div>
+                <div class="puzzle-actions" id="patch-actions">
+                    ${patchActions}
+                </div>
+                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
+                    Live patch lab online. Run exploit simulation to validate fixes.
+                </div>
+                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
+                    Patch operations: <span style="color: var(--cyber-blue);">0</span>
+                </div>
+            </div>
+        `;
+
+        this.setupLivePatchEventListeners();
+        this.updatePatchUI();
+    }
+
+    /**
+     * Build default selections for enterprise config
+     * @returns {Object}
+     */
+    buildEnterpriseDefaultConfig() {
+        return {
+            minimum_length: "12",
+            allow_passphrases: "yes",
+            require_complexity: "yes",
+            block_common_passwords: "yes",
+            password_storage: "hash_salt",
+            authentication_controls: "app_mfa",
+            login_protection: "rate_limiting",
+            monitoring_response: "breach_alerts"
+        };
+    }
+
+    /**
+     * Render enterprise architecture certification simulation
+     * @param {HTMLElement} container
+     */
+    renderEnterpriseArchitectureSimulationPuzzle(container) {
+        const opts = this.puzzleData.configurationOptions || {};
+        const policy = opts.passwordPolicy?.options || [];
+        const storage = opts.passwordStorage?.options || [];
+        const auth = opts.authenticationControls?.options || [];
+        const login = opts.loginProtection?.options || [];
+        const monitor = opts.monitoringResponse?.options || [];
+
+        const select = (id, values, current) => `
+            <select id="${id}">
+                ${values.map(v => {
+                    const val = typeof v === 'string' ? v : v.id;
+                    const label = typeof v === 'string' ? v : v.label;
+                    return `<option value="${val}" ${String(val) === String(current) ? 'selected' : ''}>${label}</option>`;
+                }).join('')}
+            </select>
+        `;
+
+        const policyMarkup = policy.map(p => `
+            <div class="guess-feedback" style="text-align:left; margin-top:6px;">
+                <div><strong>${p.label}</strong></div>
+                ${select(`ea-${p.id}`, p.values || [], this.enterpriseConfig[p.id])}
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="password-puzzle">
+                <h2 class="puzzle-title">ENTERPRISE ARCHITECT CERTIFICATION</h2>
+                <div class="password-brief">
+                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
+                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
+                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
+                </div>
+                <div class="password-hints">
+                    <strong style="color: var(--cyber-blue);">Phase 1: System Design</strong>
+                    ${policyMarkup}
+                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
+                        <div><strong>Password Storage</strong></div>
+                        ${select('ea-password_storage', storage, this.enterpriseConfig.password_storage)}
+                    </div>
+                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
+                        <div><strong>Authentication Controls</strong></div>
+                        ${select('ea-authentication_controls', auth, this.enterpriseConfig.authentication_controls)}
+                    </div>
+                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
+                        <div><strong>Login Protection</strong></div>
+                        ${select('ea-login_protection', login, this.enterpriseConfig.login_protection)}
+                    </div>
+                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
+                        <div><strong>Monitoring & Response</strong></div>
+                        ${select('ea-monitoring_response', monitor, this.enterpriseConfig.monitoring_response)}
+                    </div>
+                </div>
+                <div class="puzzle-actions">
+                    <button class="btn btn-primary" id="ea-run-assessment">RUN CERTIFICATION EVALUATION</button>
+                </div>
+                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
+                    Configure architecture and run evaluation.
+                </div>
+                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
+                    Certification run pending
+                </div>
+            </div>
+        `;
+
+        this.setupEnterpriseArchitectureEventListeners();
     }
 
     /**
@@ -972,7 +1584,7 @@ export class PasswordCrack {
      * Setup event listeners
      */
     setupEventListeners() {
-        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation') return;
+        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation' || this.interactionMode === 'inspection' || this.interactionMode === 'strategyBuilder' || this.interactionMode === 'liveDefenseSimulation' || this.interactionMode === 'multiStageDefenseSimulation' || this.interactionMode === 'threatHuntSimulation' || this.interactionMode === 'livePatchSimulation' || this.interactionMode === 'enterpriseArchitectureSimulation') return;
 
         // Get input elements
         this.inputs = Array.from(document.querySelectorAll('.char-input'));
@@ -1312,6 +1924,1711 @@ export class PasswordCrack {
         if (defenseBtn) {
             defenseBtn.addEventListener('click', () => this.submitInvestigationDefense());
         }
+    }
+
+    /**
+     * Setup listeners for inspection mode
+     */
+    setupInspectionEventListeners() {
+        const actionButtons = Array.from(document.querySelectorAll('button[data-action]'));
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                const systemId = btn.dataset.systemId;
+                if (!action || !systemId) return;
+                if (action === 'view-db') this.viewInspectionDatabase(systemId);
+                if (action === 'simulate-breach') this.simulateInspectionBreach(systemId);
+                this.audio.playButtonClick();
+            });
+        });
+
+        const radios = Array.from(document.querySelectorAll('input[name="inspection-choice"]'));
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.inspectionSelectedSystem = radio.value;
+                this.audio.playButtonClick();
+            });
+        });
+
+        const submitBtn = document.getElementById('submit-inspection-choice');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => this.submitInspectionChoice());
+        }
+    }
+
+    /**
+     * Setup listeners for strategy builder mode
+     */
+    setupStrategyBuilderEventListeners() {
+        const defenseButtons = Array.from(document.querySelectorAll('button[data-defense-id]'));
+        defenseButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const defenseId = btn.dataset.defenseId;
+                if (!defenseId) return;
+                this.toggleStrategyDefense(defenseId, btn);
+            });
+        });
+
+        const runBtn = document.getElementById('run-strategy-simulation');
+        if (runBtn) {
+            runBtn.addEventListener('click', () => this.submitStrategyBuilderDecision());
+        }
+
+        const clearBtn = document.getElementById('clear-strategy-selection');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearStrategySelection());
+        }
+    }
+
+    /**
+     * Setup listeners for live defense simulation
+     */
+    setupLiveDefenseEventListeners() {
+        const defenseButtons = Array.from(document.querySelectorAll('button[data-live-defense]'));
+        defenseButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const defenseName = btn.dataset.liveDefense;
+                if (!defenseName) return;
+                this.activateLiveDefense(defenseName);
+            });
+        });
+    }
+
+    /**
+     * Start live simulation loops
+     */
+    startLiveDefenseSimulation() {
+        const simConfig = this.puzzleData.simulationConfig || {};
+        const regen = simConfig.energyRegenRate || {};
+        const regenAmount = Number(regen.amount || 5);
+        const regenEvery = Math.max(1, Number(regen.everySeconds || 3));
+
+        this.updateLiveSimulationUI();
+        this.appendLiveLog('Live simulation started. Incoming waves expected.');
+
+        this.liveEnergyTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.liveEnergy = Math.min(100, this.liveEnergy + regenAmount);
+            this.updateLiveSimulationUI();
+        }, regenEvery * 1000);
+
+        this.liveCooldownTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            const names = Object.keys(this.liveDefenseCooldowns);
+            names.forEach(name => {
+                const next = Math.max(0, Number(this.liveDefenseCooldowns[name] || 0) - 1);
+                this.liveDefenseCooldowns[name] = next;
+            });
+            this.updateLiveDefenseButtons();
+        }, 1000);
+
+        this.liveDurationTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.liveRemainingTime = Math.max(0, this.liveRemainingTime - 1);
+            this.updateLiveSimulationUI();
+            if (this.liveRemainingTime <= 0) {
+                this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
+            }
+        }, 1000);
+
+        this.scheduleNextLiveAttack();
+    }
+
+    /**
+     * Stop all live simulation timers
+     */
+    stopLiveDefenseSimulation() {
+        if (this.liveAttackTimeoutId) {
+            clearTimeout(this.liveAttackTimeoutId);
+            this.liveAttackTimeoutId = null;
+        }
+        if (this.liveSpawnTimeoutId) {
+            clearTimeout(this.liveSpawnTimeoutId);
+            this.liveSpawnTimeoutId = null;
+        }
+        if (this.liveEnergyTimerId) {
+            clearInterval(this.liveEnergyTimerId);
+            this.liveEnergyTimerId = null;
+        }
+        if (this.liveDurationTimerId) {
+            clearInterval(this.liveDurationTimerId);
+            this.liveDurationTimerId = null;
+        }
+        if (this.liveCooldownTimerId) {
+            clearInterval(this.liveCooldownTimerId);
+            this.liveCooldownTimerId = null;
+        }
+    }
+
+    /**
+     * Spawn attack on randomized interval
+     */
+    scheduleNextLiveAttack() {
+        if (this.isComplete) return;
+        const simConfig = this.puzzleData.simulationConfig || {};
+        const spawn = simConfig.attackSpawnRate || {};
+        const minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
+        const maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
+        const delayMs = Math.floor((minSeconds + (Math.random() * (maxSeconds - minSeconds))) * 1000);
+
+        this.liveSpawnTimeoutId = setTimeout(() => {
+            if (this.isComplete) return;
+            this.spawnLiveAttack();
+            this.scheduleNextLiveAttack();
+        }, delayMs);
+    }
+
+    /**
+     * Create one incoming attack instance
+     */
+    spawnLiveAttack() {
+        if (this.liveActiveAttack) {
+            this.resolveLiveAttackMissed(this.liveActiveAttack);
+        }
+        const attacks = Array.isArray(this.puzzleData.attackTypes) ? this.puzzleData.attackTypes : [];
+        if (!attacks.length) return;
+        const attack = attacks[Math.floor(Math.random() * attacks.length)];
+        this.liveActiveAttack = attack;
+        const panel = document.getElementById('live-current-attack');
+        if (panel) {
+            panel.innerHTML = `<strong>${attack.type}</strong> incoming. Potential damage: ${attack.damage}.`;
+        }
+        this.appendLiveLog(`Wave detected: ${attack.type}`);
+
+        this.liveAttackTimeoutId = setTimeout(() => {
+            if (this.isComplete) return;
+            if (!this.liveActiveAttack) return;
+            this.resolveLiveAttackMissed(this.liveActiveAttack);
+            this.liveActiveAttack = null;
+            this.updateLiveSimulationUI();
+        }, 2200);
+    }
+
+    /**
+     * Activate chosen defense
+     * @param {string} defenseName
+     */
+    activateLiveDefense(defenseName) {
+        if (this.isComplete) return;
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const defense = defenses.find(item => item.name === defenseName);
+        if (!defense) return;
+
+        const cooldownLeft = Number(this.liveDefenseCooldowns[defenseName] || 0);
+        if (cooldownLeft > 0) {
+            this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldownLeft}s).`, 'warning');
+            return;
+        }
+
+        const cost = Number(defense.energyCost || 0);
+        if (this.liveEnergy < cost) {
+            this.gameScreen.ui.showNotification('Not enough energy for that defense.', 'warning');
+            return;
+        }
+
+        this.liveEnergy = Math.max(0, this.liveEnergy - cost);
+        this.liveDefenseCooldowns[defenseName] = Number(defense.cooldown || 0);
+        this.updateLiveSimulationUI();
+        this.updateLiveDefenseButtons();
+        this.audio.playButtonClick();
+        this.appendLiveLog(`Defense activated: ${defenseName}`);
+
+        if (!this.liveActiveAttack) return;
+
+        const attack = this.liveActiveAttack;
+        const matched = Array.isArray(defense.protectsAgainst) && defense.protectsAgainst.includes(attack.type);
+        const canCounter = Array.isArray(attack.counteredBy) && attack.counteredBy.includes(defense.name);
+
+        if (matched || canCounter) {
+            if (this.liveAttackTimeoutId) {
+                clearTimeout(this.liveAttackTimeoutId);
+                this.liveAttackTimeoutId = null;
+            }
+            this.liveActiveAttack = null;
+            const panel = document.getElementById('live-current-attack');
+            if (panel) {
+                panel.innerHTML = `${attack.type} blocked by ${defense.name}.`;
+            }
+            this.appendLiveLog(`Blocked: ${attack.type} using ${defense.name}`);
+            this.audio.playSuccess();
+        } else {
+            this.appendLiveLog(`${defense.name} did not stop ${attack.type}.`);
+        }
+    }
+
+    /**
+     * Resolve missed attack damage
+     * @param {{type:string, damage:number}} attack
+     */
+    resolveLiveAttackMissed(attack) {
+        const damage = Number(attack?.damage || 0);
+        this.liveVaultHealth = Math.max(0, this.liveVaultHealth - damage);
+        this.appendLiveLog(`Impact: ${attack.type} hit the vault (-${damage} health).`);
+        const panel = document.getElementById('live-current-attack');
+        if (panel) {
+            panel.innerHTML = `${attack.type} was successful. Vault damaged by ${damage}.`;
+        }
+        this.audio.playFailure();
+        this.updateLiveSimulationUI();
+        if (this.liveVaultHealth <= 0) {
+            this.finishLiveDefenseSimulation(false);
+        }
+    }
+
+    /**
+     * Update HUD values for live simulation
+     */
+    updateLiveSimulationUI() {
+        const vault = Math.max(0, Math.min(100, this.liveVaultHealth));
+        const energy = Math.max(0, Math.min(100, this.liveEnergy));
+        const vaultText = document.getElementById('live-vault-text');
+        const vaultFill = document.getElementById('live-vault-fill');
+        const energyText = document.getElementById('live-energy-text');
+        const energyFill = document.getElementById('live-energy-fill');
+        const timeText = document.getElementById('live-time-text');
+        if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
+        if (vaultFill) vaultFill.style.width = `${vault}%`;
+        if (energyText) energyText.textContent = `${Math.floor(energy)}%`;
+        if (energyFill) energyFill.style.width = `${energy}%`;
+        if (timeText) timeText.textContent = `${Math.max(0, Math.floor(this.liveRemainingTime))}s`;
+        this.updateLiveDefenseButtons();
+    }
+
+    /**
+     * Update defense button disabled/cooldown text
+     */
+    updateLiveDefenseButtons() {
+        const buttons = Array.from(document.querySelectorAll('button[data-live-defense]'));
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        buttons.forEach(btn => {
+            const defenseName = btn.dataset.liveDefense;
+            const defense = defenses.find(item => item.name === defenseName);
+            if (!defense) return;
+            const cooldown = Number(this.liveDefenseCooldowns[defenseName] || 0);
+            const affordable = this.liveEnergy >= Number(defense.energyCost || 0);
+            btn.disabled = this.isComplete || cooldown > 0 || !affordable;
+            const cd = document.getElementById(`live-cd-${this.sanitizeId(defenseName)}`);
+            if (cd) {
+                if (cooldown > 0) cd.textContent = `COOLDOWN: ${cooldown}s`;
+                else if (!affordable) cd.textContent = 'LOW ENERGY';
+                else cd.textContent = 'READY';
+            }
+        });
+    }
+
+    /**
+     * Append event to live feed
+     * @param {string} message
+     */
+    appendLiveLog(message) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const line = document.createElement('div');
+        line.textContent = `• ${message}`;
+        feedback.appendChild(line);
+        feedback.scrollTop = feedback.scrollHeight;
+    }
+
+    /**
+     * End simulation and finalize mission
+     * @param {boolean} success
+     */
+    finishLiveDefenseSimulation(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        this.stopLiveDefenseSimulation();
+        const summary = this.puzzleData.educationalSummary || 'Security works best when multiple defenses protect the system. No single tool can stop every attack.';
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
+        }
+        if (success) {
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Defense simulation completed.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+        } else {
+            this.audio.playFailure();
+            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Vault health reached zero.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+        }
+    }
+
+    /**
+     * Setup listeners for multi-stage boss simulation
+     */
+    setupMultiStageDefenseEventListeners() {
+        const defenseButtons = Array.from(document.querySelectorAll('button[data-multi-defense]'));
+        defenseButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const defenseName = btn.dataset.multiDefense;
+                if (!defenseName) return;
+                this.activateMultiDefense(defenseName);
+            });
+        });
+    }
+
+    /**
+     * Setup listeners for live patch simulation
+     */
+    setupLivePatchEventListeners() {
+        const buttons = Array.from(document.querySelectorAll('button[data-patch-action]'));
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.patchAction;
+                if (!actionId) return;
+                this.handlePatchAction(actionId);
+            });
+        });
+    }
+
+    /**
+     * Setup listeners for enterprise architecture simulation
+     */
+    setupEnterpriseArchitectureEventListeners() {
+        const map = [
+            "minimum_length",
+            "allow_passphrases",
+            "require_complexity",
+            "block_common_passwords",
+            "password_storage",
+            "authentication_controls",
+            "login_protection",
+            "monitoring_response"
+        ];
+        map.forEach(key => {
+            const el = document.getElementById(`ea-${key}`);
+            if (!el) return;
+            el.addEventListener('change', () => {
+                this.enterpriseConfig[key] = el.value;
+                this.audio.playButtonClick();
+            });
+        });
+
+        const btn = document.getElementById('ea-run-assessment');
+        if (btn) {
+            btn.addEventListener('click', () => this.runEnterpriseArchitectureAssessment());
+        }
+    }
+
+    /**
+     * Run full final certification evaluation
+     */
+    runEnterpriseArchitectureAssessment() {
+        if (this.isComplete) return;
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const attacks = Array.isArray(this.puzzleData.attackSimulationMatrix) ? this.puzzleData.attackSimulationMatrix : [];
+        this.enterpriseAttackResults = attacks.map(a => this.evaluateEnterpriseAttack(a));
+        this.enterpriseScores = this.calculateEnterpriseScores(this.enterpriseAttackResults);
+        this.enterpriseRating = this.calculateEnterpriseRatingFromScore(this.enterpriseScores.finalWeightedScore);
+        this.enterpriseBadgeUnlocked = this.isEnterpriseBadgeUnlocked(this.enterpriseRating, this.enterpriseScores.finalWeightedScore);
+
+        this.renderEnterpriseAssessmentFeedback();
+        this.isComplete = true;
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1500);
+    }
+
+    /**
+     * Evaluate one attack result from current config
+     * @param {Object} attack
+     * @returns {{attackId:string,attackName:string,outcome:string}}
+     */
+    evaluateEnterpriseAttack(attack) {
+        const cfg = this.enterpriseConfig;
+        const chosen = [
+            cfg.password_storage,
+            cfg.authentication_controls,
+            cfg.login_protection,
+            cfg.monitoring_response,
+            cfg.minimum_length,
+            cfg.allow_passphrases,
+            cfg.require_complexity,
+            cfg.block_common_passwords
+        ];
+        const strong = (attack.strongCounters || []).filter(c => chosen.includes(c)).length;
+        const partial = (attack.partialCounters || []).filter(c => chosen.includes(c)).length;
+        let outcome = "Successful";
+        if (strong >= 2) outcome = "Blocked";
+        else if (strong >= 1 || partial >= 1) outcome = "Partially Mitigated";
+        return {
+            attackId: attack.attackId,
+            attackName: attack.attackName,
+            outcome
+        };
+    }
+
+    /**
+     * Compute weighted score dashboard
+     * @param {Array} results
+     * @returns {Object}
+     */
+    calculateEnterpriseScores(results) {
+        const algo = this.puzzleData.scoringAlgorithm || {};
+        const points = algo.attackOutcomePoints || {};
+        const scoreMap = {
+            "Blocked": Number(points.blocked || 100),
+            "Partially Mitigated": Number(points.partially_mitigated || 65),
+            "Successful": Number(points.successful || 25)
+        };
+        const avgAttack = results.length
+            ? Math.round(results.reduce((s, r) => s + (scoreMap[r.outcome] || 0), 0) / results.length)
+            : 0;
+
+        const cfg = this.enterpriseConfig;
+        const vaultSecurityScore = Math.max(0, Math.min(100, avgAttack + (cfg.password_storage === 'hash_salt_iteration' ? 8 : cfg.password_storage === 'hash_salt' ? 5 : 0)));
+        const breachResistanceScore = Math.max(0, Math.min(100, avgAttack + (cfg.authentication_controls === 'hardware_key_mfa' ? 10 : cfg.authentication_controls === 'app_mfa' ? 6 : 0)));
+        const userExperienceScore = Math.max(0, Math.min(100, 75 - (cfg.login_protection === 'adaptive_risk_login' ? 4 : 0) - (cfg.authentication_controls === 'hardware_key_mfa' ? 8 : 0) + (cfg.allow_passphrases === 'yes' ? 6 : -3)));
+        const operationalStabilityScore = Math.max(0, Math.min(100, 78 - (cfg.monitoring_response === 'realtime_anomaly' ? 8 : cfg.monitoring_response === 'breach_alerts' ? 4 : 0) - (cfg.login_protection === 'adaptive_risk_login' ? 5 : 0)));
+        const incidentResponseMaturity = Math.max(0, Math.min(100, (cfg.monitoring_response === 'realtime_anomaly' ? 90 : cfg.monitoring_response === 'breach_alerts' ? 78 : cfg.monitoring_response === 'basic_logging' ? 60 : 35)));
+
+        const w = algo.weightedCategories || {};
+        const weighted =
+            vaultSecurityScore * Number(w.vaultSecurityScore?.weight || 0.3) +
+            breachResistanceScore * Number(w.breachResistanceScore?.weight || 0.25) +
+            userExperienceScore * Number(w.userExperienceScore?.weight || 0.15) +
+            operationalStabilityScore * Number(w.operationalStabilityScore?.weight || 0.15) +
+            incidentResponseMaturity * Number(w.incidentResponseMaturity?.weight || 0.15);
+
+        return {
+            vaultSecurityScore: Math.round(vaultSecurityScore),
+            breachResistanceScore: Math.round(breachResistanceScore),
+            userExperienceScore: Math.round(userExperienceScore),
+            operationalStabilityScore: Math.round(operationalStabilityScore),
+            incidentResponseMaturity: Math.round(incidentResponseMaturity),
+            finalWeightedScore: Math.round(weighted)
+        };
+    }
+
+    /**
+     * Resolve final rating from score
+     * @param {number} score
+     * @returns {string}
+     */
+    calculateEnterpriseRatingFromScore(score) {
+        const rules = this.puzzleData.scoringAlgorithm?.ratingRules || [];
+        for (const rule of rules) {
+            if (score >= Number(rule.minScore || 0)) return rule.rating;
+        }
+        return 'C';
+    }
+
+    /**
+     * Badge unlock check
+     * @param {string} rating
+     * @param {number} score
+     * @returns {boolean}
+     */
+    isEnterpriseBadgeUnlocked(rating, score) {
+        const logic = this.puzzleData.certificationBadgeLogic?.unlockCondition || {};
+        const minRating = logic.minimumRating || 'A';
+        const minScore = Number(logic.minimumScore || 80);
+        const order = { "C": 1, "B": 2, "A": 3, "A+": 4 };
+        return (order[rating] || 0) >= (order[minRating] || 0) && score >= minScore;
+    }
+
+    /**
+     * Print structured certification report
+     */
+    renderEnterpriseAssessmentFeedback() {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const fg = this.puzzleData.feedbackGenerator || {};
+        const mitigatedCount = this.enterpriseAttackResults.filter(r => r.outcome !== 'Successful').length;
+        const totalThreats = this.enterpriseAttackResults.length;
+
+        const areaPairs = [
+            ["Vault Security", this.enterpriseScores.vaultSecurityScore],
+            ["Breach Resistance", this.enterpriseScores.breachResistanceScore],
+            ["User Experience", this.enterpriseScores.userExperienceScore],
+            ["Operational Stability", this.enterpriseScores.operationalStabilityScore],
+            ["Incident Response Maturity", this.enterpriseScores.incidentResponseMaturity]
+        ];
+        areaPairs.sort((a, b) => b[1] - a[1]);
+        const strongestArea = areaPairs[0][0];
+        const weakestArea = areaPairs[areaPairs.length - 1][0];
+        const recommendation = weakestArea === "Incident Response Maturity"
+            ? "Improve continuous monitoring to detect early attack signals."
+            : weakestArea === "User Experience"
+                ? "Reduce unnecessary friction while keeping strong controls."
+                : "Strengthen layered controls in weaker architecture areas.";
+
+        const summary = (fg.summaryTemplate || "You successfully mitigated [mitigatedCount] of [totalThreats] simulated threats.")
+            .replace("[mitigatedCount]", String(mitigatedCount))
+            .replace("[totalThreats]", String(totalThreats));
+
+        const resultLines = this.enterpriseAttackResults.map(r => `<div>• ${r.attackName}: <strong>${r.outcome}</strong></div>`).join('');
+        const badgeLine = this.enterpriseBadgeUnlocked
+            ? `<div><strong>Badge Unlocked:</strong> ${this.puzzleData.certificationBadgeLogic?.badgeName || 'Certified Security Architect'}</div>`
+            : `<div>${this.puzzleData.certificationBadgeLogic?.lockedMessage || ''}</div>`;
+
+        feedback.innerHTML = `
+            <div><strong>Phase 2: Controlled Attack Evaluation</strong></div>
+            ${resultLines}
+            <div style="margin-top:10px;"><strong>Phase 3: Performance Metrics</strong></div>
+            <div>Vault Security Score: ${this.enterpriseScores.vaultSecurityScore}</div>
+            <div>Breach Resistance Score: ${this.enterpriseScores.breachResistanceScore}</div>
+            <div>User Experience Score: ${this.enterpriseScores.userExperienceScore}</div>
+            <div>Operational Stability Score: ${this.enterpriseScores.operationalStabilityScore}</div>
+            <div>Incident Response Maturity: ${this.enterpriseScores.incidentResponseMaturity}</div>
+            <div style="margin-top:8px;"><strong>Final Rating:</strong> ${this.enterpriseRating} (${this.puzzleData.ratingBands?.[this.enterpriseRating] || ''})</div>
+            <div><strong>Final Score:</strong> ${this.enterpriseScores.finalWeightedScore}/100</div>
+            <div style="margin-top:8px;">${summary}</div>
+            <div>${(fg.strongestAreaTemplate || "Strongest area: [strongestArea].").replace("[strongestArea]", strongestArea)}</div>
+            <div>${(fg.weakestAreaTemplate || "Weakest area: [weakestArea].").replace("[weakestArea]", weakestArea)}</div>
+            <div>${(fg.recommendationTemplate || "Recommended improvement: [recommendation].").replace("[recommendation]", recommendation)}</div>
+            <div style="margin-top:8px;">${fg.humilityMessage || ''}</div>
+            <div style="margin-top:8px;">${badgeLine}</div>
+        `;
+    }
+
+    /**
+     * Handle one patch lab action
+     * @param {string} actionId
+     */
+    handlePatchAction(actionId) {
+        if (this.isComplete) return;
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+        const option = (this.puzzleData.patchOptions || []).find(p => p.id === actionId);
+        if (!option) return;
+
+        if (actionId === 'patch_simulate_exploit') {
+            this.simulatePatchExploit();
+            this.evaluatePatchFailState();
+            return;
+        }
+
+        this.patchAppliedActions.add(actionId);
+        const effects = option.effects || {};
+        this.patchMetrics.exploitSuccessRate += Number(effects.exploitSuccessRateDelta || 0);
+        this.patchMetrics.serverLoad += Number(effects.serverLoadDelta || 0);
+        this.patchMetrics.userExperienceScore += Number(effects.userExperienceScoreDelta || 0);
+
+        const closes = Array.isArray(effects.closesVulnerabilities) ? effects.closesVulnerabilities : [];
+        closes.forEach(id => this.patchClosedVulns.add(id));
+        this.refreshPatchVulnerabilityCount();
+        this.clampPatchMetrics();
+        this.patchTurnsSincePatch = 0;
+
+        if (!this.patchPrimaryFixed && (this.patchClosedVulns.has('vuln_timing_compare') || this.patchClosedVulns.has('vuln_session_reuse'))) {
+            this.patchPrimaryFixed = true;
+            this.revealSecondaryPatchVulnerability();
+        }
+
+        this.appendPatchLog(`Patch applied: ${option.action}.`);
+        this.updatePatchUI();
+        this.evaluatePatchWinState();
+        this.evaluatePatchFailState();
+    }
+
+    /**
+     * Simulate exploit against current patch state
+     */
+    simulatePatchExploit() {
+        const logic = this.puzzleData.exploitSimulationLogic || {};
+        const sim = logic.onSimulate || {};
+        this.applyPatchDelayEscalation();
+
+        const remaining = this.getPatchRemainingVulnerabilities();
+        const fullyFixed = remaining.length === 0;
+        const partiallyFixed = remaining.length > 0 && remaining.length < (this.puzzleData.vulnerabilities || []).filter(v => v.status !== 'hidden').length;
+
+        if (fullyFixed) {
+            this.patchMetrics.exploitSuccessRate = Number(sim.ifFullyPatched?.exploitSuccessRateSet ?? 0);
+            this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifFullyPatched?.vaultHealthDrop || 0));
+            this.appendPatchLog(sim.ifFullyPatched?.message || 'Exploit blocked. No active path detected.');
+        } else if (partiallyFixed) {
+            this.patchMetrics.exploitSuccessRate += Number(sim.ifPartiallyPatched?.exploitSuccessRateAdjustment || -8);
+            this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifPartiallyPatched?.vaultHealthDrop || 6));
+            this.appendPatchLog(sim.ifPartiallyPatched?.message || 'Exploit partially successful. Residual weakness still exploitable.');
+        } else {
+            this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifUnpatched?.vaultHealthDrop || 12));
+            this.appendPatchLog(sim.ifUnpatched?.message || 'Exploit succeeded. Active vulnerability chain confirmed.');
+        }
+
+        this.patchTurnsSincePatch += 1;
+        this.clampPatchMetrics();
+        this.updatePatchUI();
+        this.evaluatePatchWinState();
+    }
+
+    /**
+     * Reveal hidden secondary flaw after primary fix
+     */
+    revealSecondaryPatchVulnerability() {
+        const secondary = this.puzzleData.exploitSimulationLogic?.secondaryReveal || {};
+        const vulnId = secondary.revealVulnerabilityId || 'vuln_static_api_token';
+        if (this.patchSecondaryRevealed) return;
+        const vulns = this.puzzleData.vulnerabilities || [];
+        const target = vulns.find(v => v.id === vulnId);
+        if (target) target.status = 'open';
+        this.patchSecondaryRevealed = true;
+        this.refreshPatchVulnerabilityCount();
+        this.appendPatchLog(secondary.revealMessage || 'Secondary access path detected.');
+        this.gameScreen.ui.showNotification(secondary.revealMessage || 'Secondary access path detected.', 'warning');
+    }
+
+    /**
+     * Apply escalation when patch actions are delayed
+     */
+    applyPatchDelayEscalation() {
+        const delayed = this.puzzleData.exploitSimulationLogic?.delayedEscalation || {};
+        if (!delayed.enabled) return;
+        if (this.patchTurnsSincePatch < Number(delayed.turnsWithoutPatchThreshold || 2)) return;
+        this.patchMetrics.exploitSuccessRate += Number(delayed.exploitSuccessRateIncreasePerTrigger || 5);
+        this.patchMetrics.vaultHealth -= Number(delayed.vaultHealthDropPerTrigger || 3);
+        this.appendPatchLog(delayed.message || 'Threat pressure rising due to delayed remediation.');
+    }
+
+    /**
+     * Get list of still-open vulnerabilities
+     * @returns {Array}
+     */
+    getPatchRemainingVulnerabilities() {
+        const vulns = Array.isArray(this.puzzleData.vulnerabilities) ? this.puzzleData.vulnerabilities : [];
+        return vulns.filter(v => (v.status !== 'hidden') && !this.patchClosedVulns.has(v.id));
+    }
+
+    /**
+     * Recount vulnerability metric
+     */
+    refreshPatchVulnerabilityCount() {
+        this.patchMetrics.vulnerabilityCountRemaining = this.getPatchRemainingVulnerabilities().length;
+    }
+
+    /**
+     * Clamp patch dashboard metrics
+     */
+    clampPatchMetrics() {
+        const guard = this.puzzleData.exploitSimulationLogic?.metricGuards || {};
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        this.patchMetrics.exploitSuccessRate = clamp(this.patchMetrics.exploitSuccessRate, Number(guard.exploitSuccessRateMin ?? 0), Number(guard.exploitSuccessRateMax ?? 100));
+        this.patchMetrics.serverLoad = clamp(this.patchMetrics.serverLoad, Number(guard.serverLoadMin ?? 0), Number(guard.serverLoadMax ?? 100));
+        this.patchMetrics.userExperienceScore = clamp(this.patchMetrics.userExperienceScore, Number(guard.userExperienceScoreMin ?? 0), Number(guard.userExperienceScoreMax ?? 100));
+        this.patchMetrics.vaultHealth = clamp(this.patchMetrics.vaultHealth, Number(guard.vaultHealthMin ?? 0), Number(guard.vaultHealthMax ?? 100));
+    }
+
+    /**
+     * Update live patch dashboard UI
+     */
+    updatePatchUI() {
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(value);
+        };
+        setText('patch-vault', `${Math.floor(this.patchMetrics.vaultHealth)}%`);
+        setText('patch-exploit', `${Math.floor(this.patchMetrics.exploitSuccessRate)}%`);
+        setText('patch-load', `${Math.floor(this.patchMetrics.serverLoad)}%`);
+        setText('patch-ux', `${Math.floor(this.patchMetrics.userExperienceScore)}%`);
+        setText('patch-vuln', `${this.patchMetrics.vulnerabilityCountRemaining}`);
+        const fill = document.getElementById('patch-vault-fill');
+        if (fill) fill.style.width = `${Math.max(0, Math.min(100, this.patchMetrics.vaultHealth))}%`;
+    }
+
+    /**
+     * Log patch-lab feedback lines
+     * @param {string} message
+     */
+    appendPatchLog(message) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const line = document.createElement('div');
+        line.textContent = `• ${message}`;
+        feedback.appendChild(line);
+        feedback.scrollTop = feedback.scrollHeight;
+    }
+
+    /**
+     * Evaluate patch lab win condition
+     */
+    evaluatePatchWinState() {
+        if (this.isComplete) return;
+        const all = this.puzzleData.winCondition?.all || [];
+        if (!all.length) return;
+        const pass = all.every(rule => this.evaluatePatchRule(rule));
+        if (!pass) return;
+        this.finishPatchLab(true);
+    }
+
+    /**
+     * Evaluate patch lab fail condition
+     */
+    evaluatePatchFailState() {
+        if (this.isComplete) return;
+        const any = this.puzzleData.failCondition?.any || [];
+        const failed = any.some(rule => this.evaluatePatchRule(rule));
+        if (!failed) return;
+        this.finishPatchLab(false);
+    }
+
+    /**
+     * Evaluate one metric rule for patch lab
+     * @param {{metric:string,operator:string,value:number}} rule
+     * @returns {boolean}
+     */
+    evaluatePatchRule(rule) {
+        const value = Number(this.patchMetrics?.[rule.metric] ?? 0);
+        const expected = Number(rule.value);
+        if (rule.operator === '==') return value === expected;
+        if (rule.operator === '>') return value > expected;
+        if (rule.operator === '>=') return value >= expected;
+        if (rule.operator === '<') return value < expected;
+        if (rule.operator === '<=') return value <= expected;
+        return false;
+    }
+
+    /**
+     * Complete live patch mission
+     * @param {boolean} success
+     */
+    finishPatchLab(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        const summary = this.puzzleData.educationalSummary || '';
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
+        if (success) {
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Remediation successful.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+        } else {
+            this.audio.playFailure();
+            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Remediation failed.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+        }
+    }
+
+    /**
+     * Setup listeners for threat hunt simulation
+     */
+    setupThreatHuntEventListeners() {
+        const actionButtons = Array.from(document.querySelectorAll('button[data-threat-action]'));
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.threatAction;
+                const eventId = btn.dataset.eventId;
+                if (!actionId || !eventId) return;
+                this.handleThreatAction(actionId, eventId);
+            });
+        });
+
+        const finalizeBtn = document.getElementById('threat-finalize');
+        if (finalizeBtn) {
+            finalizeBtn.addEventListener('click', () => this.finalizeThreatHunt());
+        }
+    }
+
+    /**
+     * Handle one threat hunt action on an event
+     * @param {string} actionId
+     * @param {string} eventId
+     */
+    handleThreatAction(actionId, eventId) {
+        if (this.isComplete) return;
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const event = this.getThreatEventById(eventId);
+        if (!event) return;
+
+        const chainEntry = this.getThreatChainEntryByEventId(eventId);
+        const isMalicious = !!chainEntry;
+        const rules = this.puzzleData.progressionLogic || {};
+        const progressRules = rules.attackerProgressRules || {};
+        const falseRules = rules.falsePositiveRules || {};
+        const containment = rules.containmentEffects || {};
+
+        const addFalsePositive = (dropIntegrity = Number(falseRules.systemIntegrityDropPerFalsePositive || 8)) => {
+            this.threatFalsePositiveCount += Number(falseRules.incorrectFlagIncrease || 1);
+            this.threatSystemIntegrity = Math.max(0, this.threatSystemIntegrity - dropIntegrity);
+            this.appendThreatLog(rules.operationalFeedback?.falseAlert || "False alert logged. Operational efficiency reduced.");
+        };
+
+        const addAttackerProgress = () => {
+            this.threatAttackerProgress += Number(progressRules.missedMaliciousEventIncrease || 1);
+        };
+
+        const markDetected = () => {
+            if (!chainEntry) return;
+            this.threatDetectedMajor.add(chainEntry.key);
+            this.threatAttackerProgress = Math.max(0, this.threatAttackerProgress - Number(progressRules.correctMajorDetectionDecrease || 1));
+        };
+
+        if (actionId === 'mark_suspicious') {
+            if (isMalicious) {
+                markDetected();
+                this.appendThreatLog("Suspicious privilege escalation detected.");
+            } else {
+                addFalsePositive();
+            }
+        }
+
+        if (actionId === 'investigate') {
+            this.threatInvestigatedEvents.add(eventId);
+            if (isMalicious) {
+                markDetected();
+                this.appendThreatLog(this.getThreatInvestigationMessage(chainEntry));
+            } else {
+                this.appendThreatLog(`Investigation complete for ${eventId}. No malicious chain evidence found.`);
+            }
+        }
+
+        if (actionId === 'isolate_account') {
+            const canStop = isMalicious && (containment.isolateAccountStops || []).includes(chainEntry.key);
+            if (canStop) {
+                markDetected();
+                this.threatContainedMajor.add(chainEntry.key);
+                if (chainEntry.key === 'lateral_movement') {
+                    this.appendThreatLog(rules.operationalFeedback?.lateralMove || "Attacker lateral movement confirmed.");
+                } else {
+                    this.appendThreatLog(`Containment applied: account isolation stopped ${chainEntry.label}.`);
+                }
+            } else {
+                addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10));
+            }
+        }
+
+        if (actionId === 'block_ip') {
+            const canStop = isMalicious && (containment.blockIPStops || []).includes(chainEntry.key);
+            if (canStop) {
+                markDetected();
+                this.threatContainedMajor.add(chainEntry.key);
+                this.appendThreatLog(rules.operationalFeedback?.exportAlert || "Unauthorized data export attempt identified.");
+            } else {
+                addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10));
+            }
+        }
+
+        if (actionId === 'ignore') {
+            if (isMalicious) {
+                addAttackerProgress();
+                this.appendThreatLog(`Ignored malicious signal (${eventId}). Attacker progression increased.`);
+            } else {
+                this.appendThreatLog(`Ignored ${eventId}. No immediate risk confirmed.`);
+            }
+        }
+
+        this.applyThreatPassiveRisk();
+        this.evaluateThreatCriticalEscalation();
+        this.updateThreatHuntUI();
+        this.evaluateThreatFailState();
+    }
+
+    /**
+     * Lookup event by id in evidence panels
+     * @param {string} eventId
+     * @returns {Object|null}
+     */
+    getThreatEventById(eventId) {
+        const panels = Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
+        for (const panel of panels) {
+            const hit = (panel.entries || []).find(entry => entry.id === eventId);
+            if (hit) return hit;
+        }
+        return null;
+    }
+
+    /**
+     * Lookup hidden chain step by linked evidence id
+     * @param {string} eventId
+     * @returns {Object|null}
+     */
+    getThreatChainEntryByEventId(eventId) {
+        const chain = Array.isArray(this.puzzleData.hiddenAttackChain) ? this.puzzleData.hiddenAttackChain : [];
+        return chain.find(step => Array.isArray(step.linkedEvidence) && step.linkedEvidence.includes(eventId)) || null;
+    }
+
+    /**
+     * Compose deep investigation message
+     * @param {Object|null} chainEntry
+     * @returns {string}
+     */
+    getThreatInvestigationMessage(chainEntry) {
+        if (!chainEntry) return "Investigation did not confirm malicious behavior.";
+        return `Investigate result: ${chainEntry.label}. ${chainEntry.explanation}`;
+    }
+
+    /**
+     * Apply passive vault drain when attacker remains undetected
+     */
+    applyThreatPassiveRisk() {
+        const passive = this.puzzleData.progressionLogic?.passiveRisk || {};
+        if (!passive.enabledWhenUndetected) return;
+        const cycle = Math.max(1, Number(passive.cycleTurns || 2));
+        if (this.attempts % cycle !== 0) return;
+        if (this.threatAttackerProgress <= 0) return;
+        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(passive.vaultHealthDropPerCycle || 4));
+    }
+
+    /**
+     * Increase vault damage when progress reaches critical threshold
+     */
+    evaluateThreatCriticalEscalation() {
+        const progressRules = this.puzzleData.progressionLogic?.attackerProgressRules || {};
+        const critical = Number(progressRules.criticalThreshold || 5);
+        if (this.threatAttackerProgress < critical) return;
+        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(progressRules.rapidVaultDrainOnCritical || 12));
+        const msg = this.puzzleData.progressionLogic?.operationalFeedback?.criticalEscalation || "Warning: attacker progression has reached critical escalation level.";
+        this.appendThreatLog(msg);
+    }
+
+    /**
+     * Update threat hunt HUD
+     */
+    updateThreatHuntUI() {
+        const vault = Math.max(0, Math.min(100, this.threatVaultHealth));
+        const integrity = Math.max(0, Math.min(100, this.threatSystemIntegrity));
+        const vaultText = document.getElementById('threat-vault-text');
+        const vaultFill = document.getElementById('threat-vault-fill');
+        const integrityText = document.getElementById('threat-integrity-text');
+        const integrityFill = document.getElementById('threat-integrity-fill');
+        const fpText = document.getElementById('threat-fp-text');
+        const progressText = document.getElementById('threat-progress-text');
+        if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
+        if (vaultFill) vaultFill.style.width = `${vault}%`;
+        if (integrityText) integrityText.textContent = `${Math.floor(integrity)}%`;
+        if (integrityFill) integrityFill.style.width = `${integrity}%`;
+        if (fpText) fpText.textContent = `${this.threatFalsePositiveCount}`;
+        if (progressText) progressText.textContent = `${this.threatAttackerProgress}`;
+    }
+
+    /**
+     * Append line in threat hunt log feed
+     * @param {string} message
+     */
+    appendThreatLog(message) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const line = document.createElement('div');
+        line.textContent = `• ${message}`;
+        feedback.appendChild(line);
+        feedback.scrollTop = feedback.scrollHeight;
+    }
+
+    /**
+     * Check fail conditions and end mission when reached
+     */
+    evaluateThreatFailState() {
+        const fail = this.puzzleData.failCondition?.any || [];
+        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
+        const failed = fail.some(rule => {
+            const metricValue = this.getThreatMetric(rule.metric, maxEscalation);
+            if (rule.operator === '<=') return metricValue <= Number(rule.value);
+            if (rule.operator === '<') return metricValue < Number(rule.value);
+            if (rule.operator === '>=') return metricValue >= Number(rule.value);
+            return false;
+        });
+        if (!failed) return;
+        this.finishThreatHunt(false);
+    }
+
+    /**
+     * Finalize hunt by checking win conditions
+     */
+    finalizeThreatHunt() {
+        if (this.isComplete) return;
+        this.evaluateThreatFailState();
+        if (this.isComplete) return;
+        const win = this.puzzleData.winCondition || {};
+        const minContained = Number(win.majorMaliciousEventsContainedMin || 3);
+        const vaultMin = Number(win.vaultHealthAbovePercent || 30);
+        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
+        const containOk = this.threatContainedMajor.size >= minContained;
+        const vaultOk = this.threatVaultHealth > vaultMin;
+        const progressOk = this.threatAttackerProgress < maxEscalation;
+        this.finishThreatHunt(containOk && vaultOk && progressOk);
+    }
+
+    /**
+     * Complete threat hunt mission with summary
+     * @param {boolean} success
+     */
+    finishThreatHunt(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        const summary = this.puzzleData.educationalSummary || {};
+        const reveal = summary.reveal || '';
+        const msg = summary.message || '';
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += `
+                <div style="margin-top:8px;"><strong>${reveal}</strong></div>
+                <div>${msg}</div>
+            `;
+        }
+        if (success) {
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Threat hunt complete.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+        } else {
+            this.audio.playFailure();
+            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Threat hunt failed.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+        }
+    }
+
+    /**
+     * Resolve metric values for fail checks
+     * @param {string} metric
+     * @param {number} maxEscalation
+     * @returns {number}
+     */
+    getThreatMetric(metric, maxEscalation) {
+        if (metric === 'vaultHealth') return this.threatVaultHealth;
+        if (metric === 'systemIntegrity') return this.threatSystemIntegrity;
+        if (metric === 'attackerProgress') return this.threatAttackerProgress;
+        if (metric === 'maxEscalation') return maxEscalation;
+        return 0;
+    }
+
+    /**
+     * Start stage-based coordinated simulation
+     */
+    startMultiStageDefenseSimulation() {
+        const base = this.puzzleData.baseStats || {};
+        const regen = base.energyRegenRate || {};
+        const regenAmount = Number(regen.amount || 3);
+        const regenEvery = Math.max(1, Number(regen.everySeconds || 3));
+        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
+        this.multiStageIndex = 0;
+        this.multiStageRemaining = Number(stages[0]?.duration || 20);
+        this.updateMultiSimulationUI();
+        this.appendMultiLog('APT campaign started.');
+        this.enterCurrentMultiStage();
+
+        this.multiEnergyTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.multiEnergy = Math.min(100, this.multiEnergy + regenAmount);
+            this.updateMultiSimulationUI();
+        }, regenEvery * 1000);
+
+        this.multiCooldownTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            Object.keys(this.multiDefenseCooldowns).forEach(key => {
+                this.multiDefenseCooldowns[key] = Math.max(0, Number(this.multiDefenseCooldowns[key] || 0) - 1);
+            });
+            this.updateMultiDefenseButtons();
+        }, 1000);
+
+        this.multiDurationTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.multiRemainingTime = Math.max(0, this.multiRemainingTime - 1);
+            this.updateMultiSimulationUI();
+            if (this.multiRemainingTime <= 0) {
+                this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
+            }
+        }, 1000);
+
+        this.multiStageTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.multiStageRemaining = Math.max(0, this.multiStageRemaining - 1);
+            this.updateMultiSimulationUI();
+            if (this.multiStageRemaining <= 0) {
+                this.advanceMultiStage();
+            }
+        }, 1000);
+    }
+
+    /**
+     * Enter current stage and schedule attacks
+     */
+    enterCurrentMultiStage() {
+        const stage = this.getCurrentMultiStage();
+        if (!stage) {
+            this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
+            return;
+        }
+        this.multiStageRemaining = Number(stage.duration || 20);
+        const stageLabel = stage.stageLabel || `Stage ${this.multiStageIndex + 1}/4`;
+        this.appendMultiLog(stageLabel);
+        if (stage.bossWarning) {
+            this.appendMultiLog(stage.bossWarning);
+            this.gameScreen.ui.showNotification(stage.bossWarning, 'warning');
+        }
+        this.scheduleNextMultiAttack();
+    }
+
+    /**
+     * Move to next stage and apply escalation outcomes
+     */
+    advanceMultiStage() {
+        this.applyCurrentStageEscalationIfNeeded();
+        this.multiStageIndex += 1;
+        this.multiActiveAttacks = [];
+        if (this.multiSpawnTimeoutId) {
+            clearTimeout(this.multiSpawnTimeoutId);
+            this.multiSpawnTimeoutId = null;
+        }
+        if (this.multiAttackResolveTimeoutId) {
+            clearTimeout(this.multiAttackResolveTimeoutId);
+            this.multiAttackResolveTimeoutId = null;
+        }
+        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
+        if (this.multiStageIndex >= stages.length) {
+            this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
+            return;
+        }
+        this.enterCurrentMultiStage();
+        this.updateMultiSimulationUI();
+    }
+
+    /**
+     * Stop all multi-stage timers
+     */
+    stopMultiStageDefenseSimulation() {
+        if (this.multiSpawnTimeoutId) clearTimeout(this.multiSpawnTimeoutId);
+        if (this.multiAttackResolveTimeoutId) clearTimeout(this.multiAttackResolveTimeoutId);
+        if (this.multiEnergyTimerId) clearInterval(this.multiEnergyTimerId);
+        if (this.multiDurationTimerId) clearInterval(this.multiDurationTimerId);
+        if (this.multiCooldownTimerId) clearInterval(this.multiCooldownTimerId);
+        if (this.multiStageTimerId) clearInterval(this.multiStageTimerId);
+        this.multiSpawnTimeoutId = null;
+        this.multiAttackResolveTimeoutId = null;
+        this.multiEnergyTimerId = null;
+        this.multiDurationTimerId = null;
+        this.multiCooldownTimerId = null;
+        this.multiStageTimerId = null;
+    }
+
+    /**
+     * Get active stage object
+     * @returns {Object|null}
+     */
+    getCurrentMultiStage() {
+        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
+        return stages[this.multiStageIndex] || null;
+    }
+
+    /**
+     * Schedule next attack for current stage
+     */
+    scheduleNextMultiAttack() {
+        if (this.isComplete) return;
+        const stage = this.getCurrentMultiStage();
+        if (!stage) return;
+        const spawn = stage.attackProfile?.spawnRate || { minSeconds: 2, maxSeconds: 4 };
+        let minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
+        let maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
+        const modifier = stage.attackProfile?.conditionalSpawnModifier;
+        if (modifier && modifier.ifFlag === 'compromisedAccounts' && Number(this.multiFlags.compromisedAccounts || 0) > 0) {
+            const factor = Math.max(0.1, 1 - (Number(modifier.increaseFrequencyPercent || 0) / 100));
+            minSeconds *= factor;
+            maxSeconds *= factor;
+        }
+        const delayMs = Math.floor((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
+        this.multiSpawnTimeoutId = setTimeout(() => {
+            if (this.isComplete) return;
+            this.spawnMultiStageAttack();
+            this.scheduleNextMultiAttack();
+        }, delayMs);
+    }
+
+    /**
+     * Spawn one or multiple attacks based on stage profile
+     */
+    spawnMultiStageAttack() {
+        const stage = this.getCurrentMultiStage();
+        if (!stage) return;
+        const attackNames = Array.isArray(stage.attackProfile?.attackTypes) ? stage.attackProfile.attackTypes : [];
+        if (!attackNames.length) return;
+        this.resolveOutstandingMultiAttacks();
+
+        const spawnAll = !!stage.attackProfile?.simultaneousWaves;
+        const selected = spawnAll ? attackNames.slice() : [attackNames[Math.floor(Math.random() * attackNames.length)]];
+        this.multiActiveAttacks = selected.map(name => this.buildMultiAttackState(name, stage));
+        const label = this.multiActiveAttacks.map(a => `${a.type} (-${a.damage})`).join(', ');
+        const panel = document.getElementById('multi-current-attacks');
+        if (panel) panel.innerHTML = label;
+        this.appendMultiLog(`Incoming: ${label}`);
+
+        this.multiAttackResolveTimeoutId = setTimeout(() => {
+            if (this.isComplete) return;
+            this.resolveOutstandingMultiAttacks();
+            this.multiActiveAttacks = [];
+            this.updateMultiSimulationUI();
+        }, 2200);
+    }
+
+    /**
+     * Build attack object with stage modifiers
+     * @param {string} attackType
+     * @param {Object} stage
+     * @returns {{type:string, damage:number, blocked:boolean}}
+     */
+    buildMultiAttackState(attackType, stage) {
+        const baseDamage = Number(stage.attackProfile?.baseDamage?.[attackType] || 10);
+        let damage = baseDamage;
+        const modifier = stage.attackProfile?.conditionalDamageModifier;
+        if (modifier && modifier.targetAttack === attackType) {
+            if (modifier.ifFlag === 'elevatedAccess' && this.multiFlags.elevatedAccess) {
+                if (modifier.increaseDamagePercent) damage = Math.round(damage * (1 + Number(modifier.increaseDamagePercent) / 100));
+            }
+            if (modifier.ifFlag === 'databaseStolen' && this.multiFlags.databaseStolen) {
+                if (modifier.multiplyDamageBy) damage = Math.round(damage * Number(modifier.multiplyDamageBy));
+            }
+        }
+        return { type: attackType, damage, blocked: false };
+    }
+
+    /**
+     * Use defense module during multi-stage simulation
+     * @param {string} defenseName
+     */
+    activateMultiDefense(defenseName) {
+        if (this.isComplete) return;
+        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
+        const defense = modules.find(d => d.name === defenseName);
+        if (!defense) return;
+        const cooldown = Number(this.multiDefenseCooldowns[defenseName] || 0);
+        if (cooldown > 0) {
+            this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldown}s).`, 'warning');
+            return;
+        }
+        const cost = Number(defense.energyCost || 0);
+        if (this.multiEnergy < cost) {
+            this.gameScreen.ui.showNotification('Not enough energy for that defense.', 'warning');
+            return;
+        }
+        this.multiEnergy = Math.max(0, this.multiEnergy - cost);
+        this.multiDefenseCooldowns[defenseName] = Number(defense.cooldown || 0);
+        this.audio.playButtonClick();
+        this.appendMultiLog(`Defense: ${defenseName}`);
+        this.multiActiveAttacks.forEach(attack => {
+            if (attack.blocked) return;
+            const match1 = Array.isArray(defense.protectsAgainst) && defense.protectsAgainst.includes(attack.type);
+            const stage = this.getCurrentMultiStage();
+            const counterList = Array.isArray(stage?.counteredBy?.[attack.type]) ? stage.counteredBy[attack.type] : [];
+            const match2 = counterList.includes(defenseName);
+            if (match1 || match2) {
+                attack.blocked = true;
+                this.appendMultiLog(`Blocked: ${attack.type}`);
+                this.audio.playSuccess();
+            }
+        });
+        this.updateMultiSimulationUI();
+        this.updateMultiDefenseButtons();
+    }
+
+    /**
+     * Apply damage for any unresolved attacks
+     */
+    resolveOutstandingMultiAttacks() {
+        const stage = this.getCurrentMultiStage();
+        if (!stage) return;
+        let unresolved = 0;
+        this.multiActiveAttacks.forEach(attack => {
+            if (attack.blocked) return;
+            unresolved += 1;
+            this.multiVaultHealth = Math.max(0, this.multiVaultHealth - Number(attack.damage || 0));
+            this.appendMultiLog(`Impact: ${attack.type} (-${attack.damage})`);
+        });
+        if (unresolved > 0) {
+            const key = stage.id || `stage_${this.multiStageIndex + 1}`;
+            this.multiUncounteredByStage[key] = Number(this.multiUncounteredByStage[key] || 0) + unresolved;
+            this.audio.playFailure();
+        }
+        if (this.multiVaultHealth <= 0) {
+            this.finishMultiStageDefenseSimulation(false);
+        }
+        this.updateMultiSimulationUI();
+    }
+
+    /**
+     * Apply stage escalation flags based on misses
+     */
+    applyCurrentStageEscalationIfNeeded() {
+        const stage = this.getCurrentMultiStage();
+        if (!stage) return;
+        const key = stage.id || `stage_${this.multiStageIndex + 1}`;
+        const misses = Number(this.multiUncounteredByStage[key] || 0);
+        const threshold = Number(stage.failureEffects?.onUncounteredThreshold || 9999);
+        if (misses < threshold) return;
+        const esc = stage.failureEffects?.escalation || {};
+        if (esc.compromisedAccounts !== undefined) this.multiFlags.compromisedAccounts = Number(esc.compromisedAccounts);
+        if (esc.elevatedAccess !== undefined) this.multiFlags.elevatedAccess = !!esc.elevatedAccess;
+        if (esc.databaseStolen !== undefined) this.multiFlags.databaseStolen = !!esc.databaseStolen;
+        if (esc.alertMessage) {
+            this.appendMultiLog(esc.alertMessage);
+            this.gameScreen.ui.showNotification(esc.alertMessage, 'warning');
+        }
+        this.updateMultiSimulationUI();
+    }
+
+    /**
+     * Update HUD for multi-stage simulation
+     */
+    updateMultiSimulationUI() {
+        const vault = Math.max(0, Math.min(100, this.multiVaultHealth));
+        const energy = Math.max(0, Math.min(100, this.multiEnergy));
+        const vaultText = document.getElementById('multi-vault-text');
+        const vaultFill = document.getElementById('multi-vault-fill');
+        const energyText = document.getElementById('multi-energy-text');
+        const energyFill = document.getElementById('multi-energy-fill');
+        const timeText = document.getElementById('multi-time-text');
+        const stageLabel = document.getElementById('multi-stage-label');
+        const stageTime = document.getElementById('multi-stage-time');
+        if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
+        if (vaultFill) vaultFill.style.width = `${vault}%`;
+        if (energyText) energyText.textContent = `${Math.floor(energy)}%`;
+        if (energyFill) energyFill.style.width = `${energy}%`;
+        if (timeText) timeText.textContent = `${Math.floor(Math.max(0, this.multiRemainingTime))}s`;
+        const stage = this.getCurrentMultiStage();
+        if (stageLabel) stageLabel.textContent = stage?.stageLabel || 'Stage Complete';
+        if (stageTime) stageTime.textContent = `${Math.floor(Math.max(0, this.multiStageRemaining))}s`;
+        this.updateMultiDefenseButtons();
+    }
+
+    /**
+     * Update multi-stage defense button states
+     */
+    updateMultiDefenseButtons() {
+        const buttons = Array.from(document.querySelectorAll('button[data-multi-defense]'));
+        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
+        buttons.forEach(btn => {
+            const name = btn.dataset.multiDefense;
+            const module = modules.find(m => m.name === name);
+            if (!module) return;
+            const cooldown = Number(this.multiDefenseCooldowns[name] || 0);
+            const affordable = this.multiEnergy >= Number(module.energyCost || 0);
+            btn.disabled = this.isComplete || cooldown > 0 || !affordable;
+            const cd = document.getElementById(`multi-cd-${this.sanitizeId(name)}`);
+            if (cd) {
+                if (cooldown > 0) cd.textContent = `COOLDOWN: ${cooldown}s`;
+                else if (!affordable) cd.textContent = 'LOW ENERGY';
+                else cd.textContent = 'READY';
+            }
+        });
+    }
+
+    /**
+     * Append log line for multi-stage simulation
+     * @param {string} message
+     */
+    appendMultiLog(message) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const line = document.createElement('div');
+        line.textContent = `• ${message}`;
+        feedback.appendChild(line);
+        feedback.scrollTop = feedback.scrollHeight;
+    }
+
+    /**
+     * Finish multi-stage simulation
+     * @param {boolean} success
+     */
+    finishMultiStageDefenseSimulation(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        this.stopMultiStageDefenseSimulation();
+        const summary = this.puzzleData.finalSummary || 'Modern cyber attacks happen in stages. Small security gaps can combine into major breaches. Layered defense and early detection are critical.';
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
+        if (success) {
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Boss campaign contained.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1300);
+        } else {
+            this.audio.playFailure();
+            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'APT campaign breached defenses.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1300);
+        }
+    }
+
+    /**
+     * Build safe id suffix from display labels
+     * @param {string} text
+     * @returns {string}
+     */
+    sanitizeId(text) {
+        return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+
+    /**
+     * Get configured total budget for strategy mode
+     * @returns {number}
+     */
+    getStrategyTotalBudget() {
+        return Number(this.puzzleData.totalBudget || this.puzzleData.initialScenarioDisplay?.budgetPoints || 100);
+    }
+
+    /**
+     * Sum selected defense costs
+     * @returns {number}
+     */
+    getStrategyUsedBudget() {
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        return defenses.reduce((sum, defense) => {
+            if (!this.strategySelectedDefenses.has(defense.id)) return sum;
+            return sum + Number(defense.cost || 0);
+        }, 0);
+    }
+
+    /**
+     * Toggle one defense with budget check
+     * @param {string} defenseId
+     * @param {HTMLElement} button
+     */
+    toggleStrategyDefense(defenseId, button) {
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const defense = defenses.find(item => item.id === defenseId);
+        if (!defense) return;
+
+        if (this.strategySelectedDefenses.has(defenseId)) {
+            this.strategySelectedDefenses.delete(defenseId);
+            button.classList.remove('selected');
+            this.audio.playButtonClick();
+            this.updateStrategyBudgetUI();
+            return;
+        }
+
+        const used = this.getStrategyUsedBudget();
+        const total = this.getStrategyTotalBudget();
+        const nextCost = used + Number(defense.cost || 0);
+        if (nextCost > total) {
+            this.gameScreen.ui.showNotification(`Budget exceeded. You have ${Math.max(0, total - used)} points left.`, 'warning');
+            this.audio.playFailure();
+            return;
+        }
+
+        this.strategySelectedDefenses.add(defenseId);
+        button.classList.add('selected');
+        this.audio.playButtonClick();
+        this.updateStrategyBudgetUI();
+    }
+
+    /**
+     * Update budget meter UI for strategy mode
+     */
+    updateStrategyBudgetUI() {
+        const used = this.getStrategyUsedBudget();
+        const total = this.getStrategyTotalBudget();
+        const pct = Math.max(0, Math.min(100, (used / Math.max(1, total)) * 100));
+        const text = document.getElementById('strategy-budget-text');
+        const fill = document.getElementById('strategy-budget-fill');
+        if (text) text.textContent = `${used} / ${total}`;
+        if (fill) fill.style.width = `${pct}%`;
+    }
+
+    /**
+     * Clear selected defenses in strategy mode
+     */
+    clearStrategySelection() {
+        this.strategySelectedDefenses.clear();
+        document.querySelectorAll('button[data-defense-id].selected').forEach(el => el.classList.remove('selected'));
+        this.updateStrategyBudgetUI();
+        this.audio.playButtonClick();
+    }
+
+    /**
+     * Simulate attack waves based on selected defenses
+     * @returns {{waveResults: Array, vaultIntegrity: number}}
+     */
+    runStrategySimulation() {
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const waves = Array.isArray(this.puzzleData.attackWaves) ? this.puzzleData.attackWaves : [];
+        const selected = defenses.filter(defense => this.strategySelectedDefenses.has(defense.id));
+        const sim = this.puzzleData.simulationLogic || {};
+        const thresholds = sim.statusThresholds || {};
+        const blockedMin = Number(thresholds.blockedMin ?? 0.67);
+        const partialMin = Number(thresholds.partialMin ?? 0.34);
+        const cap = Number(sim.protectionScoreCapPerWave ?? 1);
+
+        const waveResults = waves.map(wave => {
+            const base = Number(wave.baselineProtection || 0);
+            const mapped = selected.reduce((sum, defense) => sum + Number(defense.protectionMapping?.[wave.id] || 0), 0);
+            const score = Math.min(cap, Math.max(0, base + mapped));
+            let status = 'Successful';
+            if (score >= blockedMin) {
+                status = 'Blocked';
+            } else if (score >= partialMin) {
+                status = 'Partially Blocked';
+            }
+            return {
+                id: wave.id,
+                name: wave.name,
+                protectionScore: score,
+                status
+            };
+        });
+
+        const outcome = this.puzzleData.outcomeCalculation || {};
+        const weights = outcome.waveWeights || {};
+        const scoreByStatus = outcome.scoreByStatus || {};
+        let weightedScoreSum = 0;
+        let weightSum = 0;
+        waveResults.forEach(result => {
+            const w = Number(weights[result.id] || 0);
+            let key = 'successful';
+            if (result.status === 'Blocked') key = 'blocked';
+            if (result.status === 'Partially Blocked') key = 'partial';
+            const score = Number(scoreByStatus[key] ?? 0);
+            weightedScoreSum += score * w;
+            weightSum += w;
+        });
+        const vaultIntegrity = Math.max(0, Math.min(100, Math.round((weightedScoreSum / Math.max(1, weightSum)) * 100)));
+
+        return { waveResults, vaultIntegrity };
+    }
+
+    /**
+     * Submit selected strategy and evaluate simulation
+     */
+    submitStrategyBuilderDecision() {
+        if (this.isComplete) return;
+        if (this.strategySelectedDefenses.size === 0) {
+            this.gameScreen.ui.showNotification('Choose at least one defense before simulation.', 'warning');
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const result = this.runStrategySimulation();
+        this.strategySimulationResult = result;
+        this.renderStrategySimulationResult(result);
+
+        const successThreshold = 55;
+        if (result.vaultIntegrity >= successThreshold) {
+            this.isComplete = true;
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Defense plan stabilized the vault.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1300);
+            return;
+        }
+
+        this.audio.playFailure();
+        if (this.attempts >= this.maxAttempts) {
+            this.isComplete = true;
+            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Defense plan left critical gaps.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1300);
+            return;
+        }
+
+        this.gameScreen.ui.showNotification('Coverage is low. Rebalance defenses and run again.', 'warning');
+    }
+
+    /**
+     * Render strategy simulation outputs
+     * @param {{waveResults: Array, vaultIntegrity: number}} result
+     */
+    renderStrategySimulationResult(result) {
+        const waves = Array.isArray(result?.waveResults) ? result.waveResults : [];
+        waves.forEach(wave => {
+            const statusEl = document.getElementById(`strategy-wave-status-${wave.id}`);
+            if (!statusEl) return;
+            statusEl.textContent = wave.status;
+            if (wave.status === 'Blocked') {
+                statusEl.style.color = 'var(--cyber-green)';
+            } else if (wave.status === 'Partially Blocked') {
+                statusEl.style.color = 'var(--cyber-blue)';
+            } else {
+                statusEl.style.color = 'var(--cyber-pink)';
+            }
+        });
+
+        const metric = this.puzzleData.outcomeCalculation?.finalMetric || {};
+        const label = metric.label || 'Vault Integrity';
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+
+        const lines = waves.map(w => `<div>• ${w.name}: <strong>${w.status}</strong></div>`).join('');
+        feedback.innerHTML = `
+            <div><strong>Simulation Result:</strong></div>
+            ${lines}
+            <div style="margin-top:8px;"><strong>${label}:</strong> ${result.vaultIntegrity}%</div>
+            <div style="margin-top:8px;">${this.puzzleData.educationalSummary || ''}</div>
+        `;
+    }
+
+    /**
+     * Show database preview for selected system
+     * @param {string} systemId
+     */
+    viewInspectionDatabase(systemId) {
+        const system = (this.puzzleData.systems || []).find(item => item.id === systemId);
+        if (!system) return;
+        const panel = document.getElementById(`db-${systemId}`);
+        if (!panel) return;
+        const rows = Array.isArray(system.databasePreview) ? system.databasePreview : [];
+        panel.style.display = 'block';
+        panel.innerHTML = `<strong>Database Preview:</strong><div>${rows.join('</div><div>')}</div>`;
+    }
+
+    /**
+     * Show breach outcome for selected system
+     * @param {string} systemId
+     */
+    simulateInspectionBreach(systemId) {
+        const system = (this.puzzleData.systems || []).find(item => item.id === systemId);
+        if (!system) return;
+        const panel = document.getElementById(`breach-${systemId}`);
+        if (!panel) return;
+        panel.style.display = 'block';
+        panel.innerHTML = `<strong>Breach Simulation:</strong><div>${system.breachOutcome || ''}</div>`;
+    }
+
+    /**
+     * Submit safer-system choice
+     */
+    submitInspectionChoice() {
+        if (this.isComplete) return;
+        if (!this.inspectionSelectedSystem) {
+            this.gameScreen.ui.showNotification('Choose a system first.', 'warning');
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const feedback = document.getElementById('guess-feedback');
+        const isCorrect = this.inspectionSelectedSystem === this.puzzleData.correctAnswer;
+
+        if (!isCorrect) {
+            if (feedback) {
+                feedback.innerHTML = `
+                    <div><strong>Not correct yet.</strong></div>
+                    <div>${this.mission.failureFeedback || 'Review both systems and try again.'}</div>
+                    <div style="margin-top:6px;">${this.puzzleData.simpleExplanation || ''}</div>
+                `;
+            }
+            this.audio.playFailure();
+            this.gameScreen.ui.showNotification('Incorrect choice. Review and try again.', 'error');
+            return;
+        }
+
+        this.isComplete = true;
+        const shock = this.puzzleData.shockReveal || null;
+        if (feedback) {
+            feedback.innerHTML = `
+                <div><strong>Correct choice:</strong> System B</div>
+                <div>${this.puzzleData.simpleExplanation || ''}</div>
+                ${shock ? `<div style="margin-top:10px;"><strong>${shock.title}</strong> ${shock.message}</div>` : ''}
+                <div style="margin-top:10px;">${this.puzzleData.educationalSummary || ''}</div>
+            `;
+        }
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Correct choice.', 'success');
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
     }
 
     /**
@@ -1719,7 +4036,7 @@ export class PasswordCrack {
      * @returns {string} Current password guess
      */
     getCurrentGuess() {
-        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation') return '';
+        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation' || this.interactionMode === 'inspection' || this.interactionMode === 'strategyBuilder' || this.interactionMode === 'liveDefenseSimulation' || this.interactionMode === 'multiStageDefenseSimulation' || this.interactionMode === 'threatHuntSimulation' || this.interactionMode === 'livePatchSimulation' || this.interactionMode === 'enterpriseArchitectureSimulation') return '';
         return this.inputs.map(input => input.value).join('').toUpperCase();
     }
 
@@ -1746,6 +4063,29 @@ export class PasswordCrack {
             } else {
                 this.submitInvestigationDefense();
             }
+            return;
+        }
+        if (this.interactionMode === 'inspection') {
+            this.submitInspectionChoice();
+            return;
+        }
+        if (this.interactionMode === 'strategyBuilder') {
+            this.submitStrategyBuilderDecision();
+            return;
+        }
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'multiStageDefenseSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'threatHuntSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'livePatchSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
             return;
         }
 
@@ -1923,6 +4263,32 @@ export class PasswordCrack {
             this.audio.playButtonClick();
             return;
         }
+        if (this.interactionMode === 'inspection') {
+            this.inspectionSelectedSystem = null;
+            const selected = document.querySelector('input[name="inspection-choice"]:checked');
+            if (selected) selected.checked = false;
+            this.audio.playButtonClick();
+            return;
+        }
+        if (this.interactionMode === 'strategyBuilder') {
+            this.clearStrategySelection();
+            return;
+        }
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'multiStageDefenseSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'threatHuntSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'livePatchSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
+            return;
+        }
         this.inputs.forEach(input => {
             input.value = '';
             input.classList.remove('correct', 'partial', 'incorrect');
@@ -2013,6 +4379,44 @@ export class PasswordCrack {
                 `;
                 return;
             }
+            if (this.interactionMode === 'inspection') {
+                counter.innerHTML = `
+                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                `;
+                return;
+            }
+            if (this.interactionMode === 'strategyBuilder') {
+                counter.innerHTML = `
+                    Simulations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
+                `;
+                return;
+            }
+            if (this.interactionMode === 'liveDefenseSimulation') {
+                counter.innerHTML = 'Live defense active';
+                return;
+            }
+            if (this.interactionMode === 'multiStageDefenseSimulation') {
+                counter.innerHTML = 'Boss simulation active';
+                return;
+            }
+            if (this.interactionMode === 'threatHuntSimulation') {
+                counter.innerHTML = `
+                    Investigation actions: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
+                `;
+                return;
+            }
+            if (this.interactionMode === 'livePatchSimulation') {
+                counter.innerHTML = `
+                    Patch operations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
+                `;
+                return;
+            }
+            if (this.interactionMode === 'enterpriseArchitectureSimulation') {
+                counter.innerHTML = `
+                    Certification evaluations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
+                `;
+                return;
+            }
             counter.innerHTML = `
                 Attempts: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
             `;
@@ -2087,6 +4491,126 @@ export class PasswordCrack {
             this.gameScreen.ui.showNotification('Hint revealed!', 'info');
             return;
         }
+        if (this.interactionMode === 'inspection') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            const feedback = document.getElementById('guess-feedback');
+            if (feedback) {
+                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
+            }
+            this.audio.playHint();
+            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
+            return;
+        }
+        if (this.interactionMode === 'strategyBuilder') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            const feedback = document.getElementById('guess-feedback');
+            if (feedback) {
+                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
+            }
+            this.audio.playHint();
+            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
+            return;
+        }
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.gameScreen.ui.showNotification(hintText, 'info');
+            this.audio.playHint();
+            return;
+        }
+        if (this.interactionMode === 'multiStageDefenseSimulation') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.gameScreen.ui.showNotification(hintText, 'info');
+            this.audio.playHint();
+            return;
+        }
+        if (this.interactionMode === 'threatHuntSimulation') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.gameScreen.ui.showNotification(hintText, 'info');
+            this.audio.playHint();
+            return;
+        }
+        if (this.interactionMode === 'livePatchSimulation') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.gameScreen.ui.showNotification(hintText, 'info');
+            this.audio.playHint();
+            return;
+        }
+        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
+            const hintKeys = ['hint1', 'hint2', 'hint3'];
+            if (this.hintsShown >= hintKeys.length) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.hintsShown++;
+            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
+            if (!hintText) {
+                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
+                return;
+            }
+            this.gameScreen.ui.showNotification(hintText, 'info');
+            this.audio.playHint();
+            return;
+        }
 
         if (this.isComplete) {
             this.gameScreen.ui.showNotification('Puzzle already complete!', 'info');
@@ -2141,6 +4665,29 @@ export class PasswordCrack {
             return;
         }
         if (this.interactionMode === 'investigation') {
+            return;
+        }
+        if (this.interactionMode === 'inspection') {
+            return;
+        }
+        if (this.interactionMode === 'strategyBuilder') {
+            return;
+        }
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            this.stopLiveDefenseSimulation();
+            return;
+        }
+        if (this.interactionMode === 'multiStageDefenseSimulation') {
+            this.stopMultiStageDefenseSimulation();
+            return;
+        }
+        if (this.interactionMode === 'threatHuntSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'livePatchSimulation') {
+            return;
+        }
+        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
             return;
         }
         // Remove event listeners

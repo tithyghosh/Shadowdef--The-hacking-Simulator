@@ -409,53 +409,65 @@ export const passwordMissions = [
     {
         id: 14,
         level: 5,
-        title: "LEVEL 5: What Is Hashing?",
-        desc: "Learn hashing in simple words.",
+        title: "LEVEL 5: Storage Audit - What Is Really Stored?",
+        desc: "Inspect two systems and decide which one stores passwords more safely.",
         difficulty: "Medium",
         type: "password",
         estimatedTime: "8-11 min",
-        objective: "Understand safer storage choices.",
-        scenario: "One system keeps passwords as normal readable text. Another uses hashing, which means passwords are stored as scrambled text.",
-        userTask: "Select choices that show unsafe password handling risk.",
-        simulationLogic: "Simple storage-safety training.",
+        objective: "Audit stored password data and identify the safer storage approach.",
+        scenario: "Two login systems look similar from outside, but they store passwords differently inside.",
+        userTask: "Inspect both systems, simulate a breach, then choose the safer system.",
+        simulationLogic: "Audit simulation only. No real systems are accessed.",
         visualMode: "Hybrid",
-        successCondition: "Find plain-text risk patterns correctly.",
-        successFeedback: "Credential vulnerability successfully identified. Human predictability confirmed.",
-        failureFeedback: "Security oversight detected. Reassess behavioral patterns used in password creation.",
+        successCondition: "Choose the safer storage system after reviewing the evidence.",
+        successFeedback: "Correct. You identified the safer storage model.",
+        failureFeedback: "Not correct yet. Review what each system stores and try again.",
         objectives: [
-            "Understand plain text vs hashing",
-            "Find risky patterns",
-            "Decide quickly"
+            "Compare stored password records",
+            "Understand readable vs scrambled storage",
+            "Choose the safer system using evidence"
         ],
         hintSystem: {
-            hint1: "Readable password storage is dangerous.",
-            hint2: "Hashing means storing a scrambled result instead of the original password.",
-            hint3: "Pick choices easiest to abuse if data is stolen."
+            hint1: "If passwords are directly readable, attackers can use them instantly.",
+            hint2: "A hash is a one-way scrambled version of the password.",
+            hint3: "Safer storage still needs strong passwords."
         },
         puzzle: {
-            interactionMode: "multiSelect",
+            interactionMode: "inspection",
             maxAttempts: 3,
-            revealAnswerOnFail: false,
-            timeLimit: 220,
-            riskSystem: { start: 0, wrongAdd: 16, max: 100, label: "Storage Risk", breachMessage: "Shock moment: system looked safe, but plain-text storage exposed everything instantly." },
-            generateSession: function () {
-                return makeTrainingSession(
-                    ["common", "name_year", "company_number"],
-                    ["strong", "passphrase"],
-                    "Audit found a hidden issue: one service looked secure on screen, but passwords were saved as normal text.",
-                    [
-                        "Readable and predictable passwords are the highest danger.",
-                        "If data leaks, plain text gives instant access.",
-                        "Scrambled storage and strong choices reduce damage."
+            timeLimit: 0,
+            noTimerPressure: true,
+            systems: [
+                {
+                    id: "system_a",
+                    name: "System A",
+                    databasePreview: [
+                        "admin | admin123",
+                        "rahim | rahim2001"
                     ],
-                    [
-                        "Hashing means the stored value is scrambled, not directly readable."
+                    breachOutcome: "Data stolen. All passwords readable instantly."
+                },
+                {
+                    id: "system_b",
+                    name: "System B",
+                    databasePreview: [
+                        "admin | 5f4dcc3b5aa765d61d8327deb882cf99",
+                        "rahim | 1a79a4d60de6718e8e5b326e338ae533"
                     ],
-                    8,
-                    5
-                );
+                    breachOutcome: "Data stolen. Passwords appear scrambled and not directly readable."
+                }
+            ],
+            choices: [
+                { id: "system_a", label: "System A" },
+                { id: "system_b", label: "System B" }
+            ],
+            correctAnswer: "system_b",
+            simpleExplanation: "Hashing means storing a one-way scrambled version of the password. Even if data is stolen, attackers cannot directly see the real password.",
+            shockReveal: {
+                title: "Important Warning",
+                message: "If weak passwords are used, attackers can still guess them even if hashed. The hash of common passwords like password123 is easy to match."
             },
-            validateSelection: validateWeakSelection
+            educationalSummary: "Hashing helps protect stored passwords, but weak passwords are still risky. Safe storage and strong passwords should be used together."
         },
         aiSpeed: 1.08,
         rewards: {
@@ -527,51 +539,105 @@ export const passwordMissions = [
     {
         id: 16,
         level: 7,
-        title: "LEVEL 7: Blocking Too Many Login Attempts",
-        desc: "Learn why limiting repeated tries protects accounts.",
+        title: "LEVEL 7: Live Defense Simulation - Protect the Vault",
+        desc: "Defend the vault in real time by activating the right protections under pressure.",
         difficulty: "Hard",
         type: "password",
         estimatedTime: "9-12 min",
-        objective: "Recognize passwords that fail when systems do not limit attempts.",
-        scenario: "A portal had no lockout rule. Attackers kept trying simple guesses until one worked.",
-        userTask: "Pick passwords that are most dangerous without login limits.",
-        simulationLogic: "Defense policy awareness training.",
+        objective: "Keep Vault Health above zero until the simulation ends.",
+        scenario: "You are defending a live platform under active attack. Waves are incoming now. Deploy defenses quickly and manage energy carefully.",
+        userTask: "Watch each incoming attack and trigger the best defense before the vault takes damage.",
+        simulationLogic: "Real-time defensive response simulation with attack waves, cooldowns, and energy management.",
         visualMode: "2D",
-        successCondition: "Classify high-guessability credentials.",
-        successFeedback: "Credential vulnerability successfully identified. Human predictability confirmed.",
-        failureFeedback: "Security oversight detected. Reassess behavioral patterns used in password creation.",
+        successCondition: "Vault Health stays above 0 after 60 seconds.",
+        successFeedback: "Defense successful. The vault stayed protected under live pressure.",
+        failureFeedback: "Vault breach occurred. Defense timing and coverage were not enough.",
         objectives: [
-            "Understand lockout value",
-            "Identify easy-guess targets",
-            "Keep risk under control"
+            "Respond to live attack waves",
+            "Use energy and cooldowns wisely",
+            "Maintain vault protection for the full simulation"
         ],
         hintSystem: {
-            hint1: "Without attempt limits, simple passwords are easy targets.",
-            hint2: "Attackers test common lists first, then patterns.",
-            hint3: "Pick options guessed quickly in many tries."
+            hint1: "Do not spend all energy at once. Save some for harder waves.",
+            hint2: "One defense does not stop every attack type.",
+            hint3: "Rotate defenses based on cooldown and incoming threat."
         },
         puzzle: {
-            interactionMode: "multiSelect",
-            maxAttempts: 3,
-            revealAnswerOnFail: false,
-            timeLimit: 230,
-            riskSystem: { start: 0, wrongAdd: 17, max: 100, label: "Login Defense Risk", breachMessage: "Breach simulation: no lockout + weak passwords led to account compromise." },
-            generateSession: function () {
-                return makeTrainingSession(
-                    ["common", "leaked", "keyboard", "sequence"],
-                    ["strong", "random"],
-                    "Monitoring showed repeated login attempts over time. Weak patterns finally gave the attacker access.",
-                    [
-                        "Easy guesses become dangerous when attempts are unlimited.",
-                        "Common and patterned passwords are first targets.",
-                        "Strong unpredictable values resist repeated guessing."
-                    ],
-                    [
-                        "Rate limiting means slowing or blocking too many login tries."
-                    ]
-                );
+            interactionMode: "liveDefenseSimulation",
+            attackTypes: [
+                {
+                    type: "Brute Force",
+                    damage: 10,
+                    counteredBy: ["Rate Limiting", "Account Lockout"]
+                },
+                {
+                    type: "Credential Stuffing",
+                    damage: 20,
+                    counteredBy: ["MFA", "Password Reuse Detection"]
+                },
+                {
+                    type: "Offline Crack Attempt",
+                    damage: 25,
+                    counteredBy: ["Salting"]
+                },
+                {
+                    type: "Phishing Wave",
+                    damage: 15,
+                    counteredBy: ["MFA", "Breach Monitoring"]
+                }
+            ],
+            defenses: [
+                {
+                    name: "Rate Limiting",
+                    energyCost: 20,
+                    cooldown: 5,
+                    protectsAgainst: ["Brute Force"]
+                },
+                {
+                    name: "Account Lockout",
+                    energyCost: 15,
+                    cooldown: 6,
+                    protectsAgainst: ["Brute Force"]
+                },
+                {
+                    name: "Salting",
+                    energyCost: 25,
+                    cooldown: 8,
+                    protectsAgainst: ["Offline Crack Attempt"]
+                },
+                {
+                    name: "MFA",
+                    energyCost: 35,
+                    cooldown: 10,
+                    protectsAgainst: ["Credential Stuffing", "Phishing Wave"]
+                },
+                {
+                    name: "Password Reuse Detection",
+                    energyCost: 30,
+                    cooldown: 9,
+                    protectsAgainst: ["Credential Stuffing"]
+                },
+                {
+                    name: "Breach Monitoring",
+                    energyCost: 25,
+                    cooldown: 7,
+                    protectsAgainst: ["Phishing Wave"]
+                }
+            ],
+            simulationConfig: {
+                vaultHealth: 100,
+                playerEnergy: 100,
+                energyRegenRate: {
+                    amount: 5,
+                    everySeconds: 3
+                },
+                attackSpawnRate: {
+                    minSeconds: 2,
+                    maxSeconds: 4
+                },
+                simulationDuration: 60
             },
-            validateSelection: validateWeakSelection
+            educationalSummary: "Security works best when multiple defenses protect the system. No single tool can stop every attack."
         },
         aiSpeed: 1.2,
         rewards: {
@@ -585,53 +651,178 @@ export const passwordMissions = [
     {
         id: 17,
         level: 8,
-        title: "LEVEL 8: Password Reuse Shock",
-        desc: "Shock lesson: strong-looking passwords still fail if reused.",
+        title: "LEVEL 8: Enterprise Threat Hunt - Silent Intrusion Analysis",
+        desc: "Investigate enterprise logs, detect a quiet attacker path, and contain the breach before escalation.",
         difficulty: "Hard",
         type: "password",
         estimatedTime: "10-12 min",
-        objective: "Spot risky reuse behavior, even when password looks complex.",
-        scenario: "An employee used one strong-looking password on multiple sites. A small forum breach exposed it, then attackers used it on company login.",
-        userTask: "Select passwords most dangerous in reuse scenarios.",
-        simulationLogic: "Safe reuse-risk simulation.",
-        visualMode: "Hybrid",
-        successCondition: "Identify reuse-prone risky choices.",
-        successFeedback: "Credential vulnerability successfully identified. Human predictability confirmed.",
-        failureFeedback: "Security oversight detected. Reassess behavioral patterns used in password creation.",
+        objective: "Detect and contain a silent intrusion by analyzing evidence and taking precise containment actions.",
+        scenario: "An attacker has already gained initial access and is operating quietly inside the environment. No loud alerts were triggered.",
+        userTask: "Review evidence panels, identify malicious steps, and apply the right containment actions while minimizing false positives.",
+        simulationLogic: "Threat hunting simulation focused on investigation, attacker tracing, and controlled containment decisions.",
+        visualMode: "2D",
+        successCondition: "Contain at least 3 major malicious events, keep attacker escalation under control, and keep Vault Health above 30%.",
+        successFeedback: "Threat hunting operation successful. Intrusion path contained before critical compromise.",
+        failureFeedback: "Threat hunting operation failed. Intrusion escalation exceeded acceptable limits.",
         objectives: [
-            "Understand reuse shock",
-            "Classify cross-site risk",
-            "Apply new thinking"
+            "Analyze enterprise logs for subtle malicious behavior",
+            "Confirm attacker movement across systems and accounts",
+            "Contain the intrusion with low false-positive impact"
         ],
         hintSystem: {
-            hint1: "A password can look strong but still be risky if reused.",
-            hint2: "One breach on another site can expose that same password.",
-            hint3: "Pick options people are likely to use in many places."
+            hint1: "Focus on behavior patterns across multiple logs, not isolated events.",
+            hint2: "Not every anomaly is malicious. Validate context before containment.",
+            hint3: "Repeated suspicious access and privilege changes often indicate attacker movement."
         },
         puzzle: {
-            interactionMode: "multiSelect",
-            maxAttempts: 3,
-            revealAnswerOnFail: false,
-            timeLimit: 230,
-            riskSystem: { start: 0, wrongAdd: 18, max: 100, label: "Cross-Site Risk", breachMessage: "Shock moment: strong-looking password was reused, so one outside breach opened internal access." },
-            generateSession: function () {
-                return makeTrainingSession(
-                    ["common", "company_number", "name_year"],
-                    ["random", "passphrase"],
-                    "Security team found a surprise: the password looked strong, but reuse made it easy to abuse after an external leak.",
-                    [
-                        "Do not trust strength alone without uniqueness.",
-                        "Reused passwords create cross-site breach chains.",
-                        "Guessable personal and company patterns are often reused."
-                    ],
-                    [
-                        "Unique password per site is critical, even for strong-looking values."
-                    ],
-                    8,
-                    5
-                );
+            interactionMode: "threatHuntSimulation",
+            baseStats: {
+                vaultHealth: 100,
+                systemIntegrity: 100,
+                falsePositiveCount: 0,
+                attackerProgress: 0
             },
-            validateSelection: validateWeakSelection
+            evidencePanels: [
+                {
+                    id: "login_activity",
+                    title: "Login Activity Log",
+                    entries: [
+                        { id: "L-101", timestamp: "02:14:08", user: "r.khan", action: "Successful login", locationOrIP: "198.51.100.27 (new region)", status: "anomalous" },
+                        { id: "L-102", timestamp: "08:31:12", user: "a.rahman", action: "Successful login", locationOrIP: "10.10.4.21 (HQ)", status: "normal" },
+                        { id: "L-103", timestamp: "02:16:44", user: "r.khan", action: "Mailbox access", locationOrIP: "198.51.100.27", status: "anomalous" },
+                        { id: "L-104", timestamp: "09:02:19", user: "svc.backup", action: "Scheduled service login", locationOrIP: "10.10.8.9", status: "normal" }
+                    ]
+                },
+                {
+                    id: "privilege_change",
+                    title: "Privilege Change Log",
+                    entries: [
+                        { id: "P-201", timestamp: "02:21:03", user: "r.khan", action: "Role changed to Admin (no approval ticket)", locationOrIP: "IAM-Core", status: "anomalous" },
+                        { id: "P-202", timestamp: "11:15:40", user: "it.ops", action: "Temporary admin granted (approved CR-7742)", locationOrIP: "IAM-Portal", status: "normal" },
+                        { id: "P-203", timestamp: "02:23:55", user: "r.khan", action: "Policy edit attempt", locationOrIP: "IAM-Core", status: "anomalous" }
+                    ]
+                },
+                {
+                    id: "database_access",
+                    title: "Database Access Log",
+                    entries: [
+                        { id: "D-301", timestamp: "02:33:11", user: "r.khan", action: "SELECT * FROM customer_master (45,000 rows)", locationOrIP: "DB-PRD-01", status: "anomalous" },
+                        { id: "D-302", timestamp: "10:12:09", user: "data.analyst", action: "Daily KPI query (aggregate only)", locationOrIP: "DB-REP-02", status: "normal" },
+                        { id: "D-303", timestamp: "02:36:28", user: "r.khan", action: "Export job started: customer_master_full.csv", locationOrIP: "DB-PRD-01", status: "anomalous" }
+                    ]
+                },
+                {
+                    id: "network_traffic",
+                    title: "Network Traffic Log",
+                    entries: [
+                        { id: "N-401", timestamp: "02:39:07", user: "r.khan", action: "Outbound TLS session", locationOrIP: "203.0.113.52:443", status: "anomalous" },
+                        { id: "N-402", timestamp: "02:40:14", user: "r.khan", action: "Outbound TLS session", locationOrIP: "203.0.113.52:443", status: "anomalous" },
+                        { id: "N-403", timestamp: "02:41:26", user: "cdn.sync", action: "Vendor sync", locationOrIP: "192.0.2.18:443", status: "normal" }
+                    ]
+                },
+                {
+                    id: "account_activity",
+                    title: "Account Activity Log",
+                    entries: [
+                        { id: "A-501", timestamp: "02:27:50", user: "r.khan", action: "Session token used to access account: m.sen", locationOrIP: "APP-AUTH-03", status: "anomalous" },
+                        { id: "A-502", timestamp: "14:05:33", user: "hr.bot", action: "Bulk profile updates", locationOrIP: "APP-HR-01", status: "normal" },
+                        { id: "A-503", timestamp: "02:29:02", user: "m.sen", action: "New API key generated", locationOrIP: "APP-AUTH-03", status: "anomalous" }
+                    ]
+                }
+            ],
+            hiddenAttackChain: [
+                {
+                    step: 1,
+                    key: "phishing_login",
+                    label: "Phishing-based login",
+                    linkedEvidence: ["L-101", "L-103"],
+                    explanation: "A routine-looking login at an unusual hour from an unfamiliar region."
+                },
+                {
+                    step: 2,
+                    key: "privilege_escalation",
+                    label: "Privilege escalation",
+                    linkedEvidence: ["P-201", "P-203"],
+                    explanation: "Admin rights granted without normal approval."
+                },
+                {
+                    step: 3,
+                    key: "lateral_movement",
+                    label: "Lateral movement",
+                    linkedEvidence: ["A-501", "A-503"],
+                    explanation: "The attacker moving between accounts inside the system."
+                },
+                {
+                    step: 4,
+                    key: "database_escalation",
+                    label: "Database query escalation",
+                    linkedEvidence: ["D-301", "D-303"],
+                    explanation: "Large, unusual data queries and export behavior."
+                },
+                {
+                    step: 5,
+                    key: "data_exfiltration",
+                    label: "Data exfiltration attempt",
+                    linkedEvidence: ["N-401", "N-402"],
+                    explanation: "Repeated outbound encrypted traffic to a suspicious external host."
+                }
+            ],
+            playerActions: [
+                { id: "mark_suspicious", label: "Mark as Suspicious" },
+                { id: "investigate", label: "Investigate", revealsContext: true },
+                { id: "isolate_account", label: "Isolate Account" },
+                { id: "block_ip", label: "Block IP" },
+                { id: "ignore", label: "Ignore" }
+            ],
+            progressionLogic: {
+                attackerProgressRules: {
+                    missedMaliciousEventIncrease: 1,
+                    correctMajorDetectionDecrease: 1,
+                    criticalThreshold: 5,
+                    maxEscalation: 7,
+                    rapidVaultDrainOnCritical: 12
+                },
+                falsePositiveRules: {
+                    incorrectFlagIncrease: 1,
+                    systemIntegrityDropPerFalsePositive: 8,
+                    systemIntegrityDropOnWrongContainment: 10
+                },
+                containmentEffects: {
+                    isolateAccountStops: ["phishing_login", "privilege_escalation", "lateral_movement"],
+                    blockIPStops: ["data_exfiltration"],
+                    investigateReveals: "linked evidence, sequence relationship, and confidence note",
+                    ignoreOnMalicious: "attacker advances to next step"
+                },
+                operationalFeedback: {
+                    privilegeAlert: "Suspicious privilege escalation detected.",
+                    exportAlert: "Unauthorized data export attempt identified.",
+                    falseAlert: "False alert logged. Operational efficiency reduced.",
+                    lateralMove: "Attacker lateral movement confirmed.",
+                    criticalEscalation: "Warning: attacker progression has reached critical escalation level."
+                },
+                passiveRisk: {
+                    enabledWhenUndetected: true,
+                    vaultHealthDropPerCycle: 4,
+                    cycleTurns: 2
+                },
+                noRealTimeWavePressure: true
+            },
+            winCondition: {
+                majorMaliciousEventsContainedMin: 3,
+                attackerProgressBelowCritical: true,
+                vaultHealthAbovePercent: 30
+            },
+            failCondition: {
+                any: [
+                    { metric: "vaultHealth", operator: "<=", value: 0 },
+                    { metric: "systemIntegrity", operator: "<", value: 40 },
+                    { metric: "attackerProgress", operator: ">=", value: 7 }
+                ]
+            },
+            educationalSummary: {
+                reveal: "Initial access originated from a single phishing login that appeared routine.",
+                message: "Modern cyber intrusions often begin with small, unnoticed events. Early detection prevents escalation into full data compromise."
+            }
         },
         aiSpeed: 1.27,
         rewards: {
@@ -645,51 +836,273 @@ export const passwordMissions = [
     {
         id: 18,
         level: 9,
-        title: "LEVEL 9: Insider or Delayed Breach",
-        desc: "Find hidden weak choices before a silent breach grows.",
+        title: "LEVEL 9: Zero-Day Crisis - Live Patch Engineering Lab",
+        desc: "Identify a live zero-day chain, patch vulnerable modules, re-test exploits, and secure the platform end-to-end.",
         difficulty: "Pro",
         type: "password",
         estimatedTime: "11-14 min",
-        objective: "Detect passwords that allow delayed compromise.",
-        scenario: "Logs looked normal at first. Days later, quiet login abuse was traced to old weak credential habits.",
-        userTask: "Select passwords that could enable silent long-term risk.",
-        simulationLogic: "Silent-risk awareness simulation.",
-        visualMode: "3D",
-        successCondition: "Correctly identify delayed-breach risk credentials.",
-        successFeedback: "Credential vulnerability successfully identified. Human predictability confirmed.",
-        failureFeedback: "Security oversight detected. Reassess behavioral patterns used in password creation.",
+        objective: "Detect and remediate layered vulnerabilities through live engineering decisions and exploit re-testing.",
+        scenario: "A zero-day exploit path is actively targeting your authentication stack. Primary and secondary flaws may both exist.",
+        userTask: "Inspect architecture modules, apply patches, deploy fixes, and run exploit simulation until risk is fully neutralized.",
+        simulationLogic: "Interactive patch lab with modular remediation, exploit replay, and metric tradeoff analysis.",
+        visualMode: "2D",
+        successCondition: "Reduce exploitSuccessRate to 0% while keeping system stability metrics within safe thresholds.",
+        successFeedback: "Remediation successful. Exploit chain fully blocked and system performance stabilized.",
+        failureFeedback: "Remediation failed. Exploit pressure or operational instability exceeded safe limits.",
         objectives: [
-            "Read incident pattern",
-            "Pick stealth-risk credentials",
-            "Protect long-term access"
+            "Detect primary vulnerability in auth flow",
+            "Patch logic modules and validate with exploit replay",
+            "Discover and fix secondary access path",
+            "Reach full exploit containment with balanced metrics"
         ],
         hintSystem: {
-            hint1: "Some breaches do not happen immediately.",
-            hint2: "Weak, reused, and guessable passwords can stay exposed for a long time.",
-            hint3: "Pick options attackers can keep trying quietly over time."
+            hint1: "Fixing the first issue may not remove all exploit paths.",
+            hint2: "Patch impact can improve security but may affect load and user experience.",
+            hint3: "Use exploit simulation after each patch to verify real outcomes."
         },
         puzzle: {
-            interactionMode: "multiSelect",
-            maxAttempts: 3,
-            revealAnswerOnFail: false,
-            timeLimit: 240,
-            riskSystem: { start: 0, wrongAdd: 18, max: 100, label: "Silent Breach Risk", breachMessage: "Breach simulation: delayed compromise succeeded because weak patterns stayed in use." },
-            generateSession: function () {
-                return makeTrainingSession(
-                    ["leaked", "name_year", "sequence", "keyboard"],
-                    ["random", "strong"],
-                    "This incident stayed hidden for days because weak credentials kept giving attackers quiet retry opportunities.",
-                    [
-                        "Silent breaches often start with old weak password habits.",
-                        "Patterned and leaked-list passwords are easy to revisit quietly.",
-                        "Long-term safety needs both strong and unique choices."
-                    ],
-                    [
-                        "Attackers may wait and retry over time instead of rushing."
-                    ]
-                );
+            interactionMode: "livePatchSimulation",
+            architectureModules: [
+                {
+                    id: "login_request",
+                    name: "Login Request",
+                    editable: false,
+                    flowOrder: 1,
+                    state: "active",
+                    notes: "Entry point for credential authentication"
+                },
+                {
+                    id: "input_validation",
+                    name: "Input Validation",
+                    editable: true,
+                    flowOrder: 2,
+                    state: "basic_validation",
+                    notes: "Sanitization and request checks"
+                },
+                {
+                    id: "password_comparison",
+                    name: "Password Comparison",
+                    editable: true,
+                    flowOrder: 3,
+                    state: "timing_sensitive_compare",
+                    notes: "Comparison logic currently leaks timing patterns"
+                },
+                {
+                    id: "session_token_generation",
+                    name: "Session Token Generation",
+                    editable: true,
+                    flowOrder: 4,
+                    state: "token_reuse_enabled",
+                    notes: "Session token regeneration currently disabled"
+                },
+                {
+                    id: "access_granted",
+                    name: "Access Granted",
+                    editable: false,
+                    flowOrder: 5,
+                    state: "active",
+                    notes: "Final auth decision output"
+                },
+                {
+                    id: "api_gateway",
+                    name: "API Secondary Endpoint",
+                    editable: true,
+                    flowOrder: 6,
+                    state: "static_token_exposed",
+                    notes: "Secondary endpoint uses static API token"
+                }
+            ],
+            vulnerabilities: [
+                {
+                    id: "vuln_timing_compare",
+                    name: "Timing-based Password Comparison Weakness",
+                    moduleId: "password_comparison",
+                    severity: "high",
+                    status: "open",
+                    hiddenUntil: "start"
+                },
+                {
+                    id: "vuln_session_reuse",
+                    name: "Session Token Reuse",
+                    moduleId: "session_token_generation",
+                    severity: "high",
+                    status: "open",
+                    hiddenUntil: "start"
+                },
+                {
+                    id: "vuln_missing_rate_limit",
+                    name: "Missing Rate Limiting",
+                    moduleId: "input_validation",
+                    severity: "medium",
+                    status: "open",
+                    hiddenUntil: "start"
+                },
+                {
+                    id: "vuln_static_api_token",
+                    name: "Static API Token in Secondary Endpoint",
+                    moduleId: "api_gateway",
+                    severity: "critical",
+                    status: "hidden",
+                    hiddenUntil: "after_primary_patch"
+                }
+            ],
+            systemMetrics: {
+                vaultHealth: 100,
+                exploitSuccessRate: 62,
+                serverLoad: 46,
+                userExperienceScore: 82,
+                vulnerabilityCountRemaining: 4
             },
-            validateSelection: validateWeakSelection
+            patchOptions: [
+                {
+                    id: "patch_validation_logic",
+                    action: "Modify validation logic",
+                    appliesTo: ["input_validation"],
+                    effects: {
+                        exploitSuccessRateDelta: -8,
+                        serverLoadDelta: 4,
+                        userExperienceScoreDelta: -2,
+                        closesVulnerabilities: []
+                    }
+                },
+                {
+                    id: "patch_constant_time_compare",
+                    action: "Enable constant-time comparison",
+                    appliesTo: ["password_comparison"],
+                    effects: {
+                        exploitSuccessRateDelta: -22,
+                        serverLoadDelta: 3,
+                        userExperienceScoreDelta: -1,
+                        closesVulnerabilities: ["vuln_timing_compare"]
+                    }
+                },
+                {
+                    id: "patch_rate_limit",
+                    action: "Add rate limiting",
+                    appliesTo: ["input_validation"],
+                    effects: {
+                        exploitSuccessRateDelta: -14,
+                        serverLoadDelta: 6,
+                        userExperienceScoreDelta: -5,
+                        closesVulnerabilities: ["vuln_missing_rate_limit"]
+                    }
+                },
+                {
+                    id: "patch_regen_session_tokens",
+                    action: "Regenerate session tokens",
+                    appliesTo: ["session_token_generation"],
+                    effects: {
+                        exploitSuccessRateDelta: -18,
+                        serverLoadDelta: 2,
+                        userExperienceScoreDelta: 0,
+                        closesVulnerabilities: ["vuln_session_reuse"]
+                    }
+                },
+                {
+                    id: "patch_rotate_api_keys",
+                    action: "Rotate API keys",
+                    appliesTo: ["api_gateway"],
+                    effects: {
+                        exploitSuccessRateDelta: -10,
+                        serverLoadDelta: 1,
+                        userExperienceScoreDelta: 0,
+                        closesVulnerabilities: []
+                    }
+                },
+                {
+                    id: "patch_secure_endpoint",
+                    action: "Secure endpoint",
+                    appliesTo: ["api_gateway"],
+                    effects: {
+                        exploitSuccessRateDelta: -25,
+                        serverLoadDelta: 3,
+                        userExperienceScoreDelta: -2,
+                        closesVulnerabilities: ["vuln_static_api_token"]
+                    }
+                },
+                {
+                    id: "patch_deploy",
+                    action: "Deploy patch",
+                    appliesTo: ["input_validation", "password_comparison", "session_token_generation", "api_gateway"],
+                    effects: {
+                        exploitSuccessRateDelta: 0,
+                        serverLoadDelta: 0,
+                        userExperienceScoreDelta: 0,
+                        closesVulnerabilities: []
+                    }
+                },
+                {
+                    id: "patch_simulate_exploit",
+                    action: "Run exploit simulation",
+                    appliesTo: ["all"],
+                    effects: {
+                        exploitSuccessRateDelta: 0,
+                        serverLoadDelta: 0,
+                        userExperienceScoreDelta: 0,
+                        closesVulnerabilities: []
+                    },
+                    uiLabel: "🔴 Simulate Exploit"
+                }
+            ],
+            exploitSimulationLogic: {
+                simulationButtonLabel: "🔴 Simulate Exploit",
+                onSimulate: {
+                    ifUnpatched: {
+                        vaultHealthDrop: 12,
+                        message: "Exploit succeeded. Active vulnerability chain confirmed."
+                    },
+                    ifPartiallyPatched: {
+                        vaultHealthDrop: 6,
+                        exploitSuccessRateAdjustment: -8,
+                        message: "Exploit partially successful. Residual weakness still exploitable."
+                    },
+                    ifFullyPatched: {
+                        vaultHealthDrop: 0,
+                        exploitSuccessRateSet: 0,
+                        message: "Exploit blocked. No active path detected."
+                    }
+                },
+                delayedEscalation: {
+                    enabled: true,
+                    trigger: "no_patch_action_interval",
+                    turnsWithoutPatchThreshold: 2,
+                    exploitSuccessRateIncreasePerTrigger: 5,
+                    vaultHealthDropPerTrigger: 3,
+                    message: "Threat pressure rising due to delayed remediation."
+                },
+                secondaryReveal: {
+                    trigger: "after_primary_patch",
+                    revealMessage: "Secondary access path detected.",
+                    revealVulnerabilityId: "vuln_static_api_token",
+                    requiredFollowUp: ["patch_rotate_api_keys", "patch_secure_endpoint"]
+                },
+                metricGuards: {
+                    exploitSuccessRateMin: 0,
+                    exploitSuccessRateMax: 100,
+                    serverLoadMin: 0,
+                    serverLoadMax: 100,
+                    userExperienceScoreMin: 0,
+                    userExperienceScoreMax: 100,
+                    vaultHealthMin: 0,
+                    vaultHealthMax: 100
+                }
+            },
+            winCondition: {
+                all: [
+                    { metric: "exploitSuccessRate", operator: "==", value: 0 },
+                    { metric: "vaultHealth", operator: ">", value: 40 },
+                    { metric: "serverLoad", operator: "<", value: 85 },
+                    { metric: "userExperienceScore", operator: ">", value: 40 }
+                ]
+            },
+            failCondition: {
+                any: [
+                    { metric: "vaultHealth", operator: "<=", value: 0 },
+                    { metric: "exploitSuccessRate", operator: ">", value: 80 },
+                    { metric: "serverLoad", operator: ">", value: 95 }
+                ]
+            },
+            educationalSummary: "Zero-day vulnerabilities often contain multiple layers. Fixing one weakness may not stop an attacker completely. Effective remediation requires testing, validation, and layered defense."
         },
         aiSpeed: 1.36,
         rewards: {
@@ -703,59 +1116,215 @@ export const passwordMissions = [
     {
         id: 19,
         level: 10,
-        title: "LEVEL 10: Build a Secure System",
-        desc: "Final review: apply everything and build safer password policy.",
+        title: "LEVEL 10: Enterprise Security Architect - Final Certification Assessment",
+        desc: "Final mastery simulation: design enterprise authentication architecture and earn your certification rating.",
         difficulty: "Pro",
         type: "password",
         estimatedTime: "12-16 min",
-        objective: "Use all lessons to make strong, practical security choices.",
-        scenario: "You are security lead now. Choose rules that reduce human mistakes and lower breach risk.",
-        userTask: "Select risky credentials correctly, then complete final review for a rating.",
-        simulationLogic: "Final training review. Educational only.",
+        objective: "Build a layered enterprise security architecture and validate it against controlled attack evaluations.",
+        scenario: "You are leading final enterprise security design review. Your architecture will be tested across multiple attack paths and operational constraints.",
+        userTask: "Configure all security control panels, run certification evaluation, and review your final architecture rating.",
+        simulationLogic: "Three-phase certification simulation: architecture design, controlled attack evaluation, and professional scoring feedback.",
         visualMode: "Hybrid",
-        successCondition: "Finish classification with low risk and complete final policy checks.",
-        successFeedback: "Credential vulnerability successfully identified. Human predictability confirmed.",
-        failureFeedback: "Security oversight detected. Reassess behavioral patterns used in password creation.",
+        successCondition: "Assessment always completes. Final rating reflects architecture quality.",
+        successFeedback: "Certification assessment completed. Final enterprise security rating generated.",
+        failureFeedback: "Assessment completed with major security gaps. Review recommendations and improve architecture.",
         objectives: [
-            "Use all previous lessons",
-            "Keep risk low",
-            "Earn final rating"
+            "Design full authentication security architecture",
+            "Mitigate simulated enterprise attack scenarios",
+            "Balance security, usability, and operational stability",
+            "Earn professional certification rating"
         ],
         hintSystem: {
-            hint1: "Strong security is many good choices working together.",
-            hint2: "Block common patterns, avoid reuse, use safe storage, and limit login attempts.",
-            hint3: "Choose what reduces guessability, reuse damage, and silent risk together."
+            hint1: "Layered controls perform better than single-control designs.",
+            hint2: "Strong security choices can affect user experience and operations.",
+            hint3: "Use monitoring and response controls to improve early detection."
         },
         puzzle: {
-            interactionMode: "multiSelect",
-            maxAttempts: 3,
-            revealAnswerOnFail: false,
-            finalReview: true,
-            timeLimit: 260,
-            riskSystem: { start: 0, wrongAdd: 20, max: 100, label: "Enterprise Risk", breachMessage: "Final breach simulation: weak policy choices left clear paths for account abuse." },
-            ratingBands: {
-                "A+": "Excellent: very low risk choices and strong understanding.",
-                "A": "Strong: good decisions with small gaps.",
-                "B": "Fair: some risky patterns still accepted.",
-                "C": "Needs work: too many weak-risk decisions."
-            },
-            performanceSummaryTemplate: "You spotted [correct]/[total] weak risks. Your final security rating is [rating]. Main improvement area: [focus].",
-            generateSession: function () {
-                return makeTrainingSession(
-                    ["name_year", "company_number", "leaked", "keyboard", "sequence"],
-                    ["random", "passphrase", "strong"],
-                    "Final audit combines all lessons: predictability, reuse, storage safety, and login protection.",
-                    [
-                        "Check for personal clues, common lists, and easy patterns first.",
-                        "Think about reuse damage and long-term silent risk.",
-                        "Best choices are unique, long, and hard to predict."
-                    ],
-                    [
-                        "Good password policy reduces both quick attacks and slow hidden attacks."
+            interactionMode: "enterpriseArchitectureSimulation",
+            configurationOptions: {
+                passwordPolicy: {
+                    title: "Password Policy",
+                    options: [
+                        {
+                            id: "minimum_length",
+                            label: "Minimum Length",
+                            values: ["8", "12", "16"]
+                        },
+                        {
+                            id: "allow_passphrases",
+                            label: "Allow Passphrases",
+                            values: ["yes", "no"]
+                        },
+                        {
+                            id: "require_complexity",
+                            label: "Require Complexity Rules",
+                            values: ["yes", "no"]
+                        },
+                        {
+                            id: "block_common_passwords",
+                            label: "Block Common Password List",
+                            values: ["yes", "no"]
+                        }
                     ]
-                );
+                },
+                passwordStorage: {
+                    title: "Password Storage",
+                    options: [
+                        { id: "plaintext", label: "Plain Text", securityLevel: "unsafe" },
+                        { id: "hash_only", label: "Hash Only", securityLevel: "basic" },
+                        { id: "hash_salt", label: "Hash + Salt", securityLevel: "recommended" },
+                        { id: "hash_salt_iteration", label: "Hash + Salt + Iteration Cost", securityLevel: "best" }
+                    ]
+                },
+                authenticationControls: {
+                    title: "Authentication Controls",
+                    options: [
+                        { id: "no_mfa", label: "No MFA" },
+                        { id: "sms_mfa", label: "SMS-based MFA" },
+                        { id: "app_mfa", label: "Authenticator App MFA" },
+                        { id: "hardware_key_mfa", label: "Hardware Security Key MFA" }
+                    ]
+                },
+                loginProtection: {
+                    title: "Login Protection",
+                    options: [
+                        { id: "no_login_protection", label: "No Rate Limiting" },
+                        { id: "rate_limiting", label: "Rate Limiting" },
+                        { id: "account_lockout", label: "Account Lockout" },
+                        { id: "captcha", label: "CAPTCHA" },
+                        { id: "adaptive_risk_login", label: "Adaptive Risk-based Login" }
+                    ]
+                },
+                monitoringResponse: {
+                    title: "Monitoring & Response",
+                    options: [
+                        { id: "no_monitoring", label: "No Monitoring" },
+                        { id: "basic_logging", label: "Basic Logging" },
+                        { id: "breach_alerts", label: "Breach Alert System" },
+                        { id: "realtime_anomaly", label: "Real-time Anomaly Detection" }
+                    ]
+                }
             },
-            validateSelection: validateWeakSelection
+            evaluationEngine: {
+                phases: [
+                    {
+                        id: "phase_1_design",
+                        name: "System Design",
+                        description: "Configure enterprise authentication architecture controls."
+                    },
+                    {
+                        id: "phase_2_attack_eval",
+                        name: "Controlled Attack Evaluation",
+                        description: "Run structured attack simulations against selected controls."
+                    },
+                    {
+                        id: "phase_3_metrics",
+                        name: "Performance Metrics",
+                        description: "Generate architecture scores and certification rating."
+                    }
+                ],
+                attackCount: 5,
+                resultLabels: ["Blocked", "Partially Mitigated", "Successful"]
+            },
+            attackSimulationMatrix: [
+                {
+                    attackId: "brute_force_test",
+                    attackName: "Brute Force Test",
+                    strongCounters: ["rate_limiting", "account_lockout", "adaptive_risk_login", "captcha"],
+                    partialCounters: ["basic_logging"],
+                    impactedBy: ["minimum_length", "block_common_passwords"]
+                },
+                {
+                    attackId: "credential_stuffing_test",
+                    attackName: "Credential Stuffing Test",
+                    strongCounters: ["app_mfa", "hardware_key_mfa", "adaptive_risk_login", "breach_alerts"],
+                    partialCounters: ["sms_mfa", "rate_limiting"],
+                    impactedBy: ["block_common_passwords"]
+                },
+                {
+                    attackId: "offline_database_theft_test",
+                    attackName: "Offline Database Theft Test",
+                    strongCounters: ["hash_salt_iteration", "hash_salt"],
+                    partialCounters: ["hash_only"],
+                    impactedBy: ["minimum_length", "allow_passphrases"]
+                },
+                {
+                    attackId: "phishing_attempt_test",
+                    attackName: "Phishing Attempt",
+                    strongCounters: ["hardware_key_mfa", "app_mfa", "realtime_anomaly", "breach_alerts"],
+                    partialCounters: ["sms_mfa", "basic_logging"],
+                    impactedBy: ["require_complexity"]
+                },
+                {
+                    attackId: "insider_privilege_misuse_test",
+                    attackName: "Insider Privilege Misuse Test",
+                    strongCounters: ["realtime_anomaly", "adaptive_risk_login", "breach_alerts"],
+                    partialCounters: ["basic_logging"],
+                    impactedBy: ["monitoringResponse"]
+                }
+            ],
+            scoringAlgorithm: {
+                weightedCategories: {
+                    vaultSecurityScore: {
+                        weight: 0.3,
+                        basedOn: ["attack_outcomes", "storage_strength", "login_protection"]
+                    },
+                    breachResistanceScore: {
+                        weight: 0.25,
+                        basedOn: ["attack_outcomes", "mfa_strength", "password_policy"]
+                    },
+                    userExperienceScore: {
+                        weight: 0.15,
+                        basedOn: ["policy_friction", "mfa_usability", "login_flow"]
+                    },
+                    operationalStabilityScore: {
+                        weight: 0.15,
+                        basedOn: ["monitoring_overhead", "control_complexity", "response_consistency"]
+                    },
+                    incidentResponseMaturity: {
+                        weight: 0.15,
+                        basedOn: ["monitoring_response_stack", "detection_speed", "alert_quality"]
+                    }
+                },
+                attackOutcomePoints: {
+                    blocked: 100,
+                    partially_mitigated: 65,
+                    successful: 25
+                },
+                finalScoreRange: {
+                    min: 0,
+                    max: 100
+                },
+                ratingRules: [
+                    { rating: "A+", minScore: 92 },
+                    { rating: "A", minScore: 80 },
+                    { rating: "B", minScore: 65 },
+                    { rating: "C", minScore: 0 }
+                ]
+            },
+            ratingBands: {
+                "A+": "Exceptional Security Architect",
+                "A": "Strong Defensive Design",
+                "B": "Good but with Gaps",
+                "C": "Needs Improvement"
+            },
+            feedbackGenerator: {
+                summaryTemplate: "You successfully mitigated [mitigatedCount] of [totalThreats] simulated threats.",
+                strongestAreaTemplate: "Strongest area: [strongestArea].",
+                weakestAreaTemplate: "Weakest area: [weakestArea].",
+                recommendationTemplate: "Recommended improvement: [recommendation].",
+                professionalExample: "Your architecture performed strongly against offline attacks due to proper salting and iteration cost. However, lack of adaptive login monitoring reduced early detection capability.",
+                humilityMessage: "No system is completely immune to risk. Continuous monitoring and user education remain critical."
+            },
+            certificationBadgeLogic: {
+                badgeName: "Certified Security Architect",
+                unlockCondition: {
+                    minimumRating: "A",
+                    minimumScore: 80
+                },
+                lockedMessage: "Certification not granted. Improve architecture and re-run assessment."
+            }
         },
         aiSpeed: 1.45,
         rewards: {

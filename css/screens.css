@@ -1129,6 +1129,8 @@
     width: 100%;
     height: 100%;
     background: transparent;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .mission-header {
@@ -1148,7 +1150,11 @@
     gap: var(--spacing-lg);
     max-width: 1200px;
     margin: 0 auto;
-    overflow: hidden;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--spacing-lg);
 }
 
