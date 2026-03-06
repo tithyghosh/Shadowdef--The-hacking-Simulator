@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LoginScreen - Handles user authentication interface
  */
 
@@ -15,7 +15,9 @@ export class LoginScreen {
         this.ui = new UIManager();
         this.currentMode = 'login'; // 'login' or 'register'
         this.systemHudTimers = [];
-        
+        this.backgroundAnimationFrame = null;
+        this.canvasResizeHandler = null;
+
         this.setupEventListeners();
     }
 
@@ -25,147 +27,200 @@ export class LoginScreen {
     render() {
         const loginContainer = document.getElementById('login-screen');
         if (!loginContainer) return;
+
         this.stopSystemHudAnimation();
+        this.stopCanvasAnimation();
 
         loginContainer.innerHTML = `
-            <div class="login-container">
-                <button class="back-btn" data-action="back">← BACK</button>
-                <div class="login-header">
-                    <div class="logo-container">
-                        <div class="logo-text">SHADOWDEF</div>
+            <canvas id="login-fx-canvas" class="login-fx-canvas" aria-hidden="true"></canvas>
+            <div class="scanlines" aria-hidden="true"></div>
+            <div class="vignette" aria-hidden="true"></div>
+            <div class="hud-bar-top" aria-hidden="true"></div>
+            <div class="hud-bar-bot" aria-hidden="true"></div>
+
+            <div class="hud-tl" aria-hidden="true">
+                SHADOWDEF OS v4.7<br>
+                NET: <span class="hud-green">ENCRYPTED</span><br>
+                <span class="blink">▋</span> ACTIVE
+            </div>
+            <div class="hud-tr" aria-hidden="true">
+                NODES: 2,847<br>
+                FIREWALL: <span class="hud-green">ON</span><br>
+                UTC+00:00
+            </div>
+            <div class="hud-bl" aria-hidden="true">
+                ENC: AES-256<br>
+                AUTH: SHADOW-AUTH
+            </div>
+            <div class="hud-br" aria-hidden="true">
+                INTRUSION: <span class="hud-green">NONE</span><br>
+                PROXY: <span class="blink" style="color: rgba(0,212,255,0.6)">ACTIVE</span>
+            </div>
+
+            <div class="sys-monitor" aria-hidden="true">
+                <div class="sm-title">SYSTEM MONITOR</div>
+                <div class="sm-val">SYSTEM ONLINE</div>
+                <div class="sm-val">IP TRACE: ACTIVE</div>
+                <div class="sm-val">ENCRYPTION: AES-256</div>
+            </div>
+
+            <div class="page">
+                <div class="logo-section">
+                    <div class="logo-pre">▸ SECURE ACCESS PORTAL ◂</div>
+                    <div class="logo-text" data-text="SHADOWDEF">
+                        <span class="logo-text-inner">SHADOWDEF</span>
+                    </div>
+                    <div class="logo-divider">
+                        <div class="logo-divider-line"></div>
+                        <div class="logo-divider-diamond"></div>
+                        <div class="logo-divider-line rev"></div>
                     </div>
                 </div>
 
-                <div class="login-content">
-                    <div class="auth-form-container">
-                        ${this.renderAuthForm()}
-                    </div>
-
-                    <div class="social-login">
-                        <div class="divider-text">
-                            <span>OR CONTINUE WITH</span>
-                        </div>
-                        
-                        <div class="social-buttons">
-                            <button class="social-btn google-btn" data-provider="google">
-                                <div class="social-icon">
-                                    <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.45 1.45 8.53 3.38l5.82-5.82C34.64 3.44 29.7 1.5 24 1.5 14.82 1.5 7.01 6.74 3.28 14.28l6.77 5.26C12.04 13.2 17.6 9.5 24 9.5z"/>
-                                        <path fill="#4285F4" d="M46.5 24.5c0-1.57-.14-3.08-.4-4.54H24v9.05h12.75c-.55 2.96-2.26 5.46-4.81 7.14l7.39 5.74C43.93 38.27 46.5 31.87 46.5 24.5z"/>
-                                        <path fill="#FBBC05" d="M10.05 28.54a14.8 14.8 0 0 1 0-9.08l-6.77-5.26a23.97 23.97 0 0 0 0 19.6l6.77-5.26z"/>
-                                        <path fill="#34A853" d="M24 46.5c6.2 0 11.4-2.05 15.2-5.56l-7.39-5.74c-2.05 1.38-4.68 2.2-7.81 2.2-6.4 0-11.96-3.7-13.95-9.04l-6.77 5.26C7.01 41.26 14.82 46.5 24 46.5z"/>
-                                        <path fill="none" d="M0 0h48v48H0z"/>
-                                    </svg>
-                                </div>
-                                <span>Google</span>
-                            </button>
-                        </div>
-                    </div>
-                    ${this.renderSwitchText()}
-                    ${CONFIG.AUTH.ENABLE_GUEST_MODE ? `
-                    <div class="guest-option">
-                        <button class="btn-link" id="continue-as-guest">
-                            Continue as Guest
-                        </button>
-                        <p class="guest-warning">
-                            Your progress won't be saved without an account.
-                        </p>
-                    </div>
-                    ` : ''}
-                </div>
-
-                <div class="system-hud" aria-hidden="true">
-                    <div class="system-hud-title">SYSTEM MONITOR</div>
-                    <div class="system-hud-line" data-text="SYSTEM ONLINE"></div>
-                    <div class="system-hud-line" data-text="IP TRACE: ACTIVE"></div>
-                    <div class="system-hud-line" data-text="ENCRYPTION: AES-256"></div>
-                    <div class="system-hud-line" data-text="NETWORK LOAD: 78%"></div>
-                    <span class="hud-cursor">_</span>
-                </div>
+                ${this.renderAuthCard()}
             </div>
         `;
 
         this.setupFormListeners();
         this.startSystemHudAnimation();
+        this.startCanvasAnimation();
     }
 
-    /**
-     * Render authentication form
-     */
-    renderAuthForm() {
+    renderAuthCard() {
+        const isLogin = this.currentMode === 'login';
+        const formId = isLogin ? 'login-form' : 'register-form';
+        const buttonText = isLogin ? 'LOGIN' : 'CREATE ACCOUNT';
+
+        return `
+            <div class="card">
+                <div class="card-frame"></div>
+                <div class="card-inner">
+                    <div class="card-body">
+                        <div class="card-header">
+                            <div class="header-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </div>
+                            <div class="header-text">
+                                <div class="header-title">${isLogin ? 'Authentication' : 'Registration'}</div>
+                                <div class="header-sub">IDENTITY VERIFICATION</div>
+                            </div>
+                            <div class="header-status">
+                                <div class="status-dot"></div>
+                                ONLINE
+                            </div>
+                        </div>
+
+                        <form class="auth-form" id="${formId}">
+                            ${this.renderAuthFields()}
+
+                            ${isLogin ? `
+                            <div class="options-row">
+                                <label class="check-wrap">
+                                    <input type="checkbox" id="remember-me" />
+                                    <div class="check-box"></div>
+                                    <span class="check-label">Remember me</span>
+                                </label>
+                                <button type="button" class="forgot" id="forgot-password">Forgot Password?</button>
+                            </div>
+                            ` : ''}
+
+                            <div class="btn-login-wrap">
+                                <button type="submit" class="btn-login auth-submit" id="${isLogin ? 'login-submit' : 'register-submit'}">
+                                    <span class="btn-text">${buttonText}</span>
+                                    <span class="btn-loader" style="display: none;"><span class="spinner"></span></span>
+                                </button>
+                            </div>
+                        </form>
+
+                        ${isLogin ? `
+                        <div class="divider">
+                            <div class="divider-line"></div>
+                            <span class="divider-text">OR CONTINUE WITH</span>
+                            <div class="divider-line"></div>
+                        </div>
+
+                        <button class="btn-google social-btn" data-provider="google" type="button">
+                            <div class="g-dot" aria-hidden="true"></div>
+                            GOOGLE
+                        </button>
+                        ` : ''}
+
+                        <div class="card-foot">
+                            ${this.renderSwitchText()}
+                            ${this.renderGuestSection()}
+                        </div>
+
+                        <div class="threat-stripe" aria-hidden="true">
+                            <span class="threat-label">THREAT LVL</span>
+                            <div class="threat-pips">
+                                <div class="pip g"></div>
+                                <div class="pip g"></div>
+                                <div class="pip y"></div>
+                                <div class="pip"></div>
+                                <div class="pip"></div>
+                            </div>
+                            <span class="threat-status">LOW - SECURE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderAuthFields() {
         if (this.currentMode === 'login') {
             return `
-                <form class="auth-form" id="login-form">
-                    <h2 class="auth-heading">Login in your account</h2>
-                    <div class="form-group">
-                        <label for="login-email">Email Address</label>
-                        <input type="email" id="login-email" name="email" required 
-                               placeholder="Enter your email">
+                <div class="field">
+                    <div class="field-label">Email Address</div>
+                    <div class="field-wrap">
+                        <input class="field-input" type="email" id="login-email" name="email" required placeholder="Enter your email" autocomplete="off"/>
+                        <div class="field-scan"></div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="login-password">Password</label>
-                        <input type="password" id="login-password" name="password" required 
-                               placeholder="Enter your password">
+                </div>
+
+                <div class="field">
+                    <div class="field-label">Password</div>
+                    <div class="field-wrap">
+                        <input class="field-input" type="password" id="login-password" name="password" required placeholder="Enter your password" autocomplete="off"/>
+                        <div class="field-scan"></div>
                     </div>
-                    
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="remember-me">
-                            <span class="checkmark"></span>
-                            Remember me
-                        </label>
-                        
-                        <button type="button" class="btn-link" id="forgot-password">
-                            Forgot Password?
-                        </button>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary auth-submit" id="login-submit">
-                        <span class="btn-text">LOGIN</span>
-                        <div class="btn-loader" style="display: none;">
-                            <div class="spinner"></div>
-                        </div>
-                    </button>
-                </form>
-            `;
-        } else {
-            return `
-                <form class="auth-form" id="register-form">
-                    <h2 class="auth-heading">Create Your Account</h2>
-                    <div class="form-group">
-                        <label for="register-name">Display Name</label>
-                        <input type="text" id="register-name" name="name" required 
-                               placeholder="Choose a display name">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="register-email">Email Address</label>
-                        <input type="email" id="register-email" name="email" required 
-                               placeholder="Enter your email">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="register-password">Password</label>
-                        <input type="password" id="register-password" name="password" required 
-                               placeholder="Create a password (min 6 characters)">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="register-confirm">Confirm Password</label>
-                        <input type="password" id="register-confirm" name="confirmPassword" required 
-                               placeholder="Confirm your password">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary auth-submit" id="register-submit">
-                        <span class="btn-text">CREATE ACCOUNT</span>
-                        <div class="btn-loader" style="display: none;">
-                            <div class="spinner"></div>
-                        </div>
-                    </button>
-                </form>
+                </div>
             `;
         }
+
+        return `
+            <div class="field">
+                <div class="field-label">Display Name</div>
+                <div class="field-wrap">
+                    <input class="field-input" type="text" id="register-name" name="name" required placeholder="Choose a display name" autocomplete="off"/>
+                    <div class="field-scan"></div>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="field-label">Email Address</div>
+                <div class="field-wrap">
+                    <input class="field-input" type="email" id="register-email" name="email" required placeholder="Enter your email" autocomplete="off"/>
+                    <div class="field-scan"></div>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="field-label">Password</div>
+                <div class="field-wrap">
+                    <input class="field-input" type="password" id="register-password" name="password" required placeholder="Create a password (min 6 characters)" autocomplete="off"/>
+                    <div class="field-scan"></div>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="field-label">Confirm Password</div>
+                <div class="field-wrap">
+                    <input class="field-input" type="password" id="register-confirm" name="confirmPassword" required placeholder="Confirm your password" autocomplete="off"/>
+                    <div class="field-scan"></div>
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -174,18 +229,29 @@ export class LoginScreen {
     renderSwitchText() {
         if (this.currentMode === 'login') {
             return `
-                <p class="auth-switch-text">
+                <div class="foot-register">
                     Don't you have an account?
-                    <button type="button" class="btn-link auth-switch" data-mode="register">Please register here.</button>
-                </p>
+                    <button type="button" class="auth-switch" data-mode="register">Please register here.</button>
+                </div>
             `;
         }
 
         return `
-            <p class="auth-switch-text">
+            <div class="foot-register">
                 Already have an account?
-                <button type="button" class="btn-link auth-switch" data-mode="login">Please login now.</button>
-            </p>
+                <button type="button" class="auth-switch" data-mode="login">Please login now.</button>
+            </div>
+        `;
+    }
+
+    renderGuestSection() {
+        if (!CONFIG.AUTH.ENABLE_GUEST_MODE || this.currentMode !== 'login') {
+            return '';
+        }
+
+        return `
+            <button type="button" class="guest-link" id="continue-as-guest">Continue as Guest</button>
+            <div class="guest-warn">Your progress won't be saved without<br/>an account.</div>
         `;
     }
 
@@ -277,7 +343,7 @@ export class LoginScreen {
             if (userData && userData.name) {
                 this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
             } else {
-                this.ui.showNotification(`Welcome! Login successful.`, 'success');
+                this.ui.showNotification('Welcome! Login successful.', 'success');
             }
 
         } catch (error) {
@@ -364,6 +430,7 @@ export class LoginScreen {
             'Your progress and scores won\'t be saved. You can create an account later from the settings menu.',
             () => {
                 this.stopSystemHudAnimation();
+                this.stopCanvasAnimation();
                 // Continue to main menu without authentication
                 this.game.screens.showScreen('main-menu');
                 this.ui.showNotification('Playing as guest - progress won\'t be saved', 'warning', 5000);
@@ -379,7 +446,7 @@ export class LoginScreen {
             <div style="text-align: left;">
                 <p>Enter your email address and we'll send you a reset link:</p>
                 <div class="form-group" style="margin: 20px 0;">
-                    <input type="email" id="reset-email" placeholder="Enter your email" 
+                    <input type="email" id="reset-email" placeholder="Enter your email"
                            style="width: 100%; padding: 10px; margin-bottom: 10px;">
                 </div>
             </div>
@@ -419,6 +486,7 @@ export class LoginScreen {
      */
     handleLoginSuccess(userData) {
         this.stopSystemHudAnimation();
+        this.stopCanvasAnimation();
         // Transition to main menu
         setTimeout(() => {
             this.game.screens.showScreen('main-menu');
@@ -437,6 +505,115 @@ export class LoginScreen {
         // Return to login screen
         this.game.screens.showScreen('login-screen');
         this.render();
+    }
+
+    startCanvasAnimation() {
+        const canvas = document.getElementById('login-fx-canvas');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+
+        resize();
+        this.canvasResizeHandler = resize;
+        window.addEventListener('resize', this.canvasResizeHandler);
+
+        const binaries = Array.from({ length: 45 }, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            val: Math.floor(Math.random() * 1048576).toString(2).slice(0, 6),
+            op: Math.random() * 0.1 + 0.03,
+            spd: Math.random() * 0.12 + 0.04,
+            size: Math.floor(Math.random() * 3) + 9
+        }));
+
+        const pts = Array.from({ length: 75 }, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            vx: (Math.random() - 0.5) * 0.28,
+            vy: (Math.random() - 0.5) * 0.28,
+            r: Math.random() * 1.5 + 0.4,
+            op: Math.random() * 0.3 + 0.08
+        }));
+
+        const draw = () => {
+            this.backgroundAnimationFrame = requestAnimationFrame(draw);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const gradient = ctx.createRadialGradient(
+                canvas.width * 0.5,
+                canvas.height * 0.45,
+                0,
+                canvas.width * 0.5,
+                canvas.height * 0.5,
+                canvas.width * 0.8
+            );
+            gradient.addColorStop(0, 'rgba(6,18,48,1)');
+            gradient.addColorStop(0.5, 'rgba(4,9,24,1)');
+            gradient.addColorStop(1, 'rgba(2,4,14,1)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            binaries.forEach((b) => {
+                b.y -= b.spd;
+                if (b.y < -20) {
+                    b.y = canvas.height + 10;
+                    b.x = Math.random() * canvas.width;
+                }
+                ctx.font = `${b.size}px Share Tech Mono`;
+                ctx.fillStyle = `rgba(0,200,230,${b.op})`;
+                ctx.fillText(b.val, b.x, b.y);
+            });
+
+            pts.forEach((p) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0,200,230,${p.op})`;
+                ctx.fill();
+            });
+
+            for (let i = 0; i < pts.length; i += 1) {
+                for (let j = i + 1; j < pts.length; j += 1) {
+                    const dx = pts[i].x - pts[j].x;
+                    const dy = pts[i].y - pts[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(pts[i].x, pts[i].y);
+                        ctx.lineTo(pts[j].x, pts[j].y);
+                        ctx.strokeStyle = `rgba(0,180,220,${0.07 * (1 - distance / 100)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+        };
+
+        draw();
+    }
+
+    stopCanvasAnimation() {
+        if (this.backgroundAnimationFrame) {
+            cancelAnimationFrame(this.backgroundAnimationFrame);
+            this.backgroundAnimationFrame = null;
+        }
+
+        if (this.canvasResizeHandler) {
+            window.removeEventListener('resize', this.canvasResizeHandler);
+            this.canvasResizeHandler = null;
+        }
     }
 
     startSystemHudAnimation() {
@@ -494,10 +671,10 @@ export class LoginScreen {
         if (submitBtn) {
             const btnText = submitBtn.querySelector('.btn-text');
             const btnLoader = submitBtn.querySelector('.btn-loader');
-            
+
             if (btnText) btnText.style.display = 'none';
-            if (btnLoader) btnLoader.style.display = 'flex';
-            
+            if (btnLoader) btnLoader.style.display = 'inline-flex';
+
             submitBtn.disabled = true;
         }
 
@@ -513,10 +690,10 @@ export class LoginScreen {
         if (submitBtn) {
             const btnText = submitBtn.querySelector('.btn-text');
             const btnLoader = submitBtn.querySelector('.btn-loader');
-            
+
             if (btnText) btnText.style.display = 'inline';
             if (btnLoader) btnLoader.style.display = 'none';
-            
+
             submitBtn.disabled = false;
         }
 
@@ -527,3 +704,4 @@ export class LoginScreen {
         }
     }
 }
+
