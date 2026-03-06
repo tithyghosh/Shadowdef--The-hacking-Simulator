@@ -1468,7 +1468,7 @@
 }
 
 #login-screen .check-wrap input:checked + .check-box::after {
-    content: '\\2713';
+    content: '\2713';
     font-size: 9px;
     color: var(--cyan);
 }
@@ -1826,4 +1826,5 @@
         letter-spacing: 4px;
     }
 }
+
 
