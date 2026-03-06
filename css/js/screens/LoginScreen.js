@@ -134,9 +134,7 @@ export class LoginScreen {
 
                         ${isLogin ? `
                         <div class="divider">
-                            <div class="divider-line"></div>
                             <span class="divider-text">OR CONTINUE WITH</span>
-                            <div class="divider-line"></div>
                         </div>
 
                         <button class="btn-google social-btn" data-provider="google" type="button">
@@ -704,4 +702,5 @@ export class LoginScreen {
         }
     }
 }
+
 
