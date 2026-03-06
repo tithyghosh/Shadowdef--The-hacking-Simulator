@@ -25,6 +25,7 @@ export class AudioManager {
         this.audioContext = null;
         this.sounds = new Map();
         this.musicTracks = new Map();
+        this.buttonClickAudio = null;
         
         // Initialize Web Audio API
         this.initAudioContext();
@@ -73,7 +74,7 @@ export class AudioManager {
     loadSounds() {
         // Sound effects map
         this.soundDefinitions = {
-            buttonClick: { file: 'assets/audio/sfx/button-click.mp3', volume: 0.5 },
+            buttonClick: { file: 'assets/music/Click-Sound.wav', volume: 0.5 },
             success: { file: 'assets/audio/sfx/success.mp3', volume: 0.7 },
             failure: { file: 'assets/audio/sfx/failure.mp3', volume: 0.6 },
             hint: { file: 'assets/audio/sfx/hint.mp3', volume: 0.5 },
@@ -96,6 +97,7 @@ export class AudioManager {
 
         // Preload music files
         this.preloadMusic();
+        this.preloadButtonClick();
 
         console.log('🎵 Audio definitions loaded with creepy Halloween bells music');
     }
@@ -126,6 +128,23 @@ export class AudioManager {
                 this.musicTracks.delete(trackName);
             });
         });
+    }
+
+    /**
+     * Preload button click file
+     */
+    preloadButtonClick() {
+        const clickDefinition = this.soundDefinitions.buttonClick;
+        if (!clickDefinition?.file) return;
+
+        const clickAudio = new Audio();
+        clickAudio.src = clickDefinition.file;
+        clickAudio.preload = 'auto';
+        clickAudio.volume = clickDefinition.volume * this.sfxVolume;
+        clickAudio.addEventListener('error', () => {
+            this.buttonClickAudio = null;
+        });
+        this.buttonClickAudio = clickAudio;
     }
 
     /**
@@ -654,7 +673,26 @@ export class AudioManager {
      */
     playButtonClick() {
         if (!this.sfxEnabled) return;
+        if (this.playButtonClickFromFile()) {
+            return;
+        }
         this.playSynthButtonClick(0.34 * this.sfxVolume);
+    }
+
+    playButtonClickFromFile() {
+        if (!this.buttonClickAudio) return false;
+
+        try {
+            const clickInstance = this.buttonClickAudio.cloneNode();
+            clickInstance.volume = (this.soundDefinitions.buttonClick?.volume ?? 0.5) * this.sfxVolume;
+            const playPromise = clickInstance.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => {});
+            }
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     /**
@@ -754,6 +792,12 @@ export class AudioManager {
             audio.src = '';
         });
         this.musicTracks.clear();
+
+        if (this.buttonClickAudio) {
+            this.buttonClickAudio.pause();
+            this.buttonClickAudio.src = '';
+            this.buttonClickAudio = null;
+        }
         
         if (this.audioContext) {
             this.audioContext.close();
@@ -857,57 +901,40 @@ export class AudioManager {
     playSynthButtonClick(volume = 0.25) {
         if (!this.audioContext) return;
 
+        // Softer sci-fi tap: short tone + light tick, less harsh than the old crack.
         const t = this.audioContext.currentTime;
-        const sampleRate = this.audioContext.sampleRate;
-        const clickBuffer = this.audioContext.createBuffer(1, Math.floor(sampleRate * 0.028), sampleRate);
-        const data = clickBuffer.getChannelData(0);
-        for (let i = 0; i < data.length; i += 1) {
-            const decay = 1 - (i / data.length);
-            data[i] = (Math.random() * 2 - 1) * decay;
-        }
+        const bodyOsc = this.audioContext.createOscillator();
+        const bodyGain = this.audioContext.createGain();
+        const bodyFilter = this.audioContext.createBiquadFilter();
 
-        const clickSource = this.audioContext.createBufferSource();
-        const clickFilter = this.audioContext.createBiquadFilter();
-        const clickGain = this.audioContext.createGain();
-        const clickPop = this.audioContext.createOscillator();
-        const popGain = this.audioContext.createGain();
+        bodyOsc.type = 'triangle';
+        bodyOsc.frequency.setValueAtTime(980, t);
+        bodyOsc.frequency.exponentialRampToValueAtTime(620, t + 0.04);
 
-        clickSource.buffer = clickBuffer;
-        clickFilter.type = 'highpass';
-        clickFilter.frequency.value = 1200;
+        bodyFilter.type = 'lowpass';
+        bodyFilter.frequency.setValueAtTime(2400, t);
 
-        clickGain.gain.setValueAtTime(volume * 0.95, t);
-        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+        bodyGain.gain.setValueAtTime(volume * 0.5, t);
+        bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
 
-        clickPop.type = 'sine';
-        clickPop.frequency.setValueAtTime(210, t);
-        clickPop.frequency.exponentialRampToValueAtTime(82, t + 0.04);
-        popGain.gain.setValueAtTime(volume * 0.45, t);
-        popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        bodyOsc.connect(bodyFilter);
+        bodyFilter.connect(bodyGain);
+        bodyGain.connect(this.audioContext.destination);
 
-        clickSource.connect(clickFilter);
-        clickFilter.connect(clickGain);
-        clickGain.connect(this.audioContext.destination);
+        const tickOsc = this.audioContext.createOscillator();
+        const tickGain = this.audioContext.createGain();
+        tickOsc.type = 'square';
+        tickOsc.frequency.setValueAtTime(1800, t);
+        tickOsc.frequency.exponentialRampToValueAtTime(900, t + 0.012);
+        tickGain.gain.setValueAtTime(volume * 0.12, t);
+        tickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.015);
+        tickOsc.connect(tickGain);
+        tickGain.connect(this.audioContext.destination);
 
-        clickPop.connect(popGain);
-        popGain.connect(this.audioContext.destination);
-
-        const crackOsc = this.audioContext.createOscillator();
-        const crackGain = this.audioContext.createGain();
-        crackOsc.type = 'square';
-        crackOsc.frequency.setValueAtTime(2400, t);
-        crackOsc.frequency.exponentialRampToValueAtTime(1200, t + 0.012);
-        crackGain.gain.setValueAtTime(volume * 0.3, t);
-        crackGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
-        crackOsc.connect(crackGain);
-        crackGain.connect(this.audioContext.destination);
-
-        clickSource.start(t);
-        clickSource.stop(t + 0.03);
-        clickPop.start(t);
-        clickPop.stop(t + 0.045);
-        crackOsc.start(t);
-        crackOsc.stop(t + 0.014);
+        bodyOsc.start(t);
+        bodyOsc.stop(t + 0.06);
+        tickOsc.start(t);
+        tickOsc.stop(t + 0.016);
     }
 
     playSynthGlitch(volume = 0.3) {
