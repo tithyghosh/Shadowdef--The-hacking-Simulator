@@ -39,8 +39,31 @@ export class ProfileScreen {
         const credits = stats.credits || 0;
         const rank = this.calculateRank(stats);
         const rankIndex = this.getRankIndex(rank);
+        const avatarBadge = this.renderAvatarBadge(stats);
         const initials = this.getInitials(user.name || 'User');
         const [firstName, lastName] = this.splitName(user.name || 'User');
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+        if (isMobile) {
+            this.renderMobileLayout(profileContainer, {
+                user,
+                stats,
+                level,
+                experience,
+                levelProgress,
+                missionProgress,
+                credits,
+                rank,
+                rankIndex,
+                avatarBadge,
+                initials,
+                firstName,
+                lastName
+            });
+            this.setupProfileListeners();
+            this.startProfileCanvasAnimation();
+            return;
+        }
 
         profileContainer.innerHTML = `
             <canvas id="profile-fx-canvas" class="profile-fx-canvas" aria-hidden="true"></canvas>
@@ -58,7 +81,7 @@ export class ProfileScreen {
                             <div class="ps-user-avatar-wrap">
                                 <div class="ps-avatar-container">
                                     <div class="ps-user-avatar">${this.escapeHtml(initials)}</div>
-                                    <div class="ps-avatar-badge gold" title="First Breach Badge">&#9889;</div>
+                                    ${avatarBadge}
                                     <div class="ps-avatar-online"></div>
                                 </div>
                                 <div class="ps-user-info">
@@ -158,6 +181,131 @@ export class ProfileScreen {
         this.startProfileCanvasAnimation();
     }
 
+    renderMobileLayout(profileContainer, view) {
+        const {
+            user,
+            stats,
+            level,
+            experience,
+            levelProgress,
+            missionProgress,
+            credits,
+            rank,
+            rankIndex,
+            avatarBadge,
+            initials,
+            firstName,
+            lastName
+        } = view;
+        const badgeHtml = avatarBadge.replace(/ps-avatar-badge/g, 'pm-avatar-badge');
+        const levelValue = experience % 1000;
+
+        profileContainer.innerHTML = `
+            <canvas id="profile-fx-canvas" class="profile-fx-canvas" aria-hidden="true"></canvas>
+            <div class="profile-scanlines" aria-hidden="true"></div>
+            <div class="profile-vignette" aria-hidden="true"></div>
+            <div class="profile-hud-top" aria-hidden="true"></div>
+
+            <div class="pm-topbar">
+                <button class="pm-back-btn" data-action="back" type="button">&#8592;</button>
+                <div class="pm-logo">SHADOWDEF</div>
+                <div class="pm-status"><span class="pm-status-dot"></span>ONLINE</div>
+            </div>
+
+            <div class="pm-scroll-area" id="pm-scroll-area">
+                <section class="pm-tab-page active" data-tab-page="profile">
+                    <div class="pm-user-hero">
+                        <div class="pm-user-top-row">
+                            <div class="pm-avatar-container">
+                                <div class="pm-user-avatar">${this.escapeHtml(initials)}</div>
+                                ${badgeHtml}
+                                <div class="pm-avatar-online"></div>
+                            </div>
+                            <div class="pm-user-details">
+                                <div class="pm-user-name">${this.escapeHtml(firstName.toUpperCase())}</div>
+                                <div class="pm-user-last">${this.escapeHtml(lastName.toUpperCase())}</div>
+                                <div class="pm-user-email">${this.escapeHtml(user.email || 'operator@shadowdef.local')}</div>
+                                <div class="pm-user-rank-tag">&#9656; ${this.escapeHtml(rank.toUpperCase())}</div>
+                            </div>
+                        </div>
+
+                        ${this.renderMobileRankProgression(rankIndex)}
+                        <div class="pm-xp-row"><span class="pm-xp-label">XP PROGRESS - LVL ${level}</span><span class="pm-xp-val">${levelValue} / 1000</span></div>
+                        <div class="pm-xp-bar-wrap"><div class="pm-xp-bar" style="width:${levelProgress.toFixed(1)}%"></div></div>
+                    </div>
+
+                    <div class="pm-panel">
+                        <div class="pm-panel-title">Game Statistics</div>
+                        <div class="pm-panel-body">
+                            ${this.renderMobileStats(stats)}
+                        </div>
+                    </div>
+
+                    <div class="pm-panel">
+                        <div class="pm-panel-title">Progress & XP</div>
+                        <div class="pm-panel-body">
+                            <div class="pm-prog-item">
+                                <div class="pm-prog-hdr"><span class="pm-prog-lbl">LEVEL PROGRESS</span><span class="pm-prog-v">${levelValue} / 1000 XP</span></div>
+                                <div class="pm-prog-wrap"><div class="pm-prog-fill c" style="width:${levelProgress.toFixed(1)}%"></div></div>
+                            </div>
+                            <div class="pm-prog-item">
+                                <div class="pm-prog-hdr"><span class="pm-prog-lbl">MISSION PROGRESS</span><span class="pm-prog-v">${stats.missionsCompleted || 0} / 10</span></div>
+                                <div class="pm-prog-wrap"><div class="pm-prog-fill r" style="width:${missionProgress.toFixed(1)}%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pm-panel">
+                        <div class="pm-panel-title">Gaming Credits</div>
+                        <div class="pm-panel-body">
+                            <div class="pm-credits-row">
+                                <div class="pm-coin-row">
+                                    <div class="pm-coin">&#128176;</div>
+                                    <div>
+                                        <div class="pm-credits-num">${credits}</div>
+                                        <div class="pm-credits-sub">CREDITS</div>
+                                    </div>
+                                </div>
+                                <button class="pm-btn-buy" id="earn-credits" type="button">BUY MORE</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="pm-tab-page" data-tab-page="badges">
+                    <div class="pm-panel">
+                        <div class="pm-panel-title">Achievement Badges</div>
+                        <div class="pm-panel-body">
+                            <div class="ps-ach-grid">
+                                ${this.renderCyberAchievements(stats.achievements || [], stats)}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="pm-tab-page" data-tab-page="roadmap">
+                    <div class="pm-panel">
+                        <div class="pm-panel-title">Badge Unlock Roadmap</div>
+                        <div class="pm-panel-body">
+                            ${this.renderMissionRoadmap()}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="pm-tab-page" data-tab-page="missions">
+                    ${this.renderMobileMissionCards(stats)}
+                </section>
+            </div>
+
+            <div class="pm-bottom-nav">
+                <button class="pm-nav-item active" data-tab="profile" type="button"><span class="pm-nav-icon">&#128100;</span><span class="pm-nav-label">PROFILE</span></button>
+                <button class="pm-nav-item" data-tab="badges" type="button"><span class="pm-nav-icon">&#127941;</span><span class="pm-nav-label">BADGES</span></button>
+                <button class="pm-nav-item" data-tab="roadmap" type="button"><span class="pm-nav-icon">&#128506;</span><span class="pm-nav-label">ROADMAP</span></button>
+                <button class="pm-nav-item" data-tab="missions" type="button"><span class="pm-nav-icon">&#127919;</span><span class="pm-nav-label">MISSIONS</span></button>
+            </div>
+        `;
+    }
+
     renderCyberStats(stats) {
         const rows = [
             { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
@@ -209,6 +357,25 @@ export class ProfileScreen {
                 ${this.renderMissionRoadmapBlock('MISSION 3 — NETWORK & PHISHING', '&#127760;', 'g', '&#128737;', '&#128081;', 'GHOST PROTOCOL', 'SHADOW MASTER')}
             </div>
         `;
+    }
+
+    renderAvatarBadge(stats) {
+        const completed = stats.missionsCompleted || 0;
+        const level = stats.level || 1;
+        const earned = new Set(stats.achievements || []);
+        const badgePriority = [
+            { id: 'shadow_master', icon: '&#128081;', cls: 'silver', title: 'Shadow Master Badge', unlocked: earned.has('shadow_master') },
+            { id: 'dark_net_legend', icon: '&#9760;', cls: 'purple', title: 'Dark Net Legend Badge', unlocked: earned.has('dark_net_legend') },
+            { id: 'ghost_protocol', icon: '&#128737;', cls: 'green', title: 'Ghost Protocol Badge', unlocked: earned.has('ghost_protocol') },
+            { id: 'phantom_strike', icon: '&#128293;', cls: 'red', title: 'Phantom Strike Badge', unlocked: earned.has('phantom_strike') },
+            { id: 'cipher_breaker', icon: '&#128275;', cls: 'cyan', title: 'Cipher Breaker Badge', unlocked: level >= 5 || earned.has('cipher_breaker') },
+            { id: 'first_mission', icon: '&#9889;', cls: 'gold', title: 'First Breach Badge', unlocked: completed > 0 || earned.has('first_mission') }
+        ];
+
+        const activeBadge = badgePriority.find((badge) => badge.unlocked);
+        if (!activeBadge) return '';
+
+        return `<div class="ps-avatar-badge ${activeBadge.cls}" title="${activeBadge.title}">${activeBadge.icon}</div>`;
     }
 
     renderRankProgression(currentRankIndex) {
@@ -327,6 +494,107 @@ export class ProfileScreen {
     renderLevelMini(done, total) {
         const items = Array.from({ length: total }, (_, i) => `<div class="ps-lm ${i < done ? 'done' : ''}"></div>`).join('');
         return `<div class="ps-level-mini">${items}</div>`;
+    }
+
+    renderMobileRankProgression(currentRankIndex) {
+        const ranks = ['ROOKIE', 'AGENT', 'OPERATV', 'SPECLS', 'ELITE', 'SHADOW'];
+        return `
+            <div class="pm-rank-track">
+                <div class="pm-rank-track-label">RANK PROGRESSION</div>
+                <div class="pm-rank-nodes">
+                    ${ranks.map((rank, idx) => {
+                        const active = idx <= currentRankIndex;
+                        const isFinal = idx === ranks.length - 1;
+                        const marker = active ? '&#10003;' : (isFinal ? '&#128081;' : String(idx + 1));
+                        return `
+                            <div class="pm-rn">
+                                <div class="pm-rn-dot ${active ? 'active' : ''} ${isFinal ? 'final' : ''}">${marker}</div>
+                                <div class="pm-rn-name ${active ? 'active' : ''} ${isFinal ? 'final' : ''}">${rank}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMobileStats(stats) {
+        const rows = [
+            { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
+            { cls: 'ya', icon: '&#127942;', value: this.formatNumber(stats.highScore || 0), label: 'HIGH SCORE' },
+            { cls: 'ga', icon: '&#10003;', value: stats.missionsCompleted || 0, label: 'MISSIONS' },
+            { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' },
+            { cls: 'ca', icon: '&#128202;', value: this.calculateSuccessRate(stats), label: 'SUCCESS' },
+            { cls: 'ra', icon: '&#128640;', value: this.calculateRank(stats), label: 'RANK' }
+        ];
+
+        return `
+            <div class="pm-stats-grid">
+                ${rows.map((item) => `
+                    <div class="pm-stat-box ${item.cls}">
+                        <div class="pm-stat-icon">${item.icon}</div>
+                        <div class="pm-stat-val">${this.escapeHtml(String(item.value))}</div>
+                        <div class="pm-stat-lbl">${this.escapeHtml(item.label)}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderMobileMissionCards(stats) {
+        const completedCount = Math.max(0, Math.min(10, stats.missionsCompleted || 0));
+        const cards = [
+            {
+                name: 'PASSWORD CRACKING',
+                sub: 'MISSION 1 - 10 LEVELS',
+                emoji: '&#128273;',
+                statusClass: completedCount >= 10 ? 'done' : 'prog',
+                statusText: completedCount >= 10 ? 'DONE' : 'ACTIVE',
+                done: completedCount,
+                bestScore: stats.highScore || 0,
+                badges: ['&#128274; CIPHER BREAKER', '&#128274; FIRST BREACH']
+            },
+            {
+                name: 'MALWARE DETECTION',
+                sub: 'MISSION 2 - 10 LEVELS',
+                emoji: '&#129440;',
+                statusClass: 'lock',
+                statusText: 'LOCKED',
+                done: 0,
+                bestScore: 0,
+                badges: ['&#128274; PHANTOM STRIKE', '&#128274; DARK NET LEGEND']
+            },
+            {
+                name: 'NETWORK & PHISHING',
+                sub: 'MISSION 3 - 10 LEVELS',
+                emoji: '&#127760;',
+                statusClass: 'lock',
+                statusText: 'LOCKED',
+                done: 0,
+                bestScore: 0,
+                badges: ['&#128274; GHOST PROTOCOL', '&#128274; SHADOW MASTER']
+            }
+        ];
+
+        return cards.map((card) => `
+            <div class="pm-mission-card">
+                <div class="pm-mc-header">
+                    <div class="pm-mc-emoji">${card.emoji}</div>
+                    <div class="pm-mc-info">
+                        <div class="pm-mc-name">${card.name}</div>
+                        <div class="pm-mc-sub">${card.sub}</div>
+                    </div>
+                    <div class="pm-mc-status ${card.statusClass}">${card.statusClass === 'lock' ? '&#128274;' : '&#9656;'} ${card.statusText}</div>
+                </div>
+                <div class="pm-mc-body">
+                    <div class="pm-mc-key">LEVEL PROGRESS</div>
+                    <div class="pm-mc-levels">${this.renderLevelMini(card.done, 10).replace('ps-level-mini', 'pm-level-mini').replace(/ps-lm/g, 'pm-lm')}</div>
+                    <div class="pm-mc-row"><span class="pm-mc-key">BEST SCORE</span><span class="pm-mc-val">${card.bestScore > 0 ? this.formatNumber(card.bestScore) : '&#8212;'}</span></div>
+                    <div class="pm-mc-row"><span class="pm-mc-key">BADGES EARNED</span><span class="pm-mc-val">${card.done >= 5 ? 1 : 0} / 2</span></div>
+                    <div class="pm-mc-badges-row">${card.badges.map((badge) => `<div class="pm-mc-badge">${badge}</div>`).join('')}</div>
+                </div>
+            </div>
+        `).join('');
     }
 
     startProfileCanvasAnimation() {
@@ -502,6 +770,23 @@ export class ProfileScreen {
     setupProfileListeners() {
         document.querySelector('[data-action="back"]')?.addEventListener('click', () => {
             this.game.screens.showScreen('main-menu');
+        });
+
+        document.querySelectorAll('.pm-nav-item').forEach((tabBtn) => {
+            tabBtn.addEventListener('click', () => {
+                const tabId = tabBtn.dataset.tab;
+                if (!tabId) return;
+
+                document.querySelectorAll('.pm-tab-page').forEach((page) => {
+                    page.classList.toggle('active', page.dataset.tabPage === tabId);
+                });
+                document.querySelectorAll('.pm-nav-item').forEach((item) => {
+                    item.classList.toggle('active', item === tabBtn);
+                });
+
+                const mobileScrollArea = document.getElementById('pm-scroll-area');
+                if (mobileScrollArea) mobileScrollArea.scrollTop = 0;
+            });
         });
 
         // Edit profile

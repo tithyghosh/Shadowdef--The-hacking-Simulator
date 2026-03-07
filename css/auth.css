@@ -2080,6 +2080,31 @@
     box-shadow: 0 0 10px rgba(255, 204, 0, 0.6);
 }
 
+#profile-screen .ps-avatar-badge.cyan {
+    background: radial-gradient(circle at 35% 35%, #00f0ff, #006688);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.55);
+}
+
+#profile-screen .ps-avatar-badge.red {
+    background: radial-gradient(circle at 35% 35%, #ff6688, #880020);
+    box-shadow: 0 0 10px rgba(224, 32, 74, 0.6);
+}
+
+#profile-screen .ps-avatar-badge.green {
+    background: radial-gradient(circle at 35% 35%, #66ffaa, #007733);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.55);
+}
+
+#profile-screen .ps-avatar-badge.purple {
+    background: radial-gradient(circle at 35% 35%, #dd88ff, #5500aa);
+    box-shadow: 0 0 10px rgba(180, 79, 255, 0.6);
+}
+
+#profile-screen .ps-avatar-badge.silver {
+    background: radial-gradient(circle at 35% 35%, #e0e8f0, #7090a0);
+    box-shadow: 0 0 10px rgba(180, 210, 230, 0.5);
+}
+
 #profile-screen .ps-avatar-online {
     position: absolute;
     bottom: 3px;
@@ -2947,4 +2972,272 @@
         overflow-x: auto;
         white-space: nowrap;
     }
+}
+
+@media (max-width: 768px) {
+    #profile-screen .pm-topbar {
+        position: fixed;
+        top: 2px;
+        left: 0;
+        right: 0;
+        height: 52px;
+        z-index: 25;
+        background: rgba(2, 6, 18, 0.97);
+        border-bottom: 1px solid rgba(0, 212, 255, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 12px;
+    }
+
+    #profile-screen .pm-back-btn {
+        width: 26px;
+        height: 26px;
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        background: rgba(0, 212, 255, 0.06);
+        color: var(--cyan);
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    #profile-screen .pm-logo {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 5px;
+        background: linear-gradient(90deg, var(--cyan), #fff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        flex: 1;
+    }
+
+    #profile-screen .pm-status {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 7px;
+        letter-spacing: 1.5px;
+        color: rgba(0, 255, 136, 0.6);
+    }
+
+    #profile-screen .pm-status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+        animation: profile-blink 1.4s ease infinite;
+    }
+
+    #profile-screen .pm-scroll-area {
+        position: fixed;
+        top: 54px;
+        left: 0;
+        right: 0;
+        bottom: 62px;
+        z-index: 8;
+        overflow-y: auto;
+        padding: 14px 14px 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #profile-screen .pm-tab-page {
+        display: none;
+        animation: profile-slide-left 0.25s ease both;
+    }
+
+    #profile-screen .pm-tab-page.active {
+        display: block;
+    }
+
+    #profile-screen .pm-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 62px;
+        z-index: 25;
+        background: rgba(2, 6, 18, 0.98);
+        border-top: 1px solid rgba(0, 212, 255, 0.12);
+        display: flex;
+    }
+
+    #profile-screen .pm-nav-item {
+        flex: 1;
+        border: 0;
+        border-top: 2px solid transparent;
+        background: transparent;
+        color: rgba(168, 216, 232, 0.35);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding-bottom: 4px;
+        cursor: pointer;
+    }
+
+    #profile-screen .pm-nav-item.active {
+        border-top-color: var(--cyan);
+        background: rgba(0, 212, 255, 0.04);
+        color: var(--cyan);
+    }
+
+    #profile-screen .pm-nav-icon {
+        font-size: 18px;
+    }
+
+    #profile-screen .pm-nav-label {
+        font-size: 7px;
+        letter-spacing: 1.5px;
+    }
+
+    #profile-screen .pm-user-hero,
+    #profile-screen .pm-panel,
+    #profile-screen .pm-mission-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+        clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+        margin-bottom: 12px;
+    }
+
+    #profile-screen .pm-user-hero,
+    #profile-screen .pm-panel {
+        padding: 12px 14px;
+    }
+
+    #profile-screen .pm-user-top-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    #profile-screen .pm-avatar-container { position: relative; }
+
+    #profile-screen .pm-user-avatar {
+        width: 64px;
+        height: 64px;
+        border: 2px solid rgba(0, 212, 255, 0.45);
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(224, 32, 74, 0.1));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 26px;
+        font-weight: 900;
+        color: var(--cyan);
+    }
+
+    #profile-screen .pm-avatar-badge {
+        position: absolute;
+        top: -7px;
+        left: -7px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border: 2px solid var(--deep);
+        z-index: 2;
+    }
+
+    #profile-screen .pm-avatar-badge.gold { background: radial-gradient(circle at 35% 35%, #ffe066, #cc8800); box-shadow: 0 0 8px rgba(255, 204, 0, 0.7); }
+    #profile-screen .pm-avatar-badge.cyan { background: radial-gradient(circle at 35% 35%, #00f0ff, #006688); box-shadow: 0 0 8px rgba(0, 212, 255, 0.55); }
+    #profile-screen .pm-avatar-badge.red { background: radial-gradient(circle at 35% 35%, #ff6688, #880020); box-shadow: 0 0 8px rgba(224, 32, 74, 0.6); }
+    #profile-screen .pm-avatar-badge.green { background: radial-gradient(circle at 35% 35%, #66ffaa, #007733); box-shadow: 0 0 8px rgba(0, 255, 136, 0.55); }
+    #profile-screen .pm-avatar-badge.purple { background: radial-gradient(circle at 35% 35%, #dd88ff, #5500aa); box-shadow: 0 0 8px rgba(180, 79, 255, 0.6); }
+    #profile-screen .pm-avatar-badge.silver { background: radial-gradient(circle at 35% 35%, #e0e8f0, #7090a0); box-shadow: 0 0 8px rgba(180, 210, 230, 0.5); }
+
+    #profile-screen .pm-avatar-online {
+        position: absolute;
+        bottom: 3px;
+        right: 3px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+        border: 1px solid var(--deep);
+    }
+
+    #profile-screen .pm-user-details { flex: 1; min-width: 0; }
+    #profile-screen .pm-user-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 900; color: var(--white); line-height: 1.1; }
+    #profile-screen .pm-user-last { font-size: 11px; opacity: 0.65; }
+    #profile-screen .pm-user-email { font-size: 9px; color: rgba(0, 212, 255, 0.45); margin-top: 2px; }
+    #profile-screen .pm-user-rank-tag { display: inline-flex; margin-top: 6px; padding: 2px 8px; font-size: 7px; letter-spacing: 2px; color: var(--red2); border: 1px solid rgba(224, 32, 74, 0.3); background: rgba(224, 32, 74, 0.12); }
+
+    #profile-screen .pm-rank-track { margin-bottom: 12px; }
+    #profile-screen .pm-rank-track-label { font-size: 7px; letter-spacing: 2px; color: rgba(0, 212, 255, 0.35); margin-bottom: 8px; }
+    #profile-screen .pm-rank-nodes { display: flex; align-items: center; position: relative; }
+    #profile-screen .pm-rank-nodes::before { content: ''; position: absolute; top: 9px; left: 0; right: 0; height: 1px; background: rgba(0, 212, 255, 0.08); }
+    #profile-screen .pm-rn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 1; }
+    #profile-screen .pm-rn-dot { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 7px; border: 1px solid rgba(0, 212, 255, 0.15); background: rgba(0, 10, 30, 0.9); color: rgba(168, 216, 232, 0.25); }
+    #profile-screen .pm-rn-dot.active { background: rgba(0, 212, 255, 0.18); border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px rgba(0, 212, 255, 0.5); font-size: 9px; }
+    #profile-screen .pm-rn-dot.final { border-color: rgba(180, 79, 255, 0.2); color: rgba(180, 79, 255, 0.3); }
+    #profile-screen .pm-rn-name { font-size: 5px; color: rgba(168, 216, 232, 0.3); }
+    #profile-screen .pm-rn-name.active { color: var(--cyan); }
+    #profile-screen .pm-rn-name.final { color: rgba(180, 79, 255, 0.4); }
+
+    #profile-screen .pm-xp-row,
+    #profile-screen .pm-prog-hdr,
+    #profile-screen .pm-mc-row {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    #profile-screen .pm-xp-label,
+    #profile-screen .pm-prog-lbl,
+    #profile-screen .pm-mc-key { font-size: 7.5px; letter-spacing: 1.5px; color: rgba(0, 212, 255, 0.45); }
+    #profile-screen .pm-xp-val,
+    #profile-screen .pm-prog-v,
+    #profile-screen .pm-mc-val { font-size: 8px; color: var(--white); }
+    #profile-screen .pm-xp-bar-wrap,
+    #profile-screen .pm-prog-wrap { height: 4px; background: rgba(0, 212, 255, 0.07); overflow: hidden; margin-top: 4px; }
+    #profile-screen .pm-xp-bar,
+    #profile-screen .pm-prog-fill { height: 100%; animation: profile-bar-load 1.2s ease both; }
+    #profile-screen .pm-xp-bar { background: linear-gradient(90deg, var(--cyan), var(--red)); }
+    #profile-screen .pm-prog-fill.c { background: linear-gradient(90deg, rgba(0, 212, 255, 0.3), var(--cyan)); }
+    #profile-screen .pm-prog-fill.r { background: linear-gradient(90deg, rgba(224, 32, 74, 0.3), var(--red2)); }
+    #profile-screen .pm-prog-item { margin-bottom: 12px; }
+    #profile-screen .pm-prog-item:last-child { margin-bottom: 0; }
+
+    #profile-screen .pm-panel-title { font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 3px; color: var(--cyan); text-transform: uppercase; margin-bottom: 8px; }
+    #profile-screen .pm-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    #profile-screen .pm-stat-box { background: rgba(0, 10, 25, 0.8); border: 1px solid rgba(0, 212, 255, 0.1); padding: 8px 6px; text-align: center; }
+    #profile-screen .pm-stat-box.ra { border-left: 2px solid rgba(224, 32, 74, 0.4); }
+    #profile-screen .pm-stat-box.ca { border-left: 2px solid rgba(0, 212, 255, 0.35); }
+    #profile-screen .pm-stat-box.ga { border-left: 2px solid rgba(0, 255, 136, 0.35); }
+    #profile-screen .pm-stat-box.ya { border-left: 2px solid rgba(255, 204, 0, 0.35); }
+    #profile-screen .pm-stat-icon { font-size: 12px; }
+    #profile-screen .pm-stat-val { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: var(--white); line-height: 1.2; }
+    #profile-screen .pm-stat-lbl { font-size: 6px; letter-spacing: 1px; color: rgba(0, 212, 255, 0.4); }
+
+    #profile-screen .pm-credits-row { display: flex; align-items: center; justify-content: space-between; }
+    #profile-screen .pm-coin-row { display: flex; align-items: center; gap: 8px; }
+    #profile-screen .pm-coin { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe066, #cc9900); display: flex; align-items: center; justify-content: center; }
+    #profile-screen .pm-credits-num { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--gold); }
+    #profile-screen .pm-credits-sub { font-size: 7px; letter-spacing: 2px; color: rgba(255, 204, 0, 0.35); }
+    #profile-screen .pm-btn-buy { padding: 9px 14px; border: 1px solid rgba(224, 32, 74, 0.45); background: rgba(224, 32, 74, 0.1); color: var(--red2); font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 2px; }
+
+    #profile-screen .pm-mission-card { padding: 0; }
+    #profile-screen .pm-mc-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid rgba(0, 212, 255, 0.06); }
+    #profile-screen .pm-mc-emoji { font-size: 18px; }
+    #profile-screen .pm-mc-info { flex: 1; }
+    #profile-screen .pm-mc-name { font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px; color: var(--white); }
+    #profile-screen .pm-mc-sub { font-size: 7.5px; color: rgba(168, 216, 232, 0.4); }
+    #profile-screen .pm-mc-status { font-size: 7px; letter-spacing: 1px; padding: 3px 7px; border: 1px solid rgba(0, 212, 255, 0.2); color: var(--cyan); }
+    #profile-screen .pm-mc-status.lock { color: rgba(168, 216, 232, 0.3); border-color: rgba(168, 216, 232, 0.2); }
+    #profile-screen .pm-mc-body { padding: 10px 14px 14px; }
+    #profile-screen .pm-mc-levels { margin: 8px 0 10px; }
+    #profile-screen .pm-level-mini { display: flex; gap: 2px; }
+    #profile-screen .pm-lm { width: 8px; height: 8px; border: 1px solid rgba(0, 212, 255, 0.2); transform: rotate(45deg); }
+    #profile-screen .pm-lm.done { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 4px var(--cyan); }
+    #profile-screen .pm-mc-badges-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    #profile-screen .pm-mc-badge { font-size: 7px; letter-spacing: 1px; padding: 2px 7px; border: 1px solid rgba(0, 212, 255, 0.2); color: rgba(0, 212, 255, 0.5); background: rgba(0, 212, 255, 0.05); }
 }
