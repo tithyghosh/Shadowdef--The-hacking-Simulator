@@ -38,6 +38,7 @@ export class ProfileScreen {
         const missionProgress = Math.max(0, Math.min(100, ((stats.missionsCompleted || 0) / 10) * 100));
         const credits = stats.credits || 0;
         const rank = this.calculateRank(stats);
+        const rankIndex = this.getRankIndex(rank);
         const initials = this.getInitials(user.name || 'User');
         const [firstName, lastName] = this.splitName(user.name || 'User');
 
@@ -64,11 +65,12 @@ export class ProfileScreen {
                                     <div class="ps-user-name">${this.escapeHtml(firstName.toUpperCase())}</div>
                                     <div class="ps-user-name ps-user-name-sub">${this.escapeHtml(lastName.toUpperCase())}</div>
                                     <div class="ps-user-email">${this.escapeHtml(user.email || 'operator@shadowdef.local')}</div>
-                                    <div class="ps-user-rank-badge">&gt; ${this.escapeHtml(rank.toUpperCase())}</div>
+                                    <div class="ps-user-rank-badge">&#9656; ${this.escapeHtml(rank.toUpperCase())}</div>
                                 </div>
                             </div>
+                            ${this.renderRankProgression(rankIndex)}
                             <div class="ps-rank-row">
-                                <div class="ps-rank-label"><span>RANK PROGRESS</span><span>LVL ${level}</span></div>
+                                <div class="ps-rank-label"><span>XP PROGRESS</span><span>LVL ${level}</span></div>
                                 <div class="ps-rank-bar-wrap"><div class="ps-rank-bar" style="width:${levelProgress.toFixed(1)}%"></div></div>
                             </div>
                         </div>
@@ -112,7 +114,7 @@ export class ProfileScreen {
                             <div class="ps-credits-row">
                                 <div>
                                     <div class="ps-credits-coin-row">
-                                        <div class="ps-coin-icon">$</div>
+                                        <div class="ps-coin-icon">&#128176;</div>
                                         <div>
                                             <div class="ps-credits-num">${credits}</div>
                                             <div class="ps-credits-sub">CREDITS</div>
@@ -135,7 +137,7 @@ export class ProfileScreen {
 
                     <div class="profile-main-grid">
                         <div class="profile-mpanel wide">
-                            <div class="profile-mpanel-title">Badge Unlock Roadmap - Complete Levels to Earn Badges</div>
+                            <div class="profile-mpanel-title">Badge Unlock Roadmap — Complete Levels to Earn Badges</div>
                             <div class="profile-mpanel-body">
                                 ${this.renderMissionRoadmap()}
                             </div>
@@ -202,9 +204,32 @@ export class ProfileScreen {
     renderMissionRoadmap() {
         return `
             <div class="ps-mission-roadmap">
-                ${this.renderMissionRoadmapBlock('MISSION 1 - PASSWORD CRACKING', '&#128273;', 'c', '&#9889;', '&#127942;', 'CIPHER BREAKER', 'FIRST BREACH')}
-                ${this.renderMissionRoadmapBlock('MISSION 2 - MALWARE DETECTION', '&#129440;', 'r', '&#128293;', '&#9760;', 'PHANTOM STRIKE', 'DARK NET LEGEND')}
-                ${this.renderMissionRoadmapBlock('MISSION 3 - NETWORK & PHISHING', '&#127760;', 'g', '&#128737;', '&#128081;', 'GHOST PROTOCOL', 'SHADOW MASTER')}
+                ${this.renderMissionRoadmapBlock('MISSION 1 — PASSWORD CRACKING', '&#128273;', 'c', '&#9889;', '&#127942;', 'CIPHER BREAKER', 'FIRST BREACH')}
+                ${this.renderMissionRoadmapBlock('MISSION 2 — MALWARE DETECTION', '&#129440;', 'r', '&#128293;', '&#9760;', 'PHANTOM STRIKE', 'DARK NET LEGEND')}
+                ${this.renderMissionRoadmapBlock('MISSION 3 — NETWORK & PHISHING', '&#127760;', 'g', '&#128737;', '&#128081;', 'GHOST PROTOCOL', 'SHADOW MASTER')}
+            </div>
+        `;
+    }
+
+    renderRankProgression(currentRankIndex) {
+        const ranks = ['ROOKIE', 'AGENT', 'OPERATIVE', 'SPECIALIST', 'ELITE', 'SHADOW MASTER'];
+        const nodes = ranks.map((rank, idx) => {
+            const completed = idx <= currentRankIndex;
+            const isFinal = idx === ranks.length - 1;
+            const stepText = completed ? '&#10003;' : (isFinal ? '&#128081;' : String(idx + 1));
+            const toneClass = rank.toLowerCase().replace(/\s+/g, '-');
+            return `
+                <div class="ps-rank-step">
+                    <div class="ps-rank-node ${toneClass} ${completed ? 'done' : ''} ${isFinal ? 'final' : ''}">${stepText}</div>
+                    <span class="ps-rank-step-label ${toneClass} ${completed ? 'done' : ''} ${isFinal ? 'final' : ''}">${rank}</span>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="ps-rank-track">
+                <div class="ps-rank-track-title">RANK PROGRESSION</div>
+                <div class="ps-rank-track-steps">${nodes}</div>
             </div>
         `;
     }
@@ -249,10 +274,10 @@ export class ProfileScreen {
                     <div class="ps-mission-block-title-line ${colorKey}"></div>
                 </div>
                 <div class="ps-level-steps">${nodes}</div>
-                <div class="ps-roadmap-footnote">
+                <div class="ps-roadmap-footnote ${colorKey}">
                     <div>Levels 1-4: No reward</div>
-                    <div>${lvl5Icon} LV5 - ${lvl5Name} Badge</div>
-                    <div>${lvl10Icon} LV10 - ${lvl10Name} Badge</div>
+                    <div>${lvl5Icon} LV5 &#8594; <span>${lvl5Name}</span> Badge</div>
+                    <div>${lvl10Icon} LV10 &#8594; <span>${lvl10Name}</span> Badge</div>
                 </div>
             </div>
         `;
@@ -286,14 +311,15 @@ export class ProfileScreen {
     }
 
     renderMissionLogRow(name, completed, bestScore, statusClass, statusText) {
+        const statusPrefix = statusClass === 'lock' ? '&#128274;' : '&#9656;';
         return `
             <tr>
                 <td>${this.escapeHtml(name)}</td>
                 <td>10 Levels</td>
                 <td>${this.renderLevelMini(completed, 10)}</td>
-                <td>${bestScore > 0 ? this.formatNumber(bestScore) : '-'}</td>
+                <td>${bestScore > 0 ? this.formatNumber(bestScore) : '&#8212;'}</td>
                 <td style="color: rgba(168,216,232,0.3)">${completed >= 5 ? 1 : 0} / 2</td>
-                <td><span class="ps-m-status ${statusClass}">&gt; ${statusText}</span></td>
+                <td><span class="ps-m-status ${statusClass}">${statusPrefix} ${statusText}</span></td>
             </tr>
         `;
     }
@@ -474,6 +500,10 @@ export class ProfileScreen {
      * Setup profile-specific listeners
      */
     setupProfileListeners() {
+        document.querySelector('[data-action="back"]')?.addEventListener('click', () => {
+            this.game.screens.showScreen('main-menu');
+        });
+
         // Edit profile
         document.getElementById('edit-profile')?.addEventListener('click', () => {
             this.showEditProfileModal();
@@ -698,8 +728,15 @@ export class ProfileScreen {
         const score = stats.totalScore || 0;
         if (score < 1000) return 'Rookie';
         if (score < 5000) return 'Agent';
-        if (score < 15000) return 'Expert';
+        if (score < 15000) return 'Operative';
+        if (score < 30000) return 'Specialist';
         if (score < 50000) return 'Elite';
-        return 'Legend';
+        return 'Shadow Master';
+    }
+
+    getRankIndex(rank) {
+        const order = ['Rookie', 'Agent', 'Operative', 'Specialist', 'Elite', 'Shadow Master'];
+        const idx = order.findIndex((item) => item.toLowerCase() === String(rank).toLowerCase());
+        return idx >= 0 ? idx : 0;
     }
 }

@@ -1973,6 +1973,7 @@
     background: var(--panel);
     border: 1px solid var(--border);
     position: relative;
+    flex-shrink: 0;
     overflow: hidden;
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
@@ -2140,6 +2141,128 @@
     color: var(--red2);
     clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
     margin-top: 5px;
+}
+
+#profile-screen .ps-rank-track {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#profile-screen .ps-rank-track-title {
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: rgba(0, 212, 255, 0.4);
+    margin-bottom: 7px;
+}
+
+#profile-screen .ps-rank-track-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+}
+
+#profile-screen .ps-rank-track-steps::before {
+    content: '';
+    position: absolute;
+    top: 9px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 212, 255, 0.08);
+    z-index: 0;
+}
+
+#profile-screen .ps-rank-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    z-index: 1;
+}
+
+#profile-screen .ps-rank-node {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0, 10, 30, 0.9);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    color: rgba(168, 216, 232, 0.3);
+}
+
+#profile-screen .ps-rank-node.done {
+    background: rgba(0, 212, 255, 0.2);
+    border: 2px solid var(--cyan);
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+    color: var(--cyan);
+    font-size: 8px;
+}
+
+#profile-screen .ps-rank-node.final {
+    border-color: rgba(180, 79, 255, 0.15);
+    color: rgba(180, 79, 255, 0.2);
+    font-size: 9px;
+}
+
+#profile-screen .ps-rank-node.done.final {
+    border-color: rgba(180, 79, 255, 0.45);
+    box-shadow: 0 0 8px rgba(180, 79, 255, 0.35);
+    color: #d8acff;
+}
+
+#profile-screen .ps-rank-node.operative {
+    border-color: rgba(0, 212, 255, 0.15);
+    color: rgba(168, 216, 232, 0.3);
+}
+
+#profile-screen .ps-rank-node.specialist {
+    border-color: rgba(0, 212, 255, 0.12);
+    color: rgba(168, 216, 232, 0.2);
+}
+
+#profile-screen .ps-rank-node.elite {
+    border-color: rgba(255, 204, 0, 0.15);
+    color: rgba(255, 204, 0, 0.2);
+}
+
+#profile-screen .ps-rank-step-label {
+    font-size: 5.5px;
+    letter-spacing: 0.5px;
+    color: rgba(168, 216, 232, 0.25);
+    text-transform: uppercase;
+}
+
+#profile-screen .ps-rank-step-label.done {
+    color: var(--cyan);
+}
+
+#profile-screen .ps-rank-step-label.final {
+    color: rgba(180, 79, 255, 0.25);
+}
+
+#profile-screen .ps-rank-step-label.done.final {
+    color: #d8acff;
+}
+
+#profile-screen .ps-rank-step-label.agent {
+    color: rgba(168, 216, 232, 0.3);
+}
+
+#profile-screen .ps-rank-step-label.operative {
+    color: rgba(168, 216, 232, 0.25);
+}
+
+#profile-screen .ps-rank-step-label.specialist {
+    color: rgba(168, 216, 232, 0.2);
+}
+
+#profile-screen .ps-rank-step-label.elite {
+    color: rgba(255, 204, 0, 0.25);
 }
 
 #profile-screen .ps-rank-row {
@@ -2394,6 +2517,21 @@
     text-transform: uppercase;
     clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
     transition: all 0.2s;
+    overflow: hidden;
+    position: relative;
+}
+
+#profile-screen .ps-btn-buy::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(224, 32, 74, 0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.35s;
+}
+
+#profile-screen .ps-btn-buy:hover::before {
+    transform: translateX(100%);
 }
 
 #profile-screen .ps-btn-buy:hover {
@@ -2434,7 +2572,7 @@
 }
 
 #profile-screen .profile-back-btn::before {
-    content: '<';
+    content: '◂';
 }
 
 #profile-screen .profile-title-row {
@@ -2630,6 +2768,58 @@
     font-size: 7px;
     letter-spacing: 1px;
     color: rgba(168, 216, 232, 0.35);
+}
+
+#profile-screen .ps-roadmap-footnote span {
+    color: currentColor;
+}
+
+#profile-screen .ps-roadmap-footnote.c {
+    color: rgba(0, 212, 255, 0.55);
+}
+
+#profile-screen .ps-roadmap-footnote.c div:first-child {
+    color: rgba(0, 212, 255, 0.35);
+}
+
+#profile-screen .ps-roadmap-footnote.c div:last-child {
+    color: rgba(255, 204, 0, 0.6);
+}
+
+#profile-screen .ps-roadmap-footnote.c div:last-child span {
+    color: var(--gold);
+}
+
+#profile-screen .ps-roadmap-footnote.r {
+    color: rgba(224, 32, 74, 0.6);
+}
+
+#profile-screen .ps-roadmap-footnote.r div:first-child {
+    color: rgba(168, 216, 232, 0.3);
+}
+
+#profile-screen .ps-roadmap-footnote.r div:last-child {
+    color: rgba(180, 79, 255, 0.6);
+}
+
+#profile-screen .ps-roadmap-footnote.r div:last-child span {
+    color: var(--purple);
+}
+
+#profile-screen .ps-roadmap-footnote.g {
+    color: rgba(0, 255, 136, 0.6);
+}
+
+#profile-screen .ps-roadmap-footnote.g div:first-child {
+    color: rgba(168, 216, 232, 0.3);
+}
+
+#profile-screen .ps-roadmap-footnote.g div:last-child {
+    color: rgba(180, 210, 230, 0.6);
+}
+
+#profile-screen .ps-roadmap-footnote.g div:last-child span {
+    color: #aaccdd;
 }
 
 #profile-screen .ps-mission-table {
