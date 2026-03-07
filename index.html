@@ -550,11 +550,7 @@
                             break;
                         case 'login':
                             if (authManager.isUserAuthenticated()) {
-                                ui.showConfirm(
-                                    'Logout Confirmation',
-                                    'Are you sure you want to logout?',
-                                    async () => await authManager.logout()
-                                );
+                                ui.showLogoutConfirm(async () => await authManager.logout());
                             } else {
                                 game.screens.showScreen('login-screen');
                                 loginScreen.render();

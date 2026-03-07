@@ -897,14 +897,10 @@ export class ProfileScreen {
      * Handle logout
      */
     handleLogout() {
-        this.ui.showConfirm(
-            'Logout Confirmation',
-            'Are you sure you want to logout? Your progress will be saved.',
-            async () => {
-                await this.auth.logout();
-                this.ui.showNotification('Logged out successfully', 'success');
-            }
-        );
+        this.ui.showLogoutConfirm(async () => {
+            await this.auth.logout();
+            this.ui.showNotification('Logged out successfully', 'success');
+        });
     }
 
     /**
