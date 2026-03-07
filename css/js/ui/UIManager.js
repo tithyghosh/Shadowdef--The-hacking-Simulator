@@ -242,6 +242,89 @@ export class UIManager {
     }
 
     /**
+     * Show styled logout confirmation modal
+     * @param {Function} onConfirm - Confirm callback
+     * @param {Function} onCancel - Cancel callback
+     */
+    showLogoutConfirm(onConfirm, onCancel) {
+        if (this.activeModal) {
+            this.closeModal();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'logout-overlay active';
+        overlay.innerHTML = `
+            <div class="logout-modal">
+                <button class="logout-close-btn" type="button" aria-label="Close">&#10005;</button>
+
+                <div class="logout-icon-wrap">
+                    <div class="logout-icon-circle">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff3366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="logout-title">LOGOUT</div>
+                <div class="logout-sub">SESSION TERMINATION</div>
+                <div class="logout-divider"></div>
+                <div class="logout-msg">Are you sure you want to logout?</div>
+
+                <div class="logout-btn-row">
+                    <button class="logout-btn logout-btn-confirm" type="button">CONFIRM</button>
+                    <button class="logout-btn logout-btn-cancel" type="button">CANCEL</button>
+                </div>
+            </div>
+        `;
+
+        this.modalContainer.appendChild(overlay);
+        this.activeModal = overlay;
+        this.audio.playButtonClick();
+
+        const closeModal = (invokeCancel = true) => {
+            const modal = overlay.querySelector('.logout-modal');
+            if (!modal) return;
+
+            modal.style.transition = 'all 0.2s ease';
+            modal.style.opacity = '0';
+            modal.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+                overlay.style.transition = 'opacity 0.2s ease';
+                overlay.style.opacity = '0';
+            }, 60);
+            setTimeout(() => {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (this.activeModal === overlay) this.activeModal = null;
+                if (invokeCancel && onCancel) onCancel();
+            }, 280);
+        };
+
+        overlay.querySelector('.logout-close-btn')?.addEventListener('click', () => closeModal(true));
+        overlay.querySelector('.logout-btn-cancel')?.addEventListener('click', () => closeModal(true));
+
+        overlay.querySelector('.logout-btn-confirm')?.addEventListener('click', async (e) => {
+            const confirmBtn = e.currentTarget;
+            confirmBtn.textContent = 'LOGGING OUT...';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+
+            try {
+                if (onConfirm) await onConfirm();
+            } finally {
+                setTimeout(() => closeModal(false), 900);
+            }
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeModal(true);
+            }
+        });
+    }
+
+    /**
      * Show loading spinner
      * @param {string} message - Loading message
      * @returns {HTMLElement} Loading element

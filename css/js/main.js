@@ -326,13 +326,9 @@ function handleAction(action, event) {
             syncLoginLogoutButtonState();
             if (authManager.isUserAuthenticated()) {
                 // User is logged in, show logout confirmation
-                game.ui.showConfirm(
-                    'Logout Confirmation',
-                    'Are you sure you want to logout? Your progress will be saved.',
-                    async () => {
-                        await authManager.logout();
-                    }
-                );
+                game.ui.showLogoutConfirm(async () => {
+                    await authManager.logout();
+                });
             } else {
                 // User not logged in, show login screen
                 game.screens.showScreen('login-screen');
