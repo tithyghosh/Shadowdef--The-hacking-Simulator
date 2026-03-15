@@ -486,6 +486,7 @@
                 const { Game } = await import('./css/js/core/Game.js');
                 const { AuthManager } = await import('./css/js/core/AuthManager.js');
                 const { UIManager } = await import('./css/js/ui/UIManager.js');
+                const { updateMainMenuAuthState } = await import('./css/js/ui/MainMenuAuthState.js');
                 const { AudioManager } = await import('./css/js/core/AudioManager.js');
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
@@ -505,6 +506,14 @@
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+
+                function updateMainMenuStatus() {
+                    const isAuthenticated = authManager.isUserAuthenticated() || !!authManager.getCurrentUser();
+                    const user = authManager.getCurrentUser();
+                    updateMainMenuAuthState({ isAuthenticated, user });
+                }
+
+                window.updateMainMenuStatus = updateMainMenuStatus;
                 
                 // Setup event listeners
                 document.addEventListener('click', (e) => {
@@ -560,6 +569,18 @@
                             console.warn('Unknown action:', action);
                     }
                 }
+
+                document.addEventListener('shadowdef:auth:login', () => {
+                    setTimeout(updateMainMenuStatus, 0);
+                    setTimeout(updateMainMenuStatus, 150);
+                    setTimeout(updateMainMenuStatus, 500);
+                });
+
+                document.addEventListener('shadowdef:auth:logout', () => {
+                    setTimeout(updateMainMenuStatus, 0);
+                });
+
+                updateMainMenuStatus();
                 
                 // Handle category selection
                 document.addEventListener('click', (e) => {
