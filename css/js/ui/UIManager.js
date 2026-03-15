@@ -171,6 +171,76 @@ export class UIManager {
     }
 
     /**
+     * Show the login/register success toast
+     * @param {string} name - Authenticated player name
+     * @param {number} duration - Duration in ms
+     * @returns {HTMLElement} Notification element
+     */
+    showAccessToast(name, options = {}) {
+        const {
+            duration = 4500,
+            tag = 'ACCESS GRANTED',
+            prefix = 'Welcome back,'
+        } = options;
+        const safeName = this.escapeHTML(name || 'Agent');
+        const safeTag = this.escapeHTML(tag);
+        const safePrefix = this.escapeHTML(prefix);
+        const notification = document.createElement('div');
+        notification.className = 'toast toast-auth success';
+        notification.dataset.toastPlacement = 'top-center';
+        notification.innerHTML = `
+            <div class="toast-card">
+                <div class="toast-accent" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <div class="toast-body">
+                    <div class="toast-tag">${safeTag}</div>
+                    <div class="toast-msg">${safePrefix} <span class="toast-name">${safeName}!</span></div>
+                </div>
+                <button class="toast-close" type="button" aria-label="Dismiss notification">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        notification.querySelector('.toast-close')?.addEventListener('click', () => {
+            this.removeNotification(notification);
+        });
+
+        document.body.appendChild(notification);
+        this.notifications.push(notification);
+        this.repositionNotifications();
+        this.audio.playSuccess();
+
+        if (duration > 0) {
+            setTimeout(() => {
+                this.removeNotification(notification);
+            }, duration);
+        }
+
+        return notification;
+    }
+
+    /**
+     * Escape HTML entities for safe inline rendering
+     * @param {string} value - Raw text
+     * @returns {string} Escaped text
+     */
+    escapeHTML(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    /**
      * Get icon for notification type
      * @param {string} type - Notification type
      * @returns {string} Icon character
@@ -190,7 +260,14 @@ export class UIManager {
      * @param {HTMLElement} notification - Notification to remove
      */
     removeNotification(notification) {
-        notification.style.animation = 'slideOutRight 0.3s ease';
+        if (!notification || notification.dataset.removing === 'true') {
+            return;
+        }
+
+        notification.dataset.removing = 'true';
+        notification.style.animation = notification.dataset.toastPlacement === 'top-center'
+            ? 'toastFadeOut 0.25s ease forwards'
+            : 'slideOutRight 0.3s ease';
         
         setTimeout(() => {
             if (notification.parentNode) {
@@ -205,8 +282,20 @@ export class UIManager {
      * Reposition all notifications
      */
     repositionNotifications() {
-        this.notifications.forEach((notification, index) => {
-            notification.style.bottom = `${30 + (index * 80)}px`;
+        let bottomRightIndex = 0;
+        let topCenterIndex = 0;
+
+        this.notifications.forEach((notification) => {
+            if (notification.dataset.toastPlacement === 'top-center') {
+                notification.style.top = `${28 + (topCenterIndex * 108)}px`;
+                notification.style.bottom = 'auto';
+                topCenterIndex += 1;
+                return;
+            }
+
+            notification.style.bottom = `${30 + (bottomRightIndex * 80)}px`;
+            notification.style.top = 'auto';
+            bottomRightIndex += 1;
         });
     }
 

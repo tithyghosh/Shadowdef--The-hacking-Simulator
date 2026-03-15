@@ -337,7 +337,7 @@ export class LoginScreen {
             }
 
             if (userData && userData.name) {
-                this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+                this.ui.showAccessToast(userData.name);
             } else {
                 this.ui.showNotification('Welcome! Login successful.', 'success');
             }
@@ -366,7 +366,7 @@ export class LoginScreen {
             this.showLoading('Signing in...');
 
             const userData = await this.auth.loginWithEmail(email, password, rememberMe);
-            this.ui.showNotification(`Welcome back, ${userData.name}!`, 'success');
+            this.ui.showAccessToast(userData.name);
 
         } catch (error) {
             console.error('Email login failed:', error);
@@ -405,7 +405,10 @@ export class LoginScreen {
             this.showLoading('Creating account...');
 
             const userData = await this.auth.registerWithEmail(name, email, password);
-            this.ui.showNotification(`Welcome to SHADOWDEF, ${userData.name}!`, 'success');
+            this.ui.showAccessToast(userData.name, {
+                tag: 'ACCOUNT CREATED',
+                prefix: 'Welcome to SHADOWDEF,'
+            });
 
         } catch (error) {
             console.error('Email registration failed:', error);
@@ -698,4 +701,3 @@ export class LoginScreen {
         }
     }
 }
-
