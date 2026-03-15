@@ -331,8 +331,6 @@ export class LoginScreen {
      */
     async handleSocialLogin(provider) {
         try {
-            this.showLoading(`Connecting to ${provider}...`);
-
             let userData;
             if (provider === 'google') {
                 userData = await this.auth.loginWithGoogle();
@@ -348,8 +346,6 @@ export class LoginScreen {
             console.error(`${provider} login failed:`, error);
             const errorMessage = error.message || `${provider} login failed. Please try again.`;
             this.ui.showNotification(errorMessage, 'error');
-        } finally {
-            this.hideLoading();
         }
     }
 
@@ -702,5 +698,4 @@ export class LoginScreen {
         }
     }
 }
-
 
