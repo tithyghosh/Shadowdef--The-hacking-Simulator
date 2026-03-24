@@ -93,20 +93,6 @@
                 <div class="menu-category">
                     <h3 class="category-title">Player Hub</h3>
                     <div class="menu-cards">
-                        <button class="menu-card login-card nav-icon" id="login-logout-btn" data-action="login" data-tooltip="Login Module" aria-label="Login">
-                            <div class="card-icon" aria-hidden="true">
-                                <svg class="icon-svg" viewBox="0 0 24 24">
-                                    <path d="M14 4h7v16h-7"></path>
-                                    <path d="M3 12h10"></path>
-                                    <path d="m9 8 4 4-4 4"></path>
-                                </svg>
-                            </div>
-                            <div class="card-content">
-                                <div class="card-title">LOGIN</div>
-                                <div class="card-subtitle">Terminal access / operator auth</div>
-                            </div>
-                        </button>
-
                         <button class="menu-card profile-card nav-icon" data-action="profile" data-tooltip="Profile Module">
                             <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><circle cx="12" cy="10" r="2.5"></circle><path d="M8.5 16c.9-1.5 2-2.2 3.5-2.2s2.6.7 3.5 2.2"></path></svg></div>
                             <div class="card-content">
@@ -135,15 +121,6 @@
                             <div class="card-content">
                                 <div class="card-title">SETTINGS</div>
                                 <div class="card-subtitle">Configure core system parameters</div>
-                            </div>
-                        </button>
-
-                        <button class="menu-card credits-card nav-icon" data-action="credits-store" data-tooltip="Credits Module">
-                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><path d="M12 8v8"></path><path d="M9.5 10.2c.6-.8 1.4-1.2 2.5-1.2 1.4 0 2.5.8 2.5 1.9 0 1-.8 1.6-2.3 2l-.4.1c-1.7.5-2.4 1.1-2.4 2.2 0 1.2 1.1 2 2.7 2 1.1 0 2-.4 2.6-1.2"></path><path d="M5 5l1.2 1.2"></path><path d="M19 5l-1.2 1.2"></path></svg></div>
-                            <div class="card-content">
-                                <div class="card-title">CREDITS</div>
-                                <div class="card-subtitle">Economy ledger and rewards</div>
-                                <div class="card-credits" id="credits-display">1000 Credits</div>
                             </div>
                         </button>
 
@@ -407,6 +384,12 @@
                             setTimeout(() => {
                                 mainMenu.style.opacity = '1';
                             }, 50);
+
+                            if (window.game?.screens) {
+                                window.game.screens.onScreenShow('main-menu');
+                            } else if (window.AudioManager?.getInstance) {
+                                window.AudioManager.getInstance().playMusic('menu');
+                            }
                             
                             console.log('???? Main menu displayed');
                         }, 1000);
@@ -506,6 +489,7 @@
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
                     const isAuthenticated = authManager.isUserAuthenticated() || !!authManager.getCurrentUser();
@@ -548,9 +532,6 @@
                             game.screens.showScreen('profile-screen');
                             profileScreen.render();
                             break;
-                        case 'credits-store':
-                            showCreditsStore();
-                            break;
                         case 'settings':
                             game.showSettings();
                             break;
@@ -581,6 +562,10 @@
                 });
 
                 updateMainMenuStatus();
+
+                if (document.getElementById('main-menu')?.classList.contains('active')) {
+                    game.screens.onScreenShow('main-menu');
+                }
                 
                 // Handle category selection
                 document.addEventListener('click', (e) => {
@@ -590,46 +575,6 @@
                         game.showCategoryMissions(category);
                     }
                 });
-                
-                function showCreditsStore() {
-                    const user = authManager.getCurrentUser();
-                    const credits = user?.gameStats?.credits || 0;
-                    
-                    ui.showModal('Gaming Credits', `
-                        <div class="credits-store">
-                            <div class="current-credits">
-                                <div class="credits-display-large">
-                                    <span class="credits-icon">ðŸ’°</span>
-                                    <span class="credits-amount">${credits}</span>
-                                    <span class="credits-label">Credits</span>
-                                </div>
-                            </div>
-                            <div class="credits-info">
-                                <h3>How to Earn Credits:</h3>
-                                <div class="earning-methods">
-                                    <div class="earning-method">
-                                        <span class="method-icon">ðŸŽ¯</span>
-                                        <span class="method-text">Complete missions</span>
-                                        <span class="method-reward">+100-500</span>
-                                    </div>
-                                    <div class="earning-method">
-                                        <span class="method-icon">ðŸ†</span>
-                                        <span class="method-text">Unlock achievements</span>
-                                        <span class="method-reward">+200-1000</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `, {
-                        buttons: [{
-                            text: 'START EARNING',
-                            class: 'btn-primary',
-                            onClick: () => game.showMissionSelect()
-                            }],
-                        panel: true,
-                        panelPosition: 'right'
-                    });
-                }
                 
                 console.log('âœ… Game systems loaded successfully');
                 

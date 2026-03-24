@@ -45,17 +45,22 @@ export class UIManager {
             closable = true,
             width = 'auto',
             panel = false,
-            panelPosition = 'right'
+            panelPosition = 'right',
+            modalClass = '',
+            contentClass = ''
         } = options;
 
         // Create modal HTML
         const modal = document.createElement('div');
         modal.className = 'modal active';
+        if (modalClass) {
+            modal.classList.add(...modalClass.split(' ').filter(Boolean));
+        }
         if (panel) {
             modal.classList.add('modal-panel', `modal-panel-${panelPosition}`);
         }
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: ${width}">
+            <div class="modal-content ${contentClass}" style="max-width: ${width}">
                 ${closable ? '<button class="modal-close" onclick="game.ui.closeModal()">✕</button>' : ''}
                 <div class="modal-title ${type}">${title}</div>
                 <div class="modal-body">
@@ -111,13 +116,16 @@ export class UIManager {
     closeModal() {
         if (!this.activeModal) return;
 
-        this.activeModal.classList.remove('active');
+        const modalToClose = this.activeModal;
+        modalToClose.classList.remove('active');
         
         setTimeout(() => {
-            if (this.activeModal && this.activeModal.parentNode) {
-                this.activeModal.parentNode.removeChild(this.activeModal);
+            if (modalToClose && modalToClose.parentNode) {
+                modalToClose.parentNode.removeChild(modalToClose);
             }
-            this.activeModal = null;
+            if (this.activeModal === modalToClose) {
+                this.activeModal = null;
+            }
         }, CONFIG.UI.MODAL_CLOSE_DELAY);
 
         this.audio.playButtonClick();

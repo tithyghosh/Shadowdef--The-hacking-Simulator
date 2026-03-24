@@ -24,7 +24,6 @@ export function updateMainMenuAuthState({ isAuthenticated = false, user = null }
     const loginLogoutBtn = document.getElementById('login-logout-btn');
     const profileBtn = document.querySelector('[data-action="profile"]');
     const profileStats = document.getElementById('profile-stats');
-    const creditsDisplay = document.getElementById('credits-display');
     const missionProgress = document.getElementById('mission-progress');
 
     if (loginLogoutBtn) {
@@ -58,9 +57,6 @@ export function updateMainMenuAuthState({ isAuthenticated = false, user = null }
         if (profileStats) {
             profileStats.textContent = `Level ${stats.level || 1} - ${stats.credits || 0} Credits`;
         }
-        if (creditsDisplay) {
-            creditsDisplay.textContent = `${stats.credits || 0} Credits`;
-        }
         if (missionProgress) {
             missionProgress.textContent = `${stats.missionsCompleted || 0}/20 Completed`;
         }
@@ -68,6 +64,5 @@ export function updateMainMenuAuthState({ isAuthenticated = false, user = null }
     }
 
     if (profileStats) profileStats.textContent = 'Login to view profile';
-    if (creditsDisplay) creditsDisplay.textContent = '0 Credits';
     if (missionProgress) missionProgress.textContent = '0/20 Completed';
 }
