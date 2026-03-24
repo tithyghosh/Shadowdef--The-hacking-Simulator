@@ -454,90 +454,247 @@ export class Game {
      * Show settings
      */
     showSettings() {
-        const settings = this.audio.getSettings();
-        
+        const audioSettings = this.audio.getSettings();
+        const storedSettings = this.state.loadSettings();
+        const settings = {
+            musicEnabled: audioSettings.musicEnabled,
+            sfxEnabled: audioSettings.sfxEnabled,
+            musicVolume: Math.round(audioSettings.musicVolume * 100),
+            sfxVolume: Math.round(audioSettings.sfxVolume * 100),
+            timerEnabled: storedSettings.timerEnabled !== false,
+            showHints: storedSettings.showHints !== false
+        };
+
         this.ui.showModal('Settings', `
-            <div class="settings-panel">
-                <h3>Audio Controls</h3>
-                
-                <div class="audio-control">
-                    <label>
-                        <input type="checkbox" id="music-toggle" ${settings.musicEnabled ? 'checked' : ''}>
-                        Enable Music
-                    </label>
-                </div>
-                
-                <div class="audio-control">
-                    <label for="music-volume">Music Volume:</label>
-                    <div class="volume-control">
-                        <input type="range" id="music-volume" min="0" max="100" 
-                               value="${Math.round(settings.musicVolume * 100)}" 
-                               ${!settings.musicEnabled ? 'disabled' : ''}>
-                        <span id="music-volume-display">${Math.round(settings.musicVolume * 100)}%</span>
+            <div class="settings-shell">
+                <div class="settings-nav">
+                    <div class="settings-brand">
+                        <div class="settings-brand-title">SHADOWDEF</div>
+                        <div class="settings-brand-sub">SETTINGS</div>
+                    </div>
+
+                    <div class="settings-nav-items">
+                        <button class="settings-nav-item active" type="button" data-settings-page="audio">
+                            <span class="settings-nav-icon">🔊</span>
+                            <span>AUDIO</span>
+                        </button>
+                        <button class="settings-nav-item" type="button" data-settings-page="gameplay">
+                            <span class="settings-nav-icon">🎮</span>
+                            <span>GAMEPLAY</span>
+                        </button>
+                    </div>
+
+                    <div class="settings-status">
+                        <span class="settings-status-dot"></span>
+                        <span>SYSTEM ONLINE</span>
                     </div>
                 </div>
-                
-                <div class="audio-control">
-                    <label>
-                        <input type="checkbox" id="sfx-toggle" ${settings.sfxEnabled ? 'checked' : ''}>
-                        Enable Sound Effects
-                    </label>
-                </div>
-                
-                <div class="audio-control">
-                    <label for="sfx-volume">SFX Volume:</label>
-                    <div class="volume-control">
-                        <input type="range" id="sfx-volume" min="0" max="100" 
-                               value="${Math.round(settings.sfxVolume * 100)}"
-                               ${!settings.sfxEnabled ? 'disabled' : ''}>
-                        <span id="sfx-volume-display">${Math.round(settings.sfxVolume * 100)}%</span>
+
+                <div class="settings-main">
+                    <div class="settings-head">
+                        <div class="settings-head-copy">
+                            <span class="settings-head-icon" id="settings-page-icon">🔊</span>
+                            <span class="settings-head-title" id="settings-page-title">AUDIO CONTROLS</span>
+                            <span class="settings-head-line"></span>
+                        </div>
+                        <button class="settings-close" type="button" id="settings-close-btn" aria-label="Close settings">✕</button>
+                    </div>
+
+                    <div class="settings-pages">
+                        <div class="settings-page active" id="settings-page-audio">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Enable Music</div>
+                                    <div class="settings-card-subtitle">Background music during gameplay</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="music-toggle" ${settings.musicEnabled ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-slider-row">
+                                    <div class="settings-slider-top">
+                                        <span class="settings-card-title">Music Volume</span>
+                                        <span class="settings-slider-value" id="music-volume-display">${settings.musicVolume}%</span>
+                                    </div>
+                                    <div class="settings-slider-track">
+                                        <div class="settings-slider-fill" id="music-volume-fill" style="width:${settings.musicVolume}%"></div>
+                                        <input type="range" id="music-volume" min="0" max="100"
+                                               value="${settings.musicVolume}"
+                                               ${!settings.musicEnabled ? 'disabled' : ''}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Enable Sound Effects</div>
+                                    <div class="settings-card-subtitle">In-game SFX and alert sounds</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="sfx-toggle" ${settings.sfxEnabled ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-slider-row settings-slider-row-danger">
+                                    <div class="settings-slider-top">
+                                        <span class="settings-card-title">SFX Volume</span>
+                                        <span class="settings-slider-value settings-slider-value-danger" id="sfx-volume-display">${settings.sfxVolume}%</span>
+                                    </div>
+                                    <div class="settings-slider-track">
+                                        <div class="settings-slider-fill settings-slider-fill-danger" id="sfx-volume-fill" style="width:${settings.sfxVolume}%"></div>
+                                        <input type="range" id="sfx-volume" class="settings-range-danger" min="0" max="100"
+                                               value="${settings.sfxVolume}"
+                                               ${!settings.sfxEnabled ? 'disabled' : ''}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-audio-actions">
+                                <button class="settings-action settings-action-play" type="button" id="music-pause-btn"
+                                        ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
+                                    ▶ ${this.audio.currentAudioElement && !this.audio.currentAudioElement.paused ? 'PAUSE' : 'RESUME'}
+                                </button>
+                                <button class="settings-action settings-action-stop" type="button" id="music-stop-btn"
+                                        ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
+                                    ■ STOP
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="settings-page" id="settings-page-gameplay">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Timer</div>
+                                    <div class="settings-card-subtitle">Countdown clock on each level</div>
+                                </div>
+                                <div class="settings-select">
+                                    <select id="timer-setting">
+                                        <option value="on" ${settings.timerEnabled ? 'selected' : ''}>ENABLED</option>
+                                        <option value="off" ${!settings.timerEnabled ? 'selected' : ''}>DISABLED</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Show Hints</div>
+                                    <div class="settings-card-subtitle">Display clues when player is stuck</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="hints-toggle" ${settings.showHints ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer">
+                        <button class="settings-save-btn" type="button" id="settings-save-btn">SAVE & CLOSE</button>
+                        <button class="settings-discard-btn" type="button" id="settings-discard-btn">DISCARD</button>
                     </div>
                 </div>
-                
-                <div class="music-controls">
-                    <button class="btn btn-small" id="music-pause-btn" 
-                            ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
-                        ${this.audio.currentAudioElement && !this.audio.currentAudioElement.paused ? 'PAUSE' : 'RESUME'}
-                    </button>
-                    <button class="btn btn-small" id="music-stop-btn"
-                            ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
-                        STOP
-                    </button>
-                </div>
-                
-                <div class="divider"></div>
-                
-                <h3>Gameplay</h3>
-                <label>
-                    Timer:
-                    <select id="timer-setting">
-                        <option value="on">Enabled</option>
-                        <option value="off">Disabled</option>
-                    </select>
-                </label>
-                
-                <div class="divider"></div>
-                
-                <button class="btn btn-primary" onclick="game.ui.closeModal()">SAVE & CLOSE</button>
             </div>
-        `, { panel: true, panelPosition: 'right' });
+        `, {
+            closable: false,
+            width: 'min(1220px, 94vw)',
+            modalClass: 'settings-modal',
+            contentClass: 'settings-modal-content'
+        });
 
         // Setup settings event listeners
-        this.setupSettingsListeners();
+        this.setupSettingsListeners(settings);
     }
 
     /**
      * Setup settings event listeners
      */
-    setupSettingsListeners() {
+    setupSettingsListeners(initialSettings) {
         const musicToggle = document.getElementById('music-toggle');
         const sfxToggle = document.getElementById('sfx-toggle');
+        const hintsToggle = document.getElementById('hints-toggle');
+        const timerSetting = document.getElementById('timer-setting');
         const musicVolume = document.getElementById('music-volume');
         const sfxVolume = document.getElementById('sfx-volume');
         const musicVolumeDisplay = document.getElementById('music-volume-display');
         const sfxVolumeDisplay = document.getElementById('sfx-volume-display');
+        const musicVolumeFill = document.getElementById('music-volume-fill');
+        const sfxVolumeFill = document.getElementById('sfx-volume-fill');
         const musicPauseBtn = document.getElementById('music-pause-btn');
         const musicStopBtn = document.getElementById('music-stop-btn');
+        const saveBtn = document.getElementById('settings-save-btn');
+        const discardBtn = document.getElementById('settings-discard-btn');
+        const closeBtn = document.getElementById('settings-close-btn');
+        const pageTitle = document.getElementById('settings-page-title');
+        const pageIcon = document.getElementById('settings-page-icon');
+        const navItems = document.querySelectorAll('[data-settings-page]');
+
+        const pageInfo = {
+            audio: { icon: '🔊', title: 'AUDIO CONTROLS' },
+            gameplay: { icon: '🎮', title: 'GAMEPLAY' }
+        };
+
+        const updateSlider = (input, display, fill) => {
+            if (!input || !display || !fill) return;
+            display.textContent = `${input.value}%`;
+            fill.style.width = `${input.value}%`;
+        };
+
+        const updateMusicControls = () => {
+            const hasMusic = !!this.audio.currentMusic;
+            if (musicPauseBtn) musicPauseBtn.disabled = !musicToggle?.checked || !hasMusic;
+            if (musicStopBtn) musicStopBtn.disabled = !musicToggle?.checked || !hasMusic;
+        };
+
+        const switchPage = (pageName) => {
+            navItems.forEach((item) => {
+                item.classList.toggle('active', item.dataset.settingsPage === pageName);
+            });
+            document.querySelectorAll('.settings-page').forEach((page) => {
+                page.classList.toggle('active', page.id === `settings-page-${pageName}`);
+            });
+            if (pageTitle) pageTitle.textContent = pageInfo[pageName].title;
+            if (pageIcon) pageIcon.textContent = pageInfo[pageName].icon;
+        };
+
+        const persistSettings = () => {
+            const currentStoredSettings = this.state.loadSettings();
+            this.state.saveSettings({
+                ...currentStoredSettings,
+                musicEnabled: musicToggle?.checked ?? initialSettings.musicEnabled,
+                sfxEnabled: sfxToggle?.checked ?? initialSettings.sfxEnabled,
+                volume: {
+                    music: Number(musicVolume?.value ?? initialSettings.musicVolume) / 100,
+                    sfx: Number(sfxVolume?.value ?? initialSettings.sfxVolume) / 100
+                },
+                musicVolume: Number(musicVolume?.value ?? initialSettings.musicVolume) / 100,
+                sfxVolume: Number(sfxVolume?.value ?? initialSettings.sfxVolume) / 100,
+                difficulty: 'medium',
+                timerEnabled: timerSetting?.value !== 'off',
+                showHints: hintsToggle?.checked ?? initialSettings.showHints
+            });
+        };
+
+        const discardChanges = () => {
+            this.audio.applySettings({
+                musicEnabled: initialSettings.musicEnabled,
+                sfxEnabled: initialSettings.sfxEnabled,
+                musicVolume: initialSettings.musicVolume / 100,
+                sfxVolume: initialSettings.sfxVolume / 100
+            });
+            this.ui.closeModal();
+        };
+
+        navItems.forEach((item) => {
+            item.addEventListener('click', () => switchPage(item.dataset.settingsPage));
+        });
 
         // Music toggle
         if (musicToggle) {
@@ -550,9 +707,7 @@ export class Game {
                 }
                 
                 // Enable/disable music control buttons
-                const hasMusic = this.audio.currentMusic;
-                if (musicPauseBtn) musicPauseBtn.disabled = !e.target.checked || !hasMusic;
-                if (musicStopBtn) musicStopBtn.disabled = !e.target.checked || !hasMusic;
+                updateMusicControls();
             });
         }
 
@@ -573,7 +728,7 @@ export class Game {
             musicVolume.addEventListener('input', (e) => {
                 const volume = parseInt(e.target.value) / 100;
                 this.audio.setMusicVolume(volume);
-                musicVolumeDisplay.textContent = `${e.target.value}%`;
+                updateSlider(musicVolume, musicVolumeDisplay, musicVolumeFill);
             });
         }
 
@@ -582,7 +737,7 @@ export class Game {
             sfxVolume.addEventListener('input', (e) => {
                 const volume = parseInt(e.target.value) / 100;
                 this.audio.setSfxVolume(volume);
-                sfxVolumeDisplay.textContent = `${e.target.value}%`;
+                updateSlider(sfxVolume, sfxVolumeDisplay, sfxVolumeFill);
                 
                 // Play test sound
                 this.audio.playButtonClick();
@@ -597,7 +752,7 @@ export class Game {
                     musicPauseBtn.textContent = 'RESUME';
                 } else {
                     this.audio.resumeMusic();
-                    musicPauseBtn.textContent = 'PAUSE';
+                    musicPauseBtn.textContent = '▶ PAUSE';
                 }
             });
         }
@@ -607,12 +762,31 @@ export class Game {
             musicStopBtn.addEventListener('click', () => {
                 this.audio.stopMusic();
                 if (musicPauseBtn) {
-                    musicPauseBtn.textContent = 'PAUSE';
+                    musicPauseBtn.textContent = '▶ PAUSE';
                     musicPauseBtn.disabled = true;
                 }
                 musicStopBtn.disabled = true;
             });
         }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                persistSettings();
+                this.ui.closeModal();
+            });
+        }
+
+        if (discardBtn) {
+            discardBtn.addEventListener('click', discardChanges);
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', discardChanges);
+        }
+
+        updateSlider(musicVolume, musicVolumeDisplay, musicVolumeFill);
+        updateSlider(sfxVolume, sfxVolumeDisplay, sfxVolumeFill);
+        updateMusicControls();
     }
 
     /**
