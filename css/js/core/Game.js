@@ -562,17 +562,6 @@ export class Game {
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="settings-audio-actions">
-                                <button class="settings-action settings-action-play" type="button" id="music-pause-btn"
-                                        ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
-                                    ▶ ${this.audio.currentAudioElement && !this.audio.currentAudioElement.paused ? 'PAUSE' : 'RESUME'}
-                                </button>
-                                <button class="settings-action settings-action-stop" type="button" id="music-stop-btn"
-                                        ${!settings.musicEnabled || !this.audio.currentMusic ? 'disabled' : ''}>
-                                    ■ STOP
-                                </button>
-                            </div>
                         </div>
 
                         <div class="settings-page ${defaultPage === 'gameplay' ? 'active' : ''}" id="settings-page-gameplay">
@@ -677,8 +666,6 @@ export class Game {
         const sfxVolumeDisplay = document.getElementById('sfx-volume-display');
         const musicVolumeFill = document.getElementById('music-volume-fill');
         const sfxVolumeFill = document.getElementById('sfx-volume-fill');
-        const musicPauseBtn = document.getElementById('music-pause-btn');
-        const musicStopBtn = document.getElementById('music-stop-btn');
         const authBtn = document.getElementById('settings-auth-btn');
         const saveBtn = document.getElementById('settings-save-btn');
         const discardBtn = document.getElementById('settings-discard-btn');
@@ -697,12 +684,6 @@ export class Game {
             if (!input || !display || !fill) return;
             display.textContent = `${input.value}%`;
             fill.style.width = `${input.value}%`;
-        };
-
-        const updateMusicControls = () => {
-            const hasMusic = !!this.audio.currentMusic;
-            if (musicPauseBtn) musicPauseBtn.disabled = !musicToggle?.checked || !hasMusic;
-            if (musicStopBtn) musicStopBtn.disabled = !musicToggle?.checked || !hasMusic;
         };
 
         const switchPage = (pageName) => {
@@ -757,9 +738,6 @@ export class Game {
                 if (musicVolume) {
                     musicVolume.disabled = !e.target.checked;
                 }
-                
-                // Enable/disable music control buttons
-                updateMusicControls();
             });
         }
 
@@ -793,31 +771,6 @@ export class Game {
                 
                 // Play test sound
                 this.audio.playButtonClick();
-            });
-        }
-
-        // Music pause/resume button
-        if (musicPauseBtn) {
-            musicPauseBtn.addEventListener('click', () => {
-                if (this.audio.currentAudioElement && !this.audio.currentAudioElement.paused) {
-                    this.audio.pauseMusic();
-                    musicPauseBtn.textContent = 'RESUME';
-                } else {
-                    this.audio.resumeMusic();
-                    musicPauseBtn.textContent = '▶ PAUSE';
-                }
-            });
-        }
-
-        // Music stop button
-        if (musicStopBtn) {
-            musicStopBtn.addEventListener('click', () => {
-                this.audio.stopMusic();
-                if (musicPauseBtn) {
-                    musicPauseBtn.textContent = '▶ PAUSE';
-                    musicPauseBtn.disabled = true;
-                }
-                musicStopBtn.disabled = true;
             });
         }
 
@@ -859,7 +812,6 @@ export class Game {
 
         updateSlider(musicVolume, musicVolumeDisplay, musicVolumeFill);
         updateSlider(sfxVolume, sfxVolumeDisplay, sfxVolumeFill);
-        updateMusicControls();
     }
 
     /**
