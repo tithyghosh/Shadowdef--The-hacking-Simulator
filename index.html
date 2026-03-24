@@ -384,6 +384,12 @@
                             setTimeout(() => {
                                 mainMenu.style.opacity = '1';
                             }, 50);
+
+                            if (window.game?.screens) {
+                                window.game.screens.onScreenShow('main-menu');
+                            } else if (window.AudioManager?.getInstance) {
+                                window.AudioManager.getInstance().playMusic('menu');
+                            }
                             
                             console.log('???? Main menu displayed');
                         }, 1000);
@@ -483,6 +489,7 @@
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
                     const isAuthenticated = authManager.isUserAuthenticated() || !!authManager.getCurrentUser();
@@ -555,6 +562,10 @@
                 });
 
                 updateMainMenuStatus();
+
+                if (document.getElementById('main-menu')?.classList.contains('active')) {
+                    game.screens.onScreenShow('main-menu');
+                }
                 
                 // Handle category selection
                 document.addEventListener('click', (e) => {

@@ -26,6 +26,7 @@ export class AudioManager {
         this.sounds = new Map();
         this.musicTracks = new Map();
         this.buttonClickAudio = null;
+        this.pendingMusicTrack = null;
         
         // Initialize Web Audio API
         this.initAudioContext();
@@ -60,6 +61,14 @@ export class AudioManager {
                 if (this.audioContext.state === 'suspended') {
                     this.audioContext.resume();
                 }
+                this.retryPendingMusic();
+            });
+
+            document.addEventListener('keydown', () => {
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                this.retryPendingMusic();
             }, { once: true });
             
             console.log('🔊 Audio context initialized');
@@ -182,6 +191,7 @@ export class AudioManager {
      */
     playMusic(trackName, fade = true) {
         if (!this.musicEnabled) return;
+        this.pendingMusicTrack = trackName;
 
         // Stop current music if playing
         if (this.currentMusic) {
@@ -229,6 +239,7 @@ export class AudioManager {
                     console.log(`🎵 Playing audio file: ${trackName}`);
                 }).catch(error => {
                     console.warn(`🎵 Audio play failed for ${trackName}:`, error);
+                    this.pendingMusicTrack = trackName;
                     this.fallbackToSoftTones(trackName, fade);
                 });
             }
@@ -236,8 +247,25 @@ export class AudioManager {
             this.currentAudioElement = audioElement;
         } catch (error) {
             console.warn(`🎵 Error playing ${trackName}:`, error);
+            this.pendingMusicTrack = trackName;
             this.fallbackToSoftTones(trackName, fade);
         }
+    }
+
+    retryPendingMusic() {
+        if (!this.pendingMusicTrack || !this.musicEnabled) return;
+
+        const activeScreen = document.querySelector('.screen.active');
+        if (!activeScreen || activeScreen.id !== 'main-menu') return;
+
+        const track = this.pendingMusicTrack;
+        const isPlaying = this.currentAudioElement && !this.currentAudioElement.paused;
+        if (this.currentMusic === track && isPlaying) {
+            this.pendingMusicTrack = null;
+            return;
+        }
+
+        this.playMusic(track, false);
     }
 
     /**
