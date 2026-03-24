@@ -116,13 +116,16 @@ export class UIManager {
     closeModal() {
         if (!this.activeModal) return;
 
-        this.activeModal.classList.remove('active');
+        const modalToClose = this.activeModal;
+        modalToClose.classList.remove('active');
         
         setTimeout(() => {
-            if (this.activeModal && this.activeModal.parentNode) {
-                this.activeModal.parentNode.removeChild(this.activeModal);
+            if (modalToClose && modalToClose.parentNode) {
+                modalToClose.parentNode.removeChild(modalToClose);
             }
-            this.activeModal = null;
+            if (this.activeModal === modalToClose) {
+                this.activeModal = null;
+            }
         }, CONFIG.UI.MODAL_CLOSE_DELAY);
 
         this.audio.playButtonClick();

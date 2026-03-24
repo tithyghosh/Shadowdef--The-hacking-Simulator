@@ -453,9 +453,12 @@ export class Game {
     /**
      * Show settings
      */
-    showSettings() {
+    showSettings(defaultPage = 'audio') {
         const audioSettings = this.audio.getSettings();
         const storedSettings = this.state.loadSettings();
+        const authManager = window.authManager;
+        const user = authManager?.getCurrentUser?.() || null;
+        const isAuthenticated = !!(authManager?.isUserAuthenticated?.() || user);
         const settings = {
             musicEnabled: audioSettings.musicEnabled,
             sfxEnabled: audioSettings.sfxEnabled,
@@ -474,13 +477,17 @@ export class Game {
                     </div>
 
                     <div class="settings-nav-items">
-                        <button class="settings-nav-item active" type="button" data-settings-page="audio">
+                        <button class="settings-nav-item ${defaultPage === 'audio' ? 'active' : ''}" type="button" data-settings-page="audio">
                             <span class="settings-nav-icon">🔊</span>
                             <span>AUDIO</span>
                         </button>
-                        <button class="settings-nav-item" type="button" data-settings-page="gameplay">
+                        <button class="settings-nav-item ${defaultPage === 'gameplay' ? 'active' : ''}" type="button" data-settings-page="gameplay">
                             <span class="settings-nav-icon">🎮</span>
                             <span>GAMEPLAY</span>
+                        </button>
+                        <button class="settings-nav-item ${defaultPage === 'account' ? 'active' : ''}" type="button" data-settings-page="account">
+                            <span class="settings-nav-icon">⍟</span>
+                            <span>ACCOUNT</span>
                         </button>
                     </div>
 
@@ -493,15 +500,15 @@ export class Game {
                 <div class="settings-main">
                     <div class="settings-head">
                         <div class="settings-head-copy">
-                            <span class="settings-head-icon" id="settings-page-icon">🔊</span>
-                            <span class="settings-head-title" id="settings-page-title">AUDIO CONTROLS</span>
+                            <span class="settings-head-icon" id="settings-page-icon">${defaultPage === 'gameplay' ? '🎮' : defaultPage === 'account' ? '⍟' : '🔊'}</span>
+                            <span class="settings-head-title" id="settings-page-title">${defaultPage === 'gameplay' ? 'GAMEPLAY' : defaultPage === 'account' ? 'ACCOUNT ACCESS' : 'AUDIO CONTROLS'}</span>
                             <span class="settings-head-line"></span>
                         </div>
                         <button class="settings-close" type="button" id="settings-close-btn" aria-label="Close settings">✕</button>
                     </div>
 
                     <div class="settings-pages">
-                        <div class="settings-page active" id="settings-page-audio">
+                        <div class="settings-page ${defaultPage === 'audio' ? 'active' : ''}" id="settings-page-audio">
                             <div class="settings-card">
                                 <div class="settings-copy">
                                     <div class="settings-card-title">Enable Music</div>
@@ -568,7 +575,7 @@ export class Game {
                             </div>
                         </div>
 
-                        <div class="settings-page" id="settings-page-gameplay">
+                        <div class="settings-page ${defaultPage === 'gameplay' ? 'active' : ''}" id="settings-page-gameplay">
                             <div class="settings-card">
                                 <div class="settings-copy">
                                     <div class="settings-card-title">Timer</div>
@@ -592,6 +599,49 @@ export class Game {
                                     <span class="settings-toggle-track"></span>
                                     <span class="settings-toggle-knob"></span>
                                 </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-page ${defaultPage === 'account' ? 'active' : ''}" id="settings-page-account">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Account Access</div>
+                                    <div class="settings-card-subtitle" id="settings-auth-subtitle">
+                                        ${isAuthenticated
+                                            ? `Signed in as ${(user?.displayName || user?.username || user?.email || 'Operator')}`
+                                            : 'Authenticate your operator profile from settings'}
+                                    </div>
+                                </div>
+                                <button class="settings-auth-btn ${isAuthenticated ? 'is-logout' : ''}" type="button" id="settings-auth-btn">
+                                    ${isAuthenticated ? 'LOGOUT' : 'LOGIN'}
+                                </button>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-account-panel">
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">STATUS</span>
+                                        <span class="settings-account-badge ${isAuthenticated ? 'online' : 'offline'}">
+                                            ${isAuthenticated ? 'AUTHENTICATED' : 'GUEST MODE'}
+                                        </span>
+                                    </div>
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">OPERATOR</span>
+                                        <span class="settings-account-value">
+                                            ${isAuthenticated
+                                                ? (user?.displayName || user?.username || user?.email || 'Operator')
+                                                : 'Not signed in'}
+                                        </span>
+                                    </div>
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">ACCESS</span>
+                                        <span class="settings-account-value">
+                                            ${isAuthenticated
+                                                ? 'Profile data and progress sync enabled'
+                                                : 'Login required for cloud save and synced progress'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -629,6 +679,7 @@ export class Game {
         const sfxVolumeFill = document.getElementById('sfx-volume-fill');
         const musicPauseBtn = document.getElementById('music-pause-btn');
         const musicStopBtn = document.getElementById('music-stop-btn');
+        const authBtn = document.getElementById('settings-auth-btn');
         const saveBtn = document.getElementById('settings-save-btn');
         const discardBtn = document.getElementById('settings-discard-btn');
         const closeBtn = document.getElementById('settings-close-btn');
@@ -638,7 +689,8 @@ export class Game {
 
         const pageInfo = {
             audio: { icon: '🔊', title: 'AUDIO CONTROLS' },
-            gameplay: { icon: '🎮', title: 'GAMEPLAY' }
+            gameplay: { icon: '🎮', title: 'GAMEPLAY' },
+            account: { icon: '⍟', title: 'ACCOUNT ACCESS' }
         };
 
         const updateSlider = (input, display, fill) => {
@@ -766,6 +818,27 @@ export class Game {
                     musicPauseBtn.disabled = true;
                 }
                 musicStopBtn.disabled = true;
+            });
+        }
+
+        if (authBtn) {
+            authBtn.addEventListener('click', async () => {
+                const authManager = window.authManager;
+                if (!authManager) return;
+
+                if (authManager.isUserAuthenticated()) {
+                    this.ui.showLogoutConfirm(async () => {
+                        await authManager.logout();
+                        setTimeout(() => {
+                            this.showSettings('account');
+                        }, 1250);
+                    });
+                    return;
+                }
+
+                this.ui.closeModal();
+                this.screens.showScreen('login-screen');
+                window.loginScreen?.render?.();
             });
         }
 
