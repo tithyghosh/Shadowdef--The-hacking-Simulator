@@ -27,6 +27,7 @@ export class AudioManager {
         this.musicTracks = new Map();
         this.buttonClickAudio = null;
         this.pendingMusicTrack = null;
+        this.lastMusicTrack = null;
         
         // Initialize Web Audio API
         this.initAudioContext();
@@ -192,6 +193,7 @@ export class AudioManager {
     playMusic(trackName, fade = true) {
         if (!this.musicEnabled) return;
         this.pendingMusicTrack = trackName;
+        this.lastMusicTrack = trackName;
 
         // Stop current music if playing
         if (this.currentMusic) {
@@ -602,9 +604,42 @@ export class AudioManager {
         
         if (!enabled && this.currentMusic) {
             this.stopMusic();
+        } else if (enabled && !this.currentMusic) {
+            const trackToResume = this.getPreferredTrackForCurrentScreen();
+            if (trackToResume) {
+                this.playMusic(trackToResume, false);
+            }
         }
         
         console.log(`🎵 Music ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    getPreferredTrackForCurrentScreen() {
+        const activeScreen = document.querySelector('.screen.active')?.id;
+
+        if (activeScreen === 'game-screen') {
+            return 'gameplay';
+        }
+
+        if (
+            activeScreen === 'loading-screen'
+        ) {
+            return 'loading';
+        }
+
+        if (
+            activeScreen === 'main-menu' ||
+            activeScreen === 'mission-select' ||
+            activeScreen === 'password-missions' ||
+            activeScreen === 'malware-missions' ||
+            activeScreen === 'network-missions' ||
+            activeScreen === 'profile-screen' ||
+            activeScreen === 'login-screen'
+        ) {
+            return this.lastMusicTrack === 'loading' ? 'menu' : (this.lastMusicTrack || 'menu');
+        }
+
+        return this.pendingMusicTrack || this.lastMusicTrack || 'menu';
     }
 
     /**
