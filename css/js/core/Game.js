@@ -63,9 +63,9 @@ export class Game {
         this.state.resetProgress();
         
         // Ensure first levels are unlocked in each section
-        this.passwordMissions[0].locked = false;
-        this.malwareMissions[0].locked = false;
-        this.networkMissions[0].locked = false;
+        if (this.passwordMissions[0]) this.passwordMissions[0].locked = false;
+        if (this.malwareMissions[0]) this.malwareMissions[0].locked = false;
+        if (this.networkMissions[0]) this.networkMissions[0].locked = false;
         
         // Lock all other levels
         this.passwordMissions.slice(1).forEach(m => m.locked = true);

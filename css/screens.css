@@ -1516,6 +1516,992 @@
     font-weight: bold;
 }
 
+/* Level 1 full-screen dossier theme */
+#game-screen.game-screen--human-lab {
+    background:
+        radial-gradient(circle at top left, rgba(245, 166, 35, 0.1), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(0, 212, 255, 0.08), transparent 26%),
+        linear-gradient(180deg, #070b12 0%, #06080f 100%);
+}
+
+#game-screen.game-screen--human-lab .back-btn {
+    background: rgba(10, 13, 24, 0.9);
+    border-color: rgba(245, 166, 35, 0.22);
+    color: rgba(245, 166, 35, 0.76);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+#game-screen.game-screen--human-lab .back-btn:hover {
+    border-color: rgba(245, 166, 35, 0.46);
+    color: #ffcb6b;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--human-lab .game-header {
+    background: #0a0d18;
+    border-bottom: 1px solid rgba(245, 166, 35, 0.2);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+#game-screen.game-screen--human-lab .stat-label,
+#game-screen.game-screen--human-lab .progress-label,
+#game-screen.game-screen--human-lab .ai-status,
+#game-screen.game-screen--human-lab .music-volume {
+    color: rgba(180, 190, 230, 0.62);
+}
+
+#game-screen.game-screen--human-lab .stat-value,
+#game-screen.game-screen--human-lab .music-status {
+    color: #f5a623;
+}
+
+#game-screen.game-screen--human-lab .music-panel {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--human-lab .btn-icon {
+    border-color: rgba(245, 166, 35, 0.18);
+    color: rgba(245, 166, 35, 0.78);
+}
+
+#game-screen.game-screen--human-lab .btn-icon:hover {
+    background: rgba(245, 166, 35, 0.12);
+    color: #ffcb6b;
+    box-shadow: 0 0 12px rgba(245, 166, 35, 0.16);
+}
+
+#game-screen.game-screen--human-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--human-lab .puzzle-area {
+    background: transparent;
+    border: 1px solid rgba(245, 166, 35, 0.14);
+    border-radius: 0;
+    box-shadow: 0 26px 54px rgba(0, 0, 0, 0.22);
+    padding: 0;
+}
+
+#game-screen.game-screen--human-lab .puzzle-area::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.34);
+}
+
+#game-screen.game-screen--human-lab .puzzle-area::-webkit-scrollbar-thumb {
+    background: rgba(245, 166, 35, 0.56);
+}
+
+#game-screen.game-screen--human-lab .puzzle-area::-webkit-scrollbar-thumb:hover {
+    background: #f5a623;
+}
+
+#game-screen.game-screen--human-lab .side-panel {
+    gap: 16px;
+}
+
+#game-screen.game-screen--human-lab .panel {
+    background: rgba(0, 0, 0, 0.26);
+    border: 1px solid rgba(245, 166, 35, 0.12);
+    border-radius: 0;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(10px);
+}
+
+#game-screen.game-screen--human-lab .panel-title {
+    color: rgba(245, 166, 35, 0.78);
+    border-bottom-color: rgba(245, 166, 35, 0.12);
+}
+
+#game-screen.game-screen--human-lab .objective {
+    background: rgba(0, 0, 0, 0.22);
+    border-left-color: rgba(245, 166, 35, 0.4);
+    color: rgba(220, 228, 245, 0.76);
+    border-radius: 0;
+}
+
+#game-screen.game-screen--human-lab .objective.completed {
+    border-left-color: #00e87a;
+    color: #00e87a;
+    background: rgba(0, 232, 122, 0.06);
+}
+
+#game-screen.game-screen--human-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(245, 166, 35, 0.18);
+    border-radius: 999px;
+}
+
+#game-screen.game-screen--human-lab .progress-fill {
+    background: linear-gradient(90deg, #f5a623, #00d4ff);
+}
+
+#game-screen.game-screen--human-lab .progress-fill::after {
+    opacity: 0.45;
+}
+
+#game-screen.game-screen--human-lab .game-nav-buttons .btn,
+#game-screen.game-screen--human-lab #hint-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(245, 166, 35, 0.18);
+    color: rgba(245, 166, 35, 0.76);
+    box-shadow: none;
+}
+
+#game-screen.game-screen--human-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--human-lab #hint-btn:hover {
+    background: rgba(245, 166, 35, 0.12);
+    border-color: rgba(245, 166, 35, 0.42);
+    color: #ffcb6b;
+    transform: translateY(-1px);
+}
+
+#game-screen.game-screen--human-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(245, 166, 35, 0.16), rgba(245, 166, 35, 0.06));
+    border-color: rgba(245, 166, 35, 0.42);
+    color: #eef2ff;
+}
+
+#game-screen.game-screen--human-lab .game-nav-buttons .btn.btn-primary:hover {
+    background: linear-gradient(90deg, rgba(245, 166, 35, 0.22), rgba(245, 166, 35, 0.08));
+    border-color: rgba(245, 166, 35, 0.52);
+}
+
+#game-screen.game-screen--human-lab #next-level-btn:disabled,
+#game-screen.game-screen--human-lab #next-level-btn:disabled:hover {
+    background: rgba(0, 0, 0, 0.22);
+    border-color: rgba(245, 166, 35, 0.12);
+    color: rgba(180, 190, 230, 0.34);
+}
+
+/* Level 2 full-screen incident lab theme */
+#game-screen.game-screen--single-choice-lab {
+    background:
+        radial-gradient(circle at top left, rgba(245, 166, 35, 0.08), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(0, 212, 255, 0.08), transparent 28%),
+        linear-gradient(180deg, #070b12 0%, #06080f 100%);
+}
+
+#game-screen.game-screen--single-choice-lab .back-btn,
+#game-screen.game-screen--single-choice-lab .game-header,
+#game-screen.game-screen--single-choice-lab .music-panel,
+#game-screen.game-screen--single-choice-lab .panel,
+#game-screen.game-screen--single-choice-lab .game-nav-buttons .btn,
+#game-screen.game-screen--single-choice-lab #hint-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--single-choice-lab .back-btn,
+#game-screen.game-screen--single-choice-lab .btn-icon,
+#game-screen.game-screen--single-choice-lab .game-nav-buttons .btn,
+#game-screen.game-screen--single-choice-lab #hint-btn,
+#game-screen.game-screen--single-choice-lab .panel-title,
+#game-screen.game-screen--single-choice-lab .stat-value,
+#game-screen.game-screen--single-choice-lab .music-status {
+    color: #f5a623;
+}
+
+#game-screen.game-screen--single-choice-lab .game-header {
+    border-bottom: 1px solid rgba(245, 166, 35, 0.2);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+#game-screen.game-screen--single-choice-lab .stat-label,
+#game-screen.game-screen--single-choice-lab .progress-label,
+#game-screen.game-screen--single-choice-lab .ai-status,
+#game-screen.game-screen--single-choice-lab .music-volume,
+#game-screen.game-screen--single-choice-lab .objective {
+    color: rgba(220, 228, 245, 0.72);
+}
+
+#game-screen.game-screen--single-choice-lab .btn-icon,
+#game-screen.game-screen--single-choice-lab .objective,
+#game-screen.game-screen--single-choice-lab .puzzle-area {
+    border-color: rgba(245, 166, 35, 0.16);
+}
+
+#game-screen.game-screen--single-choice-lab .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: 0 26px 54px rgba(0, 0, 0, 0.22);
+}
+
+#game-screen.game-screen--single-choice-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--single-choice-lab .progress-fill {
+    background: linear-gradient(90deg, #f5a623, #00d4ff);
+}
+
+#game-screen.game-screen--single-choice-lab .objective.completed {
+    color: #00e87a;
+    border-left-color: #00e87a;
+    background: rgba(0, 232, 122, 0.06);
+}
+
+#game-screen.game-screen--single-choice-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--single-choice-lab #hint-btn:hover,
+#game-screen.game-screen--single-choice-lab .btn-icon:hover {
+    color: #ffcb6b;
+    border-color: rgba(245, 166, 35, 0.42);
+    background: rgba(245, 166, 35, 0.12);
+}
+
+#game-screen.game-screen--single-choice-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(245, 166, 35, 0.16), rgba(245, 166, 35, 0.06));
+    border-color: rgba(245, 166, 35, 0.42);
+    color: #eef2ff;
+}
+
+/* Level 3 full-screen benchmark lab theme */
+#game-screen.game-screen--prediction-lab {
+    background:
+        radial-gradient(circle at top left, rgba(0, 212, 255, 0.1), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.08), transparent 28%),
+        linear-gradient(180deg, #061019 0%, #05080e 100%);
+}
+
+#game-screen.game-screen--prediction-lab .back-btn,
+#game-screen.game-screen--prediction-lab .game-header,
+#game-screen.game-screen--prediction-lab .music-panel,
+#game-screen.game-screen--prediction-lab .panel,
+#game-screen.game-screen--prediction-lab .game-nav-buttons .btn,
+#game-screen.game-screen--prediction-lab #hint-btn {
+    background: rgba(0, 0, 0, 0.28);
+    border-color: rgba(0, 212, 255, 0.18);
+}
+
+#game-screen.game-screen--prediction-lab .back-btn,
+#game-screen.game-screen--prediction-lab .btn-icon,
+#game-screen.game-screen--prediction-lab .game-nav-buttons .btn,
+#game-screen.game-screen--prediction-lab #hint-btn,
+#game-screen.game-screen--prediction-lab .panel-title,
+#game-screen.game-screen--prediction-lab .stat-value,
+#game-screen.game-screen--prediction-lab .music-status {
+    color: #00d4ff;
+}
+
+#game-screen.game-screen--prediction-lab .game-header {
+    border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+#game-screen.game-screen--prediction-lab .stat-label,
+#game-screen.game-screen--prediction-lab .progress-label,
+#game-screen.game-screen--prediction-lab .ai-status,
+#game-screen.game-screen--prediction-lab .music-volume,
+#game-screen.game-screen--prediction-lab .objective {
+    color: rgba(220, 228, 245, 0.72);
+}
+
+#game-screen.game-screen--prediction-lab .btn-icon,
+#game-screen.game-screen--prediction-lab .objective,
+#game-screen.game-screen--prediction-lab .puzzle-area {
+    border-color: rgba(0, 212, 255, 0.16);
+}
+
+#game-screen.game-screen--prediction-lab .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: 0 26px 54px rgba(0, 0, 0, 0.24);
+}
+
+#game-screen.game-screen--prediction-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(0, 212, 255, 0.18);
+}
+
+#game-screen.game-screen--prediction-lab .progress-fill {
+    background: linear-gradient(90deg, #00d4ff, #f5a623);
+}
+
+#game-screen.game-screen--prediction-lab .objective.completed {
+    color: #00e87a;
+    border-left-color: #00e87a;
+    background: rgba(0, 232, 122, 0.06);
+}
+
+#game-screen.game-screen--prediction-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--prediction-lab #hint-btn:hover,
+#game-screen.game-screen--prediction-lab .btn-icon:hover {
+    color: #8beeff;
+    border-color: rgba(0, 212, 255, 0.42);
+    background: rgba(0, 212, 255, 0.12);
+}
+
+#game-screen.game-screen--prediction-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.16), rgba(0, 212, 255, 0.06));
+    border-color: rgba(0, 212, 255, 0.42);
+    color: #eef2ff;
+}
+
+/* Level 4 full-screen investigation lab theme */
+#game-screen.game-screen--investigation-lab {
+    background:
+        radial-gradient(circle at top left, rgba(255, 0, 110, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 212, 255, 0.08), transparent 30%),
+        radial-gradient(circle at bottom center, rgba(95, 116, 170, 0.12), transparent 34%),
+        linear-gradient(180deg, #070b12 0%, #060910 100%);
+}
+
+#game-screen.game-screen--investigation-lab .back-btn,
+#game-screen.game-screen--investigation-lab .game-header,
+#game-screen.game-screen--investigation-lab .music-panel,
+#game-screen.game-screen--investigation-lab .panel,
+#game-screen.game-screen--investigation-lab .game-nav-buttons .btn,
+#game-screen.game-screen--investigation-lab #hint-btn {
+    background: rgba(8, 11, 20, 0.76);
+    border-color: rgba(95, 116, 170, 0.22);
+}
+
+#game-screen.game-screen--investigation-lab .back-btn,
+#game-screen.game-screen--investigation-lab .btn-icon,
+#game-screen.game-screen--investigation-lab .panel-title,
+#game-screen.game-screen--investigation-lab .stat-value,
+#game-screen.game-screen--investigation-lab .music-status {
+    color: #7fd5ff;
+}
+
+#game-screen.game-screen--investigation-lab .game-nav-buttons .btn,
+#game-screen.game-screen--investigation-lab #hint-btn {
+    color: rgba(223, 231, 247, 0.84);
+}
+
+#game-screen.game-screen--investigation-lab .game-header {
+    border-bottom: 1px solid rgba(95, 116, 170, 0.24);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+}
+
+#game-screen.game-screen--investigation-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--investigation-lab .stat-label,
+#game-screen.game-screen--investigation-lab .progress-label,
+#game-screen.game-screen--investigation-lab .ai-status,
+#game-screen.game-screen--investigation-lab .music-volume,
+#game-screen.game-screen--investigation-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--investigation-lab .btn-icon,
+#game-screen.game-screen--investigation-lab .objective,
+#game-screen.game-screen--investigation-lab .puzzle-area {
+    border-color: rgba(95, 116, 170, 0.18);
+}
+
+#game-screen.game-screen--investigation-lab .puzzle-area {
+    background: rgba(4, 7, 14, 0.58);
+    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+}
+
+#game-screen.game-screen--investigation-lab .puzzle-area::-webkit-scrollbar-track {
+    background: rgba(8, 11, 20, 0.72);
+}
+
+#game-screen.game-screen--investigation-lab .puzzle-area::-webkit-scrollbar-thumb {
+    background: rgba(95, 116, 170, 0.52);
+}
+
+#game-screen.game-screen--investigation-lab .puzzle-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(127, 213, 255, 0.68);
+}
+
+#game-screen.game-screen--investigation-lab .side-panel {
+    gap: 16px;
+}
+
+#game-screen.game-screen--investigation-lab .panel {
+    box-shadow: 0 20px 42px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+#game-screen.game-screen--investigation-lab .panel-title {
+    border-bottom-color: rgba(95, 116, 170, 0.18);
+}
+
+#game-screen.game-screen--investigation-lab .objective {
+    background: rgba(255, 255, 255, 0.02);
+    border-left-color: rgba(255, 0, 110, 0.36);
+}
+
+#game-screen.game-screen--investigation-lab .objective.completed {
+    color: #00e87a;
+    border-left-color: #00e87a;
+    background: rgba(0, 232, 122, 0.08);
+}
+
+#game-screen.game-screen--investigation-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(95, 116, 170, 0.18);
+}
+
+#game-screen.game-screen--investigation-lab .progress-fill {
+    background: linear-gradient(90deg, #ff3b78, #7fd5ff);
+}
+
+#game-screen.game-screen--investigation-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--investigation-lab #hint-btn:hover,
+#game-screen.game-screen--investigation-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(127, 213, 255, 0.42);
+    background: rgba(127, 213, 255, 0.12);
+}
+
+#game-screen.game-screen--investigation-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(255, 59, 120, 0.18), rgba(127, 213, 255, 0.08));
+    border-color: rgba(127, 213, 255, 0.34);
+    color: #eef2ff;
+}
+
+#game-screen.game-screen--investigation-lab .game-nav-buttons .btn.btn-primary:hover {
+    background: linear-gradient(90deg, rgba(255, 59, 120, 0.24), rgba(127, 213, 255, 0.12));
+    border-color: rgba(127, 213, 255, 0.46);
+}
+
+/* Level 5 full-screen audit lab theme */
+#game-screen.game-screen--inspection-lab {
+    background:
+        radial-gradient(circle at top left, rgba(255, 176, 0, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 212, 255, 0.08), transparent 28%),
+        radial-gradient(circle at bottom center, rgba(255, 59, 120, 0.08), transparent 34%),
+        linear-gradient(180deg, #070b12 0%, #05080f 100%);
+}
+
+#game-screen.game-screen--inspection-lab .back-btn,
+#game-screen.game-screen--inspection-lab .game-header,
+#game-screen.game-screen--inspection-lab .music-panel,
+#game-screen.game-screen--inspection-lab .panel,
+#game-screen.game-screen--inspection-lab .game-nav-buttons .btn,
+#game-screen.game-screen--inspection-lab #hint-btn {
+    background: rgba(8, 11, 20, 0.76);
+    border-color: rgba(255, 176, 0, 0.18);
+}
+
+#game-screen.game-screen--inspection-lab .back-btn,
+#game-screen.game-screen--inspection-lab .btn-icon,
+#game-screen.game-screen--inspection-lab .panel-title,
+#game-screen.game-screen--inspection-lab .stat-value,
+#game-screen.game-screen--inspection-lab .music-status {
+    color: #ffb000;
+}
+
+#game-screen.game-screen--inspection-lab .game-nav-buttons .btn,
+#game-screen.game-screen--inspection-lab #hint-btn {
+    color: rgba(223, 231, 247, 0.84);
+}
+
+#game-screen.game-screen--inspection-lab .game-header {
+    border-bottom: 1px solid rgba(255, 176, 0, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+}
+
+#game-screen.game-screen--inspection-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--inspection-lab .stat-label,
+#game-screen.game-screen--inspection-lab .progress-label,
+#game-screen.game-screen--inspection-lab .ai-status,
+#game-screen.game-screen--inspection-lab .music-volume,
+#game-screen.game-screen--inspection-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--inspection-lab .btn-icon,
+#game-screen.game-screen--inspection-lab .objective,
+#game-screen.game-screen--inspection-lab .puzzle-area {
+    border-color: rgba(255, 176, 0, 0.18);
+}
+
+#game-screen.game-screen--inspection-lab .puzzle-area {
+    background: rgba(4, 7, 14, 0.58);
+    padding: 0;
+    border-radius: 18px;
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+}
+
+#game-screen.game-screen--inspection-lab .puzzle-area::-webkit-scrollbar-track {
+    background: rgba(8, 11, 20, 0.72);
+}
+
+#game-screen.game-screen--inspection-lab .puzzle-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 176, 0, 0.48);
+}
+
+#game-screen.game-screen--inspection-lab .puzzle-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 176, 0, 0.68);
+}
+
+#game-screen.game-screen--inspection-lab .side-panel {
+    gap: 16px;
+}
+
+#game-screen.game-screen--inspection-lab .panel {
+    box-shadow: 0 20px 42px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+#game-screen.game-screen--inspection-lab .panel-title {
+    border-bottom-color: rgba(255, 176, 0, 0.14);
+}
+
+#game-screen.game-screen--inspection-lab .objective {
+    background: rgba(255, 255, 255, 0.02);
+    border-left-color: rgba(255, 176, 0, 0.34);
+}
+
+#game-screen.game-screen--inspection-lab .objective.completed {
+    color: #00e87a;
+    border-left-color: #00e87a;
+    background: rgba(0, 232, 122, 0.08);
+}
+
+#game-screen.game-screen--inspection-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(255, 176, 0, 0.18);
+}
+
+#game-screen.game-screen--inspection-lab .progress-fill {
+    background: linear-gradient(90deg, #ffb000, #00d4ff);
+}
+
+#game-screen.game-screen--inspection-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--inspection-lab #hint-btn:hover,
+#game-screen.game-screen--inspection-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(255, 176, 0, 0.42);
+    background: rgba(255, 176, 0, 0.12);
+}
+
+#game-screen.game-screen--inspection-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(255, 176, 0, 0.18), rgba(0, 212, 255, 0.08));
+    border-color: rgba(255, 176, 0, 0.34);
+    color: #eef2ff;
+}
+
+/* Level 6 full-screen cryptography lab theme */
+#game-screen.game-screen--salt-lab {
+    background:
+        radial-gradient(circle at top left, rgba(245, 166, 35, 0.1), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 232, 122, 0.06), transparent 26%),
+        radial-gradient(circle at bottom center, rgba(0, 212, 255, 0.08), transparent 34%),
+        linear-gradient(180deg, #060910 0%, #04070d 100%);
+}
+
+#game-screen.game-screen--salt-lab .back-btn,
+#game-screen.game-screen--salt-lab .game-header,
+#game-screen.game-screen--salt-lab .music-panel,
+#game-screen.game-screen--salt-lab .panel,
+#game-screen.game-screen--salt-lab .game-nav-buttons .btn,
+#game-screen.game-screen--salt-lab #hint-btn {
+    background: rgba(7, 10, 18, 0.78);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--salt-lab .back-btn,
+#game-screen.game-screen--salt-lab .btn-icon,
+#game-screen.game-screen--salt-lab .panel-title,
+#game-screen.game-screen--salt-lab .stat-value,
+#game-screen.game-screen--salt-lab .music-status {
+    color: #f5a623;
+}
+
+#game-screen.game-screen--salt-lab .game-nav-buttons .btn,
+#game-screen.game-screen--salt-lab #hint-btn {
+    color: rgba(223, 231, 247, 0.84);
+}
+
+#game-screen.game-screen--salt-lab .game-header {
+    border-bottom: 1px solid rgba(245, 166, 35, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--salt-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--salt-lab .stat-label,
+#game-screen.game-screen--salt-lab .progress-label,
+#game-screen.game-screen--salt-lab .ai-status,
+#game-screen.game-screen--salt-lab .music-volume,
+#game-screen.game-screen--salt-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--salt-lab .btn-icon,
+#game-screen.game-screen--salt-lab .objective,
+#game-screen.game-screen--salt-lab .puzzle-area {
+    border-color: rgba(245, 166, 35, 0.16);
+}
+
+#game-screen.game-screen--salt-lab .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 18px;
+    box-shadow: 0 30px 64px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--salt-lab .puzzle-area::-webkit-scrollbar-track {
+    background: rgba(7, 10, 18, 0.76);
+}
+
+#game-screen.game-screen--salt-lab .puzzle-area::-webkit-scrollbar-thumb {
+    background: rgba(245, 166, 35, 0.48);
+}
+
+#game-screen.game-screen--salt-lab .puzzle-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(245, 166, 35, 0.68);
+}
+
+#game-screen.game-screen--salt-lab .side-panel {
+    gap: 16px;
+}
+
+#game-screen.game-screen--salt-lab .panel {
+    box-shadow: 0 20px 42px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(12px);
+}
+
+#game-screen.game-screen--salt-lab .panel-title {
+    border-bottom-color: rgba(245, 166, 35, 0.14);
+}
+
+#game-screen.game-screen--salt-lab .objective {
+    background: rgba(255, 255, 255, 0.02);
+    border-left-color: rgba(245, 166, 35, 0.34);
+}
+
+#game-screen.game-screen--salt-lab .objective.completed {
+    color: #00e87a;
+    border-left-color: #00e87a;
+    background: rgba(0, 232, 122, 0.08);
+}
+
+#game-screen.game-screen--salt-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--salt-lab .progress-fill {
+    background: linear-gradient(90deg, #f5a623, #00d4ff);
+}
+
+#game-screen.game-screen--salt-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--salt-lab #hint-btn:hover,
+#game-screen.game-screen--salt-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(245, 166, 35, 0.42);
+    background: rgba(245, 166, 35, 0.12);
+}
+
+#game-screen.game-screen--salt-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(245, 166, 35, 0.18), rgba(0, 212, 255, 0.08));
+    border-color: rgba(245, 166, 35, 0.36);
+    color: #eef2ff;
+}
+
+/* Level 7 full-screen live defense theme */
+#game-screen.game-screen--live-defense-lab {
+    background:
+        radial-gradient(circle at top left, rgba(245, 166, 35, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 212, 255, 0.08), transparent 28%),
+        radial-gradient(circle at bottom center, rgba(255, 59, 120, 0.08), transparent 34%),
+        linear-gradient(180deg, #060910 0%, #04070d 100%);
+}
+
+#game-screen.game-screen--live-defense-lab .back-btn,
+#game-screen.game-screen--live-defense-lab .game-header,
+#game-screen.game-screen--live-defense-lab .music-panel,
+#game-screen.game-screen--live-defense-lab .panel,
+#game-screen.game-screen--live-defense-lab .game-nav-buttons .btn,
+#game-screen.game-screen--live-defense-lab #hint-btn,
+#game-screen.game-screen--threat-hunt-lab .back-btn,
+#game-screen.game-screen--threat-hunt-lab .game-header,
+#game-screen.game-screen--threat-hunt-lab .music-panel,
+#game-screen.game-screen--threat-hunt-lab .panel,
+#game-screen.game-screen--threat-hunt-lab .game-nav-buttons .btn,
+#game-screen.game-screen--threat-hunt-lab #hint-btn {
+    background: rgba(7, 10, 18, 0.78);
+}
+
+#game-screen.game-screen--live-defense-lab .back-btn,
+#game-screen.game-screen--live-defense-lab .btn-icon,
+#game-screen.game-screen--live-defense-lab .panel-title,
+#game-screen.game-screen--live-defense-lab .stat-value,
+#game-screen.game-screen--live-defense-lab .music-status {
+    color: #f5a623;
+}
+
+#game-screen.game-screen--live-defense-lab .game-header {
+    border-bottom: 1px solid rgba(245, 166, 35, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--live-defense-lab .game-content,
+#game-screen.game-screen--threat-hunt-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--live-defense-lab .stat-label,
+#game-screen.game-screen--live-defense-lab .progress-label,
+#game-screen.game-screen--live-defense-lab .ai-status,
+#game-screen.game-screen--live-defense-lab .music-volume,
+#game-screen.game-screen--live-defense-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--live-defense-lab .puzzle-area,
+#game-screen.game-screen--threat-hunt-lab .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 18px;
+    box-shadow: 0 30px 64px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--live-defense-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(245, 166, 35, 0.18);
+}
+
+#game-screen.game-screen--live-defense-lab .progress-fill {
+    background: linear-gradient(90deg, #f5a623, #00d4ff);
+}
+
+#game-screen.game-screen--live-defense-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--live-defense-lab #hint-btn:hover,
+#game-screen.game-screen--live-defense-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(245, 166, 35, 0.42);
+    background: rgba(245, 166, 35, 0.12);
+}
+
+#game-screen.game-screen--live-defense-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(245, 166, 35, 0.18), rgba(0, 212, 255, 0.08));
+    border-color: rgba(245, 166, 35, 0.36);
+    color: #eef2ff;
+}
+
+/* Level 8 full-screen threat hunt theme */
+#game-screen.game-screen--threat-hunt-lab {
+    background:
+        radial-gradient(circle at top left, rgba(127, 213, 255, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(255, 59, 120, 0.07), transparent 28%),
+        radial-gradient(circle at bottom center, rgba(95, 116, 170, 0.12), transparent 34%),
+        linear-gradient(180deg, #060910 0%, #04070d 100%);
+}
+
+#game-screen.game-screen--threat-hunt-lab .back-btn,
+#game-screen.game-screen--threat-hunt-lab .btn-icon,
+#game-screen.game-screen--threat-hunt-lab .panel-title,
+#game-screen.game-screen--threat-hunt-lab .stat-value,
+#game-screen.game-screen--threat-hunt-lab .music-status {
+    color: #7fd5ff;
+}
+
+#game-screen.game-screen--threat-hunt-lab .game-header {
+    border-bottom: 1px solid rgba(127, 213, 255, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--threat-hunt-lab .stat-label,
+#game-screen.game-screen--threat-hunt-lab .progress-label,
+#game-screen.game-screen--threat-hunt-lab .ai-status,
+#game-screen.game-screen--threat-hunt-lab .music-volume,
+#game-screen.game-screen--threat-hunt-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--threat-hunt-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(127, 213, 255, 0.18);
+}
+
+#game-screen.game-screen--threat-hunt-lab .progress-fill {
+    background: linear-gradient(90deg, #ff4060, #7fd5ff);
+}
+
+#game-screen.game-screen--threat-hunt-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--threat-hunt-lab #hint-btn:hover,
+#game-screen.game-screen--threat-hunt-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(127, 213, 255, 0.42);
+    background: rgba(127, 213, 255, 0.12);
+}
+
+#game-screen.game-screen--threat-hunt-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(127, 213, 255, 0.18), rgba(255, 64, 96, 0.08));
+    border-color: rgba(127, 213, 255, 0.36);
+    color: #eef2ff;
+}
+
+/* Level 9 full-screen patch crisis theme */
+#game-screen.game-screen--patch-lab {
+    background:
+        radial-gradient(circle at top left, rgba(255, 64, 96, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 212, 255, 0.08), transparent 28%),
+        radial-gradient(circle at bottom center, rgba(255, 176, 0, 0.08), transparent 34%),
+        linear-gradient(180deg, #060910 0%, #04070d 100%);
+}
+
+#game-screen.game-screen--patch-lab .back-btn,
+#game-screen.game-screen--patch-lab .game-header,
+#game-screen.game-screen--patch-lab .music-panel,
+#game-screen.game-screen--patch-lab .panel,
+#game-screen.game-screen--patch-lab .game-nav-buttons .btn,
+#game-screen.game-screen--patch-lab #hint-btn {
+    background: rgba(7, 10, 18, 0.78);
+    border-color: rgba(255, 64, 96, 0.18);
+}
+
+#game-screen.game-screen--patch-lab .back-btn,
+#game-screen.game-screen--patch-lab .btn-icon,
+#game-screen.game-screen--patch-lab .panel-title,
+#game-screen.game-screen--patch-lab .stat-value,
+#game-screen.game-screen--patch-lab .music-status {
+    color: #ff4060;
+}
+
+#game-screen.game-screen--patch-lab .game-header {
+    border-bottom: 1px solid rgba(255, 64, 96, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--patch-lab .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--patch-lab .stat-label,
+#game-screen.game-screen--patch-lab .progress-label,
+#game-screen.game-screen--patch-lab .ai-status,
+#game-screen.game-screen--patch-lab .music-volume,
+#game-screen.game-screen--patch-lab .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--patch-lab .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 18px;
+    box-shadow: 0 30px 64px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--patch-lab .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(255, 64, 96, 0.18);
+}
+
+#game-screen.game-screen--patch-lab .progress-fill {
+    background: linear-gradient(90deg, #ff4060, #00d4ff);
+}
+
+#game-screen.game-screen--patch-lab .game-nav-buttons .btn:hover,
+#game-screen.game-screen--patch-lab #hint-btn:hover,
+#game-screen.game-screen--patch-lab .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(255, 64, 96, 0.42);
+    background: rgba(255, 64, 96, 0.12);
+}
+
+#game-screen.game-screen--patch-lab .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(255, 64, 96, 0.18), rgba(0, 212, 255, 0.08));
+    border-color: rgba(255, 64, 96, 0.36);
+    color: #eef2ff;
+}
+
+/* Level 10 full-screen certification finale theme */
+#game-screen.game-screen--enterprise-finale {
+    background:
+        radial-gradient(circle at top left, rgba(127, 213, 255, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(0, 232, 122, 0.06), transparent 28%),
+        radial-gradient(circle at bottom center, rgba(245, 166, 35, 0.08), transparent 34%),
+        linear-gradient(180deg, #060910 0%, #04070d 100%);
+}
+
+#game-screen.game-screen--enterprise-finale .back-btn,
+#game-screen.game-screen--enterprise-finale .game-header,
+#game-screen.game-screen--enterprise-finale .music-panel,
+#game-screen.game-screen--enterprise-finale .panel,
+#game-screen.game-screen--enterprise-finale .game-nav-buttons .btn,
+#game-screen.game-screen--enterprise-finale #hint-btn {
+    background: rgba(7, 10, 18, 0.78);
+    border-color: rgba(127, 213, 255, 0.18);
+}
+
+#game-screen.game-screen--enterprise-finale .back-btn,
+#game-screen.game-screen--enterprise-finale .btn-icon,
+#game-screen.game-screen--enterprise-finale .panel-title,
+#game-screen.game-screen--enterprise-finale .stat-value,
+#game-screen.game-screen--enterprise-finale .music-status {
+    color: #7fd5ff;
+}
+
+#game-screen.game-screen--enterprise-finale .game-header {
+    border-bottom: 1px solid rgba(127, 213, 255, 0.22);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+#game-screen.game-screen--enterprise-finale .game-content {
+    gap: 22px;
+    padding: 92px 24px 24px;
+}
+
+#game-screen.game-screen--enterprise-finale .stat-label,
+#game-screen.game-screen--enterprise-finale .progress-label,
+#game-screen.game-screen--enterprise-finale .ai-status,
+#game-screen.game-screen--enterprise-finale .music-volume,
+#game-screen.game-screen--enterprise-finale .objective {
+    color: rgba(205, 216, 238, 0.72);
+}
+
+#game-screen.game-screen--enterprise-finale .puzzle-area {
+    background: transparent;
+    padding: 0;
+    border-radius: 18px;
+    box-shadow: 0 30px 64px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--enterprise-finale .progress-bar {
+    background: rgba(0, 0, 0, 0.34);
+    border-color: rgba(127, 213, 255, 0.18);
+}
+
+#game-screen.game-screen--enterprise-finale .progress-fill {
+    background: linear-gradient(90deg, #7fd5ff, #00e87a);
+}
+
+#game-screen.game-screen--enterprise-finale .game-nav-buttons .btn:hover,
+#game-screen.game-screen--enterprise-finale #hint-btn:hover,
+#game-screen.game-screen--enterprise-finale .btn-icon:hover {
+    color: #eef2ff;
+    border-color: rgba(127, 213, 255, 0.42);
+    background: rgba(127, 213, 255, 0.12);
+}
+
+#game-screen.game-screen--enterprise-finale .game-nav-buttons .btn.btn-primary {
+    background: linear-gradient(90deg, rgba(127, 213, 255, 0.18), rgba(0, 232, 122, 0.08));
+    border-color: rgba(127, 213, 255, 0.36);
+    color: #eef2ff;
+}
+
 /* AI Opponent Panel */
 .ai-status {
     color: var(--text-secondary);
@@ -1682,6 +2668,10 @@
         flex-direction: column;
         gap: var(--spacing-sm);
     }
+
+    #game-screen.game-screen--human-lab .game-content {
+        padding-top: 86px;
+    }
     
     .header-controls {
         width: 100%;
@@ -1702,6 +2692,10 @@
     
     .music-panel {
         min-width: 100px;
+    }
+
+    #game-screen.game-screen--human-lab .side-panel .panel {
+        min-width: 250px;
     }
     
     .mission-grid {
