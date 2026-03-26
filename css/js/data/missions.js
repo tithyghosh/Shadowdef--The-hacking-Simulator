@@ -158,6 +158,8 @@ const level1 = {
           "Leaked password lists are powerful because many people reuse common passwords.",
           "Human-made passwords are often predictable.",
         ],
+        6,
+        3
       );
     },
     validateSelection: validateWeakSelection,

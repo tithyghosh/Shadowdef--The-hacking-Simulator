@@ -1519,9 +1519,16 @@
 /* Level 1 full-screen dossier theme */
 #game-screen.game-screen--human-lab {
     background:
-        radial-gradient(circle at top left, rgba(245, 166, 35, 0.1), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(0, 212, 255, 0.08), transparent 26%),
-        linear-gradient(180deg, #070b12 0%, #06080f 100%);
+        radial-gradient(circle at top left, rgba(0, 212, 255, 0.12), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(255, 51, 102, 0.12), transparent 24%),
+        linear-gradient(180deg, #04091a 0%, #020610 100%);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--human-lab > .back-btn,
+#game-screen.game-screen--human-lab .game-header,
+#game-screen.game-screen--human-lab .side-panel {
+    display: none;
 }
 
 #game-screen.game-screen--human-lab .back-btn {
@@ -1572,16 +1579,24 @@
 }
 
 #game-screen.game-screen--human-lab .game-content {
-    gap: 22px;
-    padding: 92px 24px 24px;
+    gap: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
 }
 
 #game-screen.game-screen--human-lab .puzzle-area {
     background: transparent;
-    border: 1px solid rgba(245, 166, 35, 0.14);
+    border: 0;
     border-radius: 0;
-    box-shadow: 0 26px 54px rgba(0, 0, 0, 0.22);
+    box-shadow: none;
     padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    overflow: hidden;
+    height: 100%;
+    max-height: 100%;
 }
 
 #game-screen.game-screen--human-lab .puzzle-area::-webkit-scrollbar-track {
@@ -2670,7 +2685,7 @@
     }
 
     #game-screen.game-screen--human-lab .game-content {
-        padding-top: 86px;
+        padding-top: 0;
     }
     
     .header-controls {
@@ -2906,6 +2921,103 @@
     0% { transform: translateY(-35%); opacity: 0.2; }
     50% { transform: translateY(0); opacity: 0.8; }
     100% { transform: translateY(35%); opacity: 0.2; }
+}
+
+/* Shared full-screen password lab host for levels 2-10 */
+#game-screen.game-screen--single-choice-lab,
+#game-screen.game-screen--prediction-lab,
+#game-screen.game-screen--investigation-lab,
+#game-screen.game-screen--inspection-lab,
+#game-screen.game-screen--salt-lab,
+#game-screen.game-screen--live-defense-lab,
+#game-screen.game-screen--threat-hunt-lab,
+#game-screen.game-screen--patch-lab,
+#game-screen.game-screen--enterprise-finale {
+    background:
+        radial-gradient(circle at top left, rgba(23, 216, 255, 0.12), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(255, 63, 120, 0.12), transparent 24%),
+        linear-gradient(180deg, #04091a 0%, #020610 100%);
+    overflow: hidden;
+}
+
+#game-screen.game-screen--single-choice-lab > .back-btn,
+#game-screen.game-screen--single-choice-lab .game-header,
+#game-screen.game-screen--single-choice-lab .side-panel,
+#game-screen.game-screen--prediction-lab > .back-btn,
+#game-screen.game-screen--prediction-lab .game-header,
+#game-screen.game-screen--prediction-lab .side-panel,
+#game-screen.game-screen--investigation-lab > .back-btn,
+#game-screen.game-screen--investigation-lab .game-header,
+#game-screen.game-screen--investigation-lab .side-panel,
+#game-screen.game-screen--inspection-lab > .back-btn,
+#game-screen.game-screen--inspection-lab .game-header,
+#game-screen.game-screen--inspection-lab .side-panel,
+#game-screen.game-screen--salt-lab > .back-btn,
+#game-screen.game-screen--salt-lab .game-header,
+#game-screen.game-screen--salt-lab .side-panel,
+#game-screen.game-screen--live-defense-lab > .back-btn,
+#game-screen.game-screen--live-defense-lab .game-header,
+#game-screen.game-screen--live-defense-lab .side-panel,
+#game-screen.game-screen--threat-hunt-lab > .back-btn,
+#game-screen.game-screen--threat-hunt-lab .game-header,
+#game-screen.game-screen--threat-hunt-lab .side-panel,
+#game-screen.game-screen--patch-lab > .back-btn,
+#game-screen.game-screen--patch-lab .game-header,
+#game-screen.game-screen--patch-lab .side-panel,
+#game-screen.game-screen--enterprise-finale > .back-btn,
+#game-screen.game-screen--enterprise-finale .game-header,
+#game-screen.game-screen--enterprise-finale .side-panel {
+    display: none !important;
+}
+
+#game-screen.game-screen--single-choice-lab .game-content,
+#game-screen.game-screen--prediction-lab .game-content,
+#game-screen.game-screen--investigation-lab .game-content,
+#game-screen.game-screen--inspection-lab .game-content,
+#game-screen.game-screen--salt-lab .game-content,
+#game-screen.game-screen--live-defense-lab .game-content,
+#game-screen.game-screen--threat-hunt-lab .game-content,
+#game-screen.game-screen--patch-lab .game-content,
+#game-screen.game-screen--enterprise-finale .game-content {
+    gap: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+}
+
+#game-screen.game-screen--single-choice-lab .puzzle-area,
+#game-screen.game-screen--prediction-lab .puzzle-area,
+#game-screen.game-screen--investigation-lab .puzzle-area,
+#game-screen.game-screen--inspection-lab .puzzle-area,
+#game-screen.game-screen--salt-lab .puzzle-area,
+#game-screen.game-screen--live-defense-lab .puzzle-area,
+#game-screen.game-screen--threat-hunt-lab .puzzle-area,
+#game-screen.game-screen--patch-lab .puzzle-area,
+#game-screen.game-screen--enterprise-finale .puzzle-area {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    overflow: hidden;
+    height: 100%;
+    max-height: 100%;
+}
+
+#game-screen.game-screen--single-choice-lab .puzzle-area > *,
+#game-screen.game-screen--prediction-lab .puzzle-area > *,
+#game-screen.game-screen--investigation-lab .puzzle-area > *,
+#game-screen.game-screen--inspection-lab .puzzle-area > *,
+#game-screen.game-screen--salt-lab .puzzle-area > *,
+#game-screen.game-screen--live-defense-lab .puzzle-area > *,
+#game-screen.game-screen--threat-hunt-lab .puzzle-area > *,
+#game-screen.game-screen--patch-lab .puzzle-area > *,
+#game-screen.game-screen--enterprise-finale .puzzle-area > * {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 

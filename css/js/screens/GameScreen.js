@@ -38,6 +38,7 @@ export class GameScreen {
         this.startAIOpponent();
         this.loadPuzzle();
         this.updateHintsDisplay();
+        this.syncEmbeddedMissionHUD();
     }
 
     resetUI() {
@@ -77,12 +78,19 @@ export class GameScreen {
     }
 
     updateTimerDisplay(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         const timerElement = document.getElementById('timer');
         if (timerElement) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            timerElement.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            timerElement.textContent = formatted;
             timerElement.style.color = seconds <= CONFIG.TIMING.WARNING_TIME ? 'var(--cyber-pink)' : 'var(--cyber-blue)';
+        }
+
+        const embeddedTimer = document.getElementById('l1-timer');
+        if (embeddedTimer) {
+            embeddedTimer.textContent = formatted;
+            embeddedTimer.classList.toggle('danger', seconds <= CONFIG.TIMING.WARNING_TIME);
         }
     }
 
@@ -112,6 +120,9 @@ export class GameScreen {
         const progressText = document.getElementById('ai-progress-text');
         if (progressBar) progressBar.style.width = `${progress}%`;
         if (progressText) progressText.textContent = `${Math.floor(progress)}%`;
+
+        const embeddedAi = document.getElementById('l1-ai-progress');
+        if (embeddedAi) embeddedAi.textContent = `${Math.floor(progress)}%`;
     }
 
     onAIWin() {
@@ -191,8 +202,12 @@ export class GameScreen {
     }
 
     updateScore() {
+        const score = this.game.score.getScore();
         const scoreElement = document.getElementById('score');
-        if (scoreElement) scoreElement.textContent = this.game.score.getScore();
+        if (scoreElement) scoreElement.textContent = score;
+
+        const embeddedScore = document.getElementById('l1-score');
+        if (embeddedScore) embeddedScore.textContent = String(score).padStart(3, '0');
     }
 
     updateHintsDisplay() {
@@ -200,6 +215,22 @@ export class GameScreen {
         const maxHints = CONFIG.HINTS.MAX_HINTS_PER_MISSION;
         const used = this.game.score.hintsUsed;
         if (hintsElement) hintsElement.textContent = maxHints - used;
+
+        const embeddedHints = document.getElementById('l1-hints-remaining');
+        if (embeddedHints) embeddedHints.textContent = maxHints - used;
+    }
+
+    syncEmbeddedMissionHUD() {
+        if (this.timer) {
+            this.updateTimerDisplay(this.timer.getRemaining());
+        }
+
+        if (this.aiOpponent) {
+            this.updateAIProgress(this.aiOpponent.getProgress());
+        }
+
+        this.updateScore();
+        this.updateHintsDisplay();
     }
 
     // ─── puzzle completion ────────────────────────────────────────────────────
