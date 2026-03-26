@@ -2923,6 +2923,596 @@
     100% { transform: translateY(35%); opacity: 0.2; }
 }
 
+/* ======================
+   Main Menu Theme Refresh
+   ====================== */
+
+#main-menu {
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+#main-menu::before,
+#main-menu::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+#main-menu::before {
+    background:
+        radial-gradient(780px 420px at 50% 50%, rgba(0, 243, 255, 0.12), transparent 70%),
+        radial-gradient(520px 260px at 18% 18%, rgba(255, 0, 110, 0.12), transparent 72%),
+        radial-gradient(520px 260px at 82% 82%, rgba(0, 243, 255, 0.08), transparent 72%);
+    opacity: 0.95;
+}
+
+#main-menu::after {
+    background-image:
+        linear-gradient(rgba(0, 243, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 243, 255, 0.06) 1px, transparent 1px);
+    background-size: 96px 96px;
+    mask-image: radial-gradient(circle at center, black 28%, transparent 92%);
+    opacity: 0.22;
+}
+
+#main-menu .main-menu-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: clamp(16px, 2vw, 24px);
+    overflow: hidden;
+    isolation: isolate;
+}
+
+#main-menu .main-menu-grid-overlay {
+    position: absolute;
+    inset: 5% 6%;
+    border: 1px solid rgba(0, 212, 255, 0.18);
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 212, 255, 0.08), transparent 18%),
+        rgba(4, 11, 29, 0.92);
+    box-shadow:
+        0 0 0 1px rgba(255, 51, 102, 0.08),
+        0 28px 64px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(10px);
+    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+}
+
+#main-menu .main-menu-grid-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #00d4ff, rgba(0, 212, 255, 0.12), #ff3366);
+}
+
+#main-menu .main-menu-aura {
+    position: absolute;
+    width: 34vw;
+    height: 34vw;
+    min-width: 280px;
+    min-height: 280px;
+    border-radius: 50%;
+    filter: blur(24px);
+    opacity: 0.08;
+    animation: mainMenuAuraDrift 18s ease-in-out infinite;
+}
+
+#main-menu .main-menu-aura-left {
+    top: -8%;
+    left: -6%;
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.45), rgba(0, 243, 255, 0));
+}
+
+#main-menu .main-menu-aura-right {
+    right: -10%;
+    bottom: -12%;
+    background: radial-gradient(circle, rgba(255, 0, 110, 0.34), rgba(255, 0, 110, 0));
+    animation-delay: -5s;
+}
+
+#main-menu .main-menu-topbar,
+#main-menu .main-menu-content {
+    position: relative;
+    z-index: 1;
+}
+
+#main-menu .main-menu-topbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 10px 22px 0;
+}
+
+#main-menu .main-menu-status-chip {
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 212, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(0, 10, 28, 0.58);
+    color: rgba(168, 216, 232, 0.72);
+    font-size: 0.46rem;
+    letter-spacing: 2.8px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+#main-menu .main-menu-status-chip-alt {
+    border-color: rgba(255, 51, 102, 0.18);
+    color: rgba(255, 214, 234, 0.76);
+}
+
+#main-menu .main-menu-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(235px, 260px) minmax(0, 1fr) minmax(235px, 260px);
+    gap: clamp(14px, 1.8vw, 24px);
+    align-items: center;
+    padding: clamp(24px, 4vh, 40px) clamp(22px, 2.2vw, 34px) clamp(24px, 3vh, 38px);
+}
+
+#main-menu .main-menu-side,
+#main-menu .main-menu-center {
+    min-height: 0;
+}
+
+#main-menu .main-menu-side {
+    display: grid;
+    gap: 12px;
+    align-content: center;
+}
+
+#main-menu .main-menu-panel {
+    position: relative;
+    padding: 16px 16px 14px;
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 212, 255, 0.04), transparent 100%),
+        rgba(2, 10, 28, 0.85);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.01),
+        0 10px 24px rgba(0, 0, 0, 0.12);
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+#main-menu .main-menu-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.55), transparent);
+    opacity: 0.75;
+}
+
+#main-menu .main-menu-panel-label,
+#main-menu .main-menu-kicker {
+    color: #17d8ff;
+    font-size: 0.42rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+#main-menu .main-menu-panel-title {
+    margin-top: 8px;
+    color: #e9f6ff;
+    font-size: 0.9rem;
+    letter-spacing: 3.6px;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+}
+
+#main-menu .main-menu-panel-copy,
+#main-menu .main-menu-center-copy p {
+    margin-top: 8px;
+    color: rgba(168, 216, 232, 0.52);
+    font-size: 0.7rem;
+    line-height: 1.8;
+    letter-spacing: 0.4px;
+}
+
+#main-menu .main-menu-stack {
+    display: grid;
+    gap: 14px;
+}
+
+#main-menu .main-menu-telemetry {
+    display: grid;
+    gap: 10px;
+}
+
+#main-menu .main-menu-data-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: rgba(168, 216, 232, 0.72);
+    font-size: 0.56rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+#main-menu .main-menu-data-row span:last-child {
+    color: #00ff88;
+}
+
+#main-menu .main-menu-center {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 20px;
+    padding: 18px 18px;
+    text-align: center;
+    border-left: 1px solid rgba(0, 212, 255, 0.08);
+    border-right: 1px solid rgba(0, 212, 255, 0.08);
+}
+
+#main-menu .main-menu-header {
+    display: block;
+}
+
+#main-menu .main-menu-header .logo {
+    margin-bottom: 6px;
+    font-size: clamp(2.3rem, 4vw, 3.6rem);
+    letter-spacing: clamp(5px, 0.8vw, 8px);
+    font-family: 'Orbitron', sans-serif;
+}
+
+#main-menu .main-menu-header .logo-subtitle {
+    font-size: 0.68rem;
+    color: rgba(168, 216, 232, 0.6);
+    letter-spacing: 3.2px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+#main-menu .hologram-stage {
+    position: relative;
+    width: min(100%, 460px);
+    aspect-ratio: 1 / 0.8;
+    display: grid;
+    place-items: center;
+    padding: 26px;
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    background:
+        linear-gradient(180deg, rgba(0, 212, 255, 0.04), transparent 100%),
+        rgba(2, 10, 28, 0.36);
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+
+#main-menu .hologram-stage::before,
+#main-menu .hologram-stage::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#main-menu .hologram-stage::before {
+    inset: 18%;
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0) 66%);
+    filter: blur(14px);
+}
+
+#main-menu .hologram-stage::after {
+    inset: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(0, 243, 255, 0.06);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    border-radius: 0;
+}
+
+#main-menu .hologram-stage-ring,
+#main-menu .hologram-stage-core,
+#main-menu .hologram-stage-scan {
+    position: absolute;
+    pointer-events: none;
+}
+
+#main-menu .hologram-stage-ring {
+    border-radius: 50%;
+    border: 1px solid rgba(0, 243, 255, 0.18);
+    box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.03);
+}
+
+#main-menu .hologram-stage-ring-outer {
+    inset: 16%;
+    border-color: rgba(0, 243, 255, 0.2);
+    animation: holoOrbitSpin 30s linear infinite;
+}
+
+#main-menu .hologram-stage-ring-mid {
+    inset: 29%;
+    border-style: dashed;
+    border-color: rgba(255, 0, 110, 0.14);
+    animation: holoOrbitSpin 24s linear infinite reverse;
+}
+
+#main-menu .hologram-stage-ring-inner {
+    inset: 40%;
+    border-color: rgba(0, 255, 65, 0.18);
+    animation: holoOrbitSpin 18s linear infinite;
+}
+
+#main-menu .hologram-stage-scan {
+    left: 24%;
+    right: 24%;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.55), transparent);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.16);
+    animation: holoStageScan 5.2s linear infinite;
+}
+
+#main-menu .hologram-stage-core {
+    width: 14%;
+    height: 14%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.72), rgba(0, 243, 255, 0.05) 62%, transparent 72%);
+    filter: blur(2px);
+    animation: holoCorePulse 4.6s ease-in-out infinite;
+}
+
+#main-menu .mission-logo.holo-logo {
+    width: min(48%, 200px);
+    height: min(48%, 200px);
+    display: grid;
+    place-items: center;
+}
+
+#main-menu .mission-logo.holo-logo img {
+    width: 100%;
+    max-width: 180px;
+}
+
+#main-menu .main-menu-center-copy {
+    max-width: 540px;
+}
+
+#main-menu .hub-play-btn {
+    --hub-play-offset: 0px;
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    min-width: 240px;
+    height: auto;
+    padding: 15px 24px;
+    border-radius: 0;
+    text-indent: 0;
+    overflow: visible;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #e9f6ff;
+    font-family: 'Orbitron', sans-serif;
+    background:
+        linear-gradient(90deg, rgba(0, 212, 255, 0.16), rgba(255, 51, 102, 0.12)),
+        rgba(0, 10, 28, 0.74);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 212, 255, 0.18),
+        0 10px 22px rgba(0, 0, 0, 0.14);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+#main-menu .hub-play-btn::before {
+    display: none;
+}
+
+#main-menu .hub-play-btn::after {
+    inset: -4px;
+    opacity: 0.7;
+}
+
+#main-menu .hub-play-btn:hover,
+#main-menu .hub-play-btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 51, 102, 0.32),
+        0 14px 24px rgba(0, 0, 0, 0.18);
+}
+
+#main-menu .menu-card.nav-icon {
+    position: relative;
+    width: 100%;
+    min-height: 82px;
+    padding: 14px 16px;
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 212, 255, 0.04), transparent 100%),
+        rgba(2, 10, 28, 0.85);
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+#main-menu .menu-card.nav-icon .card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+#main-menu .menu-card.nav-icon .card-title {
+    font-size: 0.74rem;
+    letter-spacing: 2.8px;
+    font-family: 'Orbitron', sans-serif;
+}
+
+#main-menu .menu-card.nav-icon .card-subtitle {
+    font-size: 0.6rem;
+    color: rgba(168, 216, 232, 0.48);
+    letter-spacing: 1px;
+}
+
+#main-menu .menu-card.nav-icon .card-progress,
+#main-menu .menu-card.nav-icon .card-stats {
+    font-size: 0.55rem;
+    letter-spacing: 1.8px;
+    color: rgba(0, 255, 136, 0.78);
+}
+
+#main-menu .login-card.is-logout {
+    --module-accent: var(--cyber-pink);
+}
+
+#main-menu .menu-card.nav-icon:hover,
+#main-menu .menu-card.nav-icon:focus-visible,
+#main-menu .main-menu-panel:hover {
+    border-color: rgba(0, 212, 255, 0.22);
+    background:
+        linear-gradient(180deg, rgba(0, 212, 255, 0.06), transparent 100%),
+        rgba(3, 12, 30, 0.92);
+}
+
+#main-menu .menu-card.nav-icon:hover,
+#main-menu .menu-card.nav-icon:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.14);
+}
+
+@keyframes mainMenuAuraDrift {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(12px, -18px, 0) scale(1.08);
+    }
+}
+
+@keyframes holoOrbitSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes holoStageScan {
+    0% {
+        transform: translateY(-170px);
+        opacity: 0.15;
+    }
+    20%,
+    80% {
+        opacity: 0.95;
+    }
+    100% {
+        transform: translateY(170px);
+        opacity: 0.15;
+    }
+}
+
+@keyframes holoCorePulse {
+    0%, 100% {
+        transform: scale(0.94);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 1180px) {
+    #main-menu .main-menu-content {
+        grid-template-columns: minmax(220px, 270px) minmax(0, 1fr) minmax(220px, 270px);
+    }
+
+    #main-menu .main-menu-grid-overlay {
+        inset: 5% 4%;
+    }
+}
+
+@media (max-width: 980px) {
+    #main-menu .main-menu-topbar {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    #main-menu .main-menu-content {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        align-content: start;
+        overflow-y: auto;
+        padding: 24px 8px 28px;
+    }
+
+    #main-menu .main-menu-side {
+        width: min(100%, 720px);
+    }
+
+    #main-menu .main-menu-center {
+        order: -1;
+        width: min(100%, 760px);
+    }
+
+    #main-menu .hologram-stage {
+        width: min(100%, 520px);
+    }
+}
+
+@media (max-width: 640px) {
+    #main-menu .main-menu-shell {
+        padding: 12px;
+    }
+
+    #main-menu .main-menu-grid-overlay {
+        inset: 10px;
+        border-radius: 20px;
+    }
+
+    #main-menu .main-menu-status-chip {
+        width: 100%;
+        text-align: center;
+    }
+
+    #main-menu .main-menu-content {
+        gap: 14px;
+    }
+
+    #main-menu .hologram-stage {
+        width: min(100%, 360px);
+    }
+
+    #main-menu .hologram-stage-scan {
+        left: 8%;
+        right: 8%;
+    }
+
+    #main-menu .hub-play-btn {
+        min-width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #main-menu .main-menu-aura,
+    #main-menu .hologram-stage-ring,
+    #main-menu .hologram-stage-scan,
+    #main-menu .hologram-stage-core,
+    #main-menu .mission-logo.holo-logo img,
+    #main-menu .logo.holo-logo,
+    #main-menu .logo-text.holo-logo {
+        animation: none !important;
+    }
+}
+
 /* Shared full-screen password lab host for levels 2-10 */
 #game-screen.game-screen--single-choice-lab,
 #game-screen.game-screen--prediction-lab,
