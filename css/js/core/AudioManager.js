@@ -28,6 +28,9 @@ export class AudioManager {
         this.buttonClickAudio = null;
         this.pendingMusicTrack = null;
         this.lastMusicTrack = null;
+        this.audioUnlocked = false;
+        this.audioUnlockBound = false;
+        this.autoplayNoticeShown = false;
         
         // Initialize Web Audio API
         this.initAudioContext();
@@ -57,20 +60,7 @@ export class AudioManager {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.audioContext = new AudioContext();
             
-            // Resume context on user interaction (browser policy)
-            document.addEventListener('click', () => {
-                if (this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
-                }
-                this.retryPendingMusic();
-            });
-
-            document.addEventListener('keydown', () => {
-                if (this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
-                }
-                this.retryPendingMusic();
-            }, { once: true });
+            this.bindAudioUnlock();
             
             console.log('🔊 Audio context initialized');
         } catch (error) {
@@ -140,6 +130,39 @@ export class AudioManager {
         });
     }
 
+    bindAudioUnlock() {
+        if (this.audioUnlockBound) return;
+        this.audioUnlockBound = true;
+
+        const unlock = async () => {
+            this.audioUnlocked = true;
+
+            if (this.audioContext?.state === 'suspended') {
+                try {
+                    await this.audioContext.resume();
+                } catch (error) {
+                    console.warn('Audio context resume failed:', error);
+                }
+            }
+
+            this.retryPendingMusic();
+        };
+
+        document.addEventListener('pointerdown', unlock, { passive: true });
+        document.addEventListener('touchstart', unlock, { passive: true });
+        document.addEventListener('keydown', unlock, { passive: true });
+    }
+
+    canStartAudio() {
+        return this.audioUnlocked && (!this.audioContext || this.audioContext.state === 'running');
+    }
+
+    noteAutoplayBlocked() {
+        if (this.autoplayNoticeShown) return;
+        this.autoplayNoticeShown = true;
+        console.log('🎵 Audio queued until first user interaction');
+    }
+
     /**
      * Preload button click file
      */
@@ -164,6 +187,7 @@ export class AudioManager {
      */
     playSound(soundName, volume = null) {
         if (!this.sfxEnabled) return;
+        if (!this.canStartAudio()) return;
 
         const definition = this.soundDefinitions[soundName];
         if (!definition) {
@@ -194,6 +218,10 @@ export class AudioManager {
         if (!this.musicEnabled) return;
         this.pendingMusicTrack = trackName;
         this.lastMusicTrack = trackName;
+        if (!this.canStartAudio()) {
+            this.noteAutoplayBlocked();
+            return;
+        }
 
         // Stop current music if playing
         if (this.currentMusic) {
@@ -228,6 +256,12 @@ export class AudioManager {
      */
     playAudioFile(audioElement, trackName, fade) {
         try {
+            if (!this.audioUnlocked) {
+                this.pendingMusicTrack = trackName;
+                this.noteAutoplayBlocked();
+                return;
+            }
+
             audioElement.currentTime = 0;
             audioElement.volume = fade ? 0 : (this.musicDefinitions[trackName].volume * this.musicVolume);
             
@@ -235,6 +269,7 @@ export class AudioManager {
             
             if (playPromise !== undefined) {
                 playPromise.then(() => {
+                    this.pendingMusicTrack = null;
                     if (fade) {
                         this.fadeInAudio(audioElement, this.musicDefinitions[trackName].volume * this.musicVolume);
                     }
@@ -242,7 +277,7 @@ export class AudioManager {
                 }).catch(error => {
                     console.warn(`🎵 Audio play failed for ${trackName}:`, error);
                     this.pendingMusicTrack = trackName;
-                    this.fallbackToSoftTones(trackName, fade);
+                    this.noteAutoplayBlocked();
                 });
             }
             
@@ -250,12 +285,12 @@ export class AudioManager {
         } catch (error) {
             console.warn(`🎵 Error playing ${trackName}:`, error);
             this.pendingMusicTrack = trackName;
-            this.fallbackToSoftTones(trackName, fade);
+            this.noteAutoplayBlocked();
         }
     }
 
     retryPendingMusic() {
-        if (!this.pendingMusicTrack || !this.musicEnabled) return;
+        if (!this.pendingMusicTrack || !this.musicEnabled || !this.canStartAudio()) return;
 
         const activeScreen = document.querySelector('.screen.active');
         if (!activeScreen || activeScreen.id !== 'main-menu') return;
@@ -405,7 +440,7 @@ export class AudioManager {
      * Resume music
      */
     resumeMusic() {
-        if (!this.currentMusic) return;
+        if (!this.currentMusic || !this.canStartAudio()) return;
         
         if (this.currentMusic === 'cyberHum' && this.cyberHumNodes?.gainNode) {
             const target = this.musicDefinitions.cyberHum.volume * this.musicVolume;
@@ -443,7 +478,7 @@ export class AudioManager {
      * @param {number} volume - Volume (0-1)
      */
     generateBeep(volume = 0.5) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.canStartAudio()) return;
 
         try {
             const oscillator = this.audioContext.createOscillator();
@@ -473,7 +508,7 @@ export class AudioManager {
      * @param {string} type - Type of ambient tone ('soft', 'gentle', 'calm')
      */
     generateSoftTones(type = 'soft') {
-        if (!this.audioContext || !this.musicEnabled) return;
+        if (!this.audioContext || !this.musicEnabled || !this.canStartAudio()) return;
 
         // Stop current tones
         this.stopSoftTones();
@@ -523,7 +558,7 @@ export class AudioManager {
      * @param {number} volume - Tone volume
      */
     createSoftTone(frequency, volume) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.canStartAudio()) return;
 
         try {
             const oscillator = this.audioContext.createOscillator();
@@ -743,7 +778,7 @@ export class AudioManager {
     }
 
     playButtonClickFromFile() {
-        if (!this.buttonClickAudio) return false;
+        if (!this.buttonClickAudio || !this.audioUnlocked) return false;
 
         try {
             const clickInstance = this.buttonClickAudio.cloneNode();
@@ -869,7 +904,7 @@ export class AudioManager {
     }
 
     playSynthSound(soundName, volume) {
-        if (!this.audioContext) return false;
+        if (!this.audioContext || !this.canStartAudio()) return false;
 
         switch (soundName) {
             case 'buttonClick':
@@ -887,7 +922,7 @@ export class AudioManager {
     }
 
     playAmbientCyberHum(fade = true) {
-        if (!this.audioContext || !this.musicEnabled) return;
+        if (!this.audioContext || !this.musicEnabled || !this.canStartAudio()) return;
         if (this.currentMusic === 'cyberHum' && this.cyberHumNodes) return;
 
         if (this.currentMusic && this.currentMusic !== 'cyberHum') {
@@ -962,7 +997,7 @@ export class AudioManager {
     }
 
     playSynthButtonClick(volume = 0.25) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.canStartAudio()) return;
 
         // Softer sci-fi tap: short tone + light tick, less harsh than the old crack.
         const t = this.audioContext.currentTime;
@@ -1001,7 +1036,7 @@ export class AudioManager {
     }
 
     playSynthGlitch(volume = 0.3) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.canStartAudio()) return;
 
         const t = this.audioContext.currentTime;
         const osc = this.audioContext.createOscillator();
@@ -1049,7 +1084,7 @@ export class AudioManager {
     }
 
     playSynthHologram(volume = 0.22) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.canStartAudio()) return;
 
         const t = this.audioContext.currentTime;
         const oscA = this.audioContext.createOscillator();

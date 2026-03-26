@@ -1,7 +1,22 @@
+:root {
+    --main-ui-navy: #04091a;
+    --main-ui-deep: #020610;
+    --main-ui-cyan: #00d4ff;
+    --main-ui-red: #e0204a;
+    --main-ui-red2: #ff3366;
+    --main-ui-green: #00ff88;
+    --main-ui-gold: #ffcc00;
+    --main-ui-purple: #b44fff;
+    --main-ui-text: #a8d8e8;
+    --main-ui-white: #e8f4ff;
+    --main-ui-panel: rgba(4, 12, 28, 0.95);
+    --main-ui-border: rgba(0, 212, 255, 0.15);
+}
+
 #main-menu {
     background:
-        radial-gradient(circle at 50% 55%, rgba(0, 229, 255, 0.08), transparent 22%),
-        linear-gradient(180deg, #07111f 0%, #040811 100%);
+        radial-gradient(circle at 50% 55%, rgba(0, 212, 255, 0.08), transparent 22%),
+        linear-gradient(180deg, var(--main-ui-navy) 0%, var(--main-ui-deep) 100%);
 }
 
 #main-menu::before,
@@ -15,8 +30,8 @@
 #main-menu::before {
     z-index: 1;
     background-image:
-        linear-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 229, 255, 0.035) 1px, transparent 1px);
+        linear-gradient(rgba(0, 212, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.035) 1px, transparent 1px);
     background-size: 63px 63px;
 }
 
@@ -47,8 +62,8 @@
 #main-menu .main-menu-grid-bg {
     z-index: 0;
     background:
-        radial-gradient(circle at 50% 56%, rgba(0, 229, 255, 0.08), transparent 24%),
-        linear-gradient(180deg, rgba(0, 229, 255, 0.03), transparent 32%);
+        radial-gradient(circle at 50% 56%, rgba(0, 212, 255, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(0, 212, 255, 0.03), transparent 32%);
 }
 
 #main-menu .main-menu-particles {
@@ -60,8 +75,8 @@
     width: 2px;
     height: 2px;
     border-radius: 50%;
-    background: #00e5ff;
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.9);
+    background: var(--main-ui-cyan);
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.9);
     opacity: 0;
     animation: mainMenuParticleFloat var(--particle-duration) var(--particle-delay) infinite ease-in-out;
 }
@@ -76,7 +91,7 @@
     top: -20%;
     font-family: 'Share Tech Mono', monospace;
     font-size: 10px;
-    color: rgba(0, 229, 255, 0.12);
+    color: rgba(0, 212, 255, 0.12);
     writing-mode: vertical-rl;
     text-orientation: mixed;
     user-select: none;
@@ -104,8 +119,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    background: rgba(5, 8, 16, 0.96);
-    border-bottom: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(4, 12, 28, 0.96);
+    border-bottom: 1px solid var(--main-ui-border);
     backdrop-filter: blur(14px);
 }
 
@@ -114,8 +129,8 @@
     font-family: 'Orbitron', sans-serif;
     font-size: 0.78rem;
     letter-spacing: 0.48em;
-    color: #00e5ff;
-    text-shadow: 0 0 18px rgba(0, 229, 255, 0.45);
+    color: var(--main-ui-cyan);
+    text-shadow: 0 0 18px rgba(0, 212, 255, 0.45);
 }
 
 #main-menu .main-menu-brand {
@@ -140,11 +155,11 @@
 }
 
 #main-menu .main-menu-brand-title .plain {
-    color: #ffffff;
+    color: var(--main-ui-white);
 }
 
 #main-menu .main-menu-brand-title .d2 {
-    color: #00e5ff;
+    color: var(--main-ui-cyan);
 }
 
 #main-menu .main-menu-brand-e {
@@ -166,7 +181,7 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 7px;
     letter-spacing: 0.42em;
-    color: rgba(200, 232, 240, 0.42);
+    color: rgba(168, 216, 232, 0.42);
     white-space: nowrap;
 }
 
@@ -174,7 +189,7 @@
     display: flex;
     align-items: center;
     gap: 28px;
-    color: rgba(200, 232, 240, 0.32);
+    color: rgba(168, 216, 232, 0.32);
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.58rem;
     letter-spacing: 0.22em;
@@ -206,18 +221,18 @@
 }
 
 #main-menu .is-green {
-    color: #00ff88;
+    color: var(--main-ui-green);
     box-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
 }
 
 #main-menu .is-red {
-    color: #ff2244;
-    box-shadow: 0 0 8px rgba(255, 34, 68, 0.8);
+    color: var(--main-ui-red);
+    box-shadow: 0 0 8px rgba(224, 32, 74, 0.8);
     animation: mainMenuStatusBlink 1.3s step-end infinite;
 }
 
 #main-menu .main-menu-status-alert {
-    color: #ff335a;
+    color: var(--main-ui-red2);
 }
 
 #main-menu .main-menu-content {
@@ -247,7 +262,7 @@
     top: 28px;
     bottom: 0;
     width: 1px;
-    background: linear-gradient(180deg, rgba(0, 229, 255, 0.28), transparent);
+    background: linear-gradient(180deg, rgba(0, 212, 255, 0.28), transparent);
 }
 
 #main-menu .main-menu-dock-left .main-menu-dock-rail {
@@ -261,7 +276,7 @@
 #main-menu .main-menu-dock-sep {
     width: 28px;
     height: 1px;
-    background: rgba(0, 229, 255, 0.14);
+    background: rgba(0, 212, 255, 0.14);
     margin: 2px 0;
 }
 
@@ -276,7 +291,7 @@
     border: 0;
     padding: 0;
     cursor: pointer;
-    color: rgba(0, 229, 255, 0.78);
+    color: rgba(0, 212, 255, 0.78);
     transition: transform 0.25s ease;
 }
 
@@ -290,24 +305,24 @@
     position: absolute;
     inset: 0;
     transform: rotate(45deg) scale(0.74);
-    border: 1px solid rgba(0, 229, 255, 0.16);
-    background: rgba(0, 229, 255, 0.04);
+    border: 1px solid rgba(0, 212, 255, 0.16);
+    background: rgba(0, 212, 255, 0.04);
     transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
 
 #main-menu .main-menu-dock-icon:hover .main-menu-dock-bg,
 #main-menu .main-menu-dock-icon:focus-visible .main-menu-dock-bg,
 #main-menu .main-menu-dock-icon.is-active .main-menu-dock-bg {
-    border-color: rgba(0, 229, 255, 0.55);
-    background: rgba(0, 229, 255, 0.12);
-    box-shadow: 0 0 18px rgba(0, 229, 255, 0.18), inset 0 0 14px rgba(0, 229, 255, 0.09);
+    border-color: rgba(0, 212, 255, 0.55);
+    background: rgba(0, 212, 255, 0.12);
+    box-shadow: 0 0 18px rgba(0, 212, 255, 0.18), inset 0 0 14px rgba(0, 212, 255, 0.09);
 }
 
 #main-menu .main-menu-dock-icon.is-active .main-menu-dock-bg::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 28%, rgba(0, 229, 255, 0.2) 50%, transparent 72%);
+    background: linear-gradient(180deg, transparent 28%, rgba(0, 212, 255, 0.2) 50%, transparent 72%);
     animation: mainMenuDockScan 2s linear infinite;
 }
 
@@ -359,8 +374,8 @@
     width: 3px;
     height: 18px;
     transform: translateY(-50%);
-    background: #00e5ff;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+    background: var(--main-ui-cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.9);
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -385,9 +400,9 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.5rem;
     letter-spacing: 0.18em;
-    color: #00e5ff;
-    background: rgba(3, 12, 28, 0.96);
-    border: 1px solid rgba(0, 229, 255, 0.26);
+    color: var(--main-ui-cyan);
+    background: rgba(4, 12, 28, 0.96);
+    border: 1px solid rgba(0, 212, 255, 0.26);
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -414,8 +429,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #ff2244;
-    box-shadow: 0 0 8px rgba(255, 34, 68, 0.9);
+    background: var(--main-ui-red);
+    box-shadow: 0 0 8px rgba(224, 32, 74, 0.9);
     animation: mainMenuStatusBlink 1.2s step-end infinite;
 }
 
@@ -466,7 +481,7 @@
 }
 
 #main-menu .ptitle .d2 {
-    color: #00e5ff;
+    color: var(--main-ui-cyan);
 }
 
 #main-menu .mission-e-wrap {
@@ -486,7 +501,7 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    border: 1px dashed rgba(255, 215, 0, 0.25);
+    border: 1px dashed rgba(255, 204, 0, 0.25);
     animation: orbitSpin 4s linear infinite;
     pointer-events: none;
 }
@@ -498,8 +513,8 @@
     font-family: 'Orbitron', sans-serif;
     font-size: 26px;
     font-weight: 900;
-    color: #ffd700;
-    text-shadow: 0 0 18px rgba(255, 215, 0, 0.7), 0 0 40px rgba(255, 215, 0, 0.3);
+    color: var(--main-ui-gold);
+    text-shadow: 0 0 18px rgba(255, 204, 0, 0.7), 0 0 40px rgba(255, 204, 0, 0.3);
     animation: eOrbit 3s ease-in-out infinite, ePulse 2s ease-in-out infinite;
 }
 
@@ -514,23 +529,23 @@
 #main-menu .e-spark {
     width: 5px;
     height: 5px;
-    background: #ffd700;
-    box-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255, 215, 0, 0.4);
+    background: var(--main-ui-gold);
+    box-shadow: 0 0 8px var(--main-ui-gold), 0 0 16px rgba(255, 204, 0, 0.4);
     animation: sparkOrbit 3s linear infinite;
 }
 
 #main-menu .e-spark2 {
     width: 3px;
     height: 3px;
-    background: #00e5ff;
-    box-shadow: 0 0 5px #00e5ff;
+    background: var(--main-ui-cyan);
+    box-shadow: 0 0 5px var(--main-ui-cyan);
     animation: sparkOrbit2 1.8s linear infinite reverse;
 }
 
 #main-menu .psub,
 #main-menu .htag {
     font-family: 'Share Tech Mono', monospace;
-    color: rgba(200, 232, 240, 0.32);
+    color: rgba(168, 216, 232, 0.32);
 }
 
 #main-menu .psub {
@@ -558,7 +573,7 @@
     height: 0;
     border-left: 130px solid transparent;
     border-right: 130px solid transparent;
-    border-bottom: 420px solid rgba(0, 229, 255, 0.03);
+    border-bottom: 420px solid rgba(0, 212, 255, 0.03);
     filter: blur(14px);
     animation: beamFlick 4s ease-in-out infinite;
 }
@@ -570,27 +585,27 @@
     transform: translateX(-50%);
     width: 280px;
     height: 16px;
-    background: radial-gradient(ellipse, rgba(0, 229, 255, 0.5) 0%, rgba(0, 229, 255, 0.1) 50%, transparent 70%);
+    background: radial-gradient(ellipse, rgba(0, 212, 255, 0.5) 0%, rgba(0, 212, 255, 0.1) 50%, transparent 70%);
     animation: basePulse 2.5s ease-in-out infinite;
 }
 
 #main-menu .hr {
     position: absolute;
     border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.09);
+    border: 1px solid rgba(0, 212, 255, 0.09);
 }
 
 #main-menu .hr1 { width: 460px; height: 460px; animation: spin 14s linear infinite; }
-#main-menu .hr2 { width: 390px; height: 390px; border-style: dashed; border-color: rgba(0, 229, 255, 0.06); animation: spin 9s linear infinite reverse; }
-#main-menu .hr3 { width: 310px; height: 310px; border-color: rgba(184, 51, 255, 0.1); animation: spin 22s linear infinite; }
-#main-menu .hr4 { width: 230px; height: 230px; border-style: dotted; border-color: rgba(0, 229, 255, 0.15); animation: spin 6s linear infinite reverse; }
-#main-menu .hr5 { width: 150px; height: 150px; border-color: rgba(0, 229, 255, 0.08); animation: spin 18s linear infinite; }
+#main-menu .hr2 { width: 390px; height: 390px; border-style: dashed; border-color: rgba(0, 212, 255, 0.06); animation: spin 9s linear infinite reverse; }
+#main-menu .hr3 { width: 310px; height: 310px; border-color: rgba(180, 79, 255, 0.1); animation: spin 22s linear infinite; }
+#main-menu .hr4 { width: 230px; height: 230px; border-style: dotted; border-color: rgba(0, 212, 255, 0.15); animation: spin 6s linear infinite reverse; }
+#main-menu .hr5 { width: 150px; height: 150px; border-color: rgba(0, 212, 255, 0.08); animation: spin 18s linear infinite; }
 
 #main-menu .hr1::before,
 #main-menu .hr1::after {
     content: '';
     position: absolute;
-    background: #00e5ff;
+    background: var(--main-ui-cyan);
 }
 
 #main-menu .hr1::before {
@@ -598,7 +613,7 @@
     height: 1px;
     top: 50%;
     left: -5px;
-    box-shadow: 460px 0 0 #00e5ff;
+    box-shadow: 460px 0 0 var(--main-ui-cyan);
 }
 
 #main-menu .hr1::after {
@@ -606,14 +621,14 @@
     height: 10px;
     left: 50%;
     top: -5px;
-    box-shadow: 0 460px 0 #00e5ff;
+    box-shadow: 0 460px 0 var(--main-ui-cyan);
 }
 
 #main-menu .dpt {
     position: absolute;
     font-family: 'Share Tech Mono', monospace;
     font-size: 8px;
-    color: rgba(0, 229, 255, 0.3);
+    color: rgba(0, 212, 255, 0.3);
     letter-spacing: 0.1em;
     animation: dFlt var(--dd, 4s) var(--ds, 0s) ease-in-out infinite alternate;
 }
@@ -629,7 +644,7 @@
     position: absolute;
     inset: -18px;
     pointer-events: none;
-    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 229, 255, 0.022) 3px, rgba(0, 229, 255, 0.022) 4px);
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 212, 255, 0.022) 3px, rgba(0, 212, 255, 0.022) 4px);
     animation: scanShift 3s linear infinite;
 }
 
@@ -638,7 +653,7 @@
     left: -18px;
     right: -18px;
     height: 70px;
-    background: linear-gradient(180deg, transparent, rgba(0, 229, 255, 0.06), rgba(0, 229, 255, 0.03), transparent);
+    background: linear-gradient(180deg, transparent, rgba(0, 212, 255, 0.06), rgba(0, 212, 255, 0.03), transparent);
     animation: scanBar 4.5s ease-in-out infinite;
     pointer-events: none;
 }
@@ -648,7 +663,7 @@
     font-size: 62px;
     font-weight: 900;
     letter-spacing: 0.08em;
-    background: linear-gradient(180deg, #fff 0%, #00e5ff 55%, #b833ff 100%);
+    background: linear-gradient(180deg, var(--main-ui-white) 0%, var(--main-ui-cyan) 55%, var(--main-ui-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -667,8 +682,8 @@
     font-size: 26px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: #00e5ff;
-    text-shadow: 0 0 28px #00e5ff;
+    color: var(--main-ui-cyan);
+    text-shadow: 0 0 28px var(--main-ui-cyan);
 }
 
 #main-menu .joystick-btn {
@@ -697,14 +712,14 @@
 #main-menu .joystick-btn::before {
     width: 70px;
     height: 70px;
-    border: 1px dashed rgba(0, 229, 255, 0.2);
+    border: 1px dashed rgba(0, 212, 255, 0.2);
     animation: spin 5s linear infinite;
 }
 
 #main-menu .joystick-btn::after {
     width: 54px;
     height: 54px;
-    border: 1px solid rgba(0, 229, 255, 0.12);
+    border: 1px solid rgba(0, 212, 255, 0.12);
     animation: spin 3s linear infinite reverse;
 }
 
@@ -712,7 +727,7 @@
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 229, 255, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(0, 212, 255, 0.12) 0%, transparent 70%);
     animation: joyGlow 2.5s ease-in-out infinite;
 }
 
@@ -720,13 +735,13 @@
     position: relative;
     z-index: 2;
     font-size: 28px;
-    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.7)) drop-shadow(0 0 20px rgba(0, 229, 255, 0.4));
+    filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.7)) drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
     transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 #main-menu .joystick-btn:hover .joy-icon {
     transform: scale(1.18);
-    filter: drop-shadow(0 0 14px #00e5ff) drop-shadow(0 0 30px rgba(0, 229, 255, 0.6));
+    filter: drop-shadow(0 0 14px var(--main-ui-cyan)) drop-shadow(0 0 30px rgba(0, 212, 255, 0.6));
 }
 
 #main-menu .joy-spark,
@@ -740,16 +755,16 @@
 #main-menu .joy-spark {
     width: 4px;
     height: 4px;
-    background: #00e5ff;
-    box-shadow: 0 0 7px #00e5ff;
+    background: var(--main-ui-cyan);
+    box-shadow: 0 0 7px var(--main-ui-cyan);
     animation: joySpark var(--jd, 2.4s) var(--jdl, 0s) linear infinite;
 }
 
 #main-menu .joy-spark2 {
     width: 3px;
     height: 3px;
-    background: #ffd700;
-    box-shadow: 0 0 5px #ffd700;
+    background: var(--main-ui-gold);
+    box-shadow: 0 0 5px var(--main-ui-gold);
     animation: joySpark2 var(--jd, 1.6s) var(--jdl, 0s) linear infinite reverse;
 }
 
@@ -757,7 +772,7 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    border: 2px solid #00e5ff;
+    border: 2px solid var(--main-ui-cyan);
     opacity: 0;
     pointer-events: none;
 }
@@ -788,12 +803,12 @@
     display: flex;
     align-items: center;
     gap: 24px;
-    background: rgba(5, 8, 16, 0.98);
-    border-top: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(4, 12, 28, 0.98);
+    border-top: 1px solid var(--main-ui-border);
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.52rem;
     letter-spacing: 0.18em;
-    color: rgba(200, 232, 240, 0.34);
+    color: rgba(168, 216, 232, 0.34);
     text-transform: uppercase;
 }
 
@@ -805,16 +820,16 @@
 
 #main-menu .main-menu-statusbar-utc {
     margin-left: auto;
-    color: #00e5ff;
+    color: var(--main-ui-cyan);
 }
 
 #main-menu .login-card.is-logout .main-menu-dock-bg {
-    border-color: rgba(255, 34, 68, 0.35);
+    border-color: rgba(224, 32, 74, 0.35);
 }
 
 #main-menu .login-card.is-logout .main-menu-dock-tip,
 #main-menu .login-card.is-logout .main-menu-dock-glyph {
-    color: #ff6a88;
+    color: var(--main-ui-red2);
 }
 
 @keyframes mainMenuParticleFloat {
@@ -1087,6 +1102,263 @@
     #main-menu .joy-icon { font-size: 28px; }
     #main-menu .dpt,
     #main-menu .main-menu-hologram-mark { display: none; }
+}
+
+@media (max-width: 540px) {
+    #main-menu .main-menu-shell {
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: 12px;
+    }
+
+    #main-menu .main-menu-topbar {
+        position: relative;
+        height: auto;
+        min-height: 0;
+        padding: 10px 12px 8px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    #main-menu .main-menu-brand {
+        align-items: center;
+    }
+
+    #main-menu .main-menu-top-status {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        font-size: 0.46rem;
+        letter-spacing: 0.14em;
+    }
+
+    #main-menu .main-menu-clock {
+        width: 100%;
+        text-align: center;
+        font-size: 0.7rem;
+        letter-spacing: 0.28em;
+    }
+
+    #main-menu .main-menu-content {
+        grid-template-columns: 1fr;
+        height: auto;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding: 8px 0 0;
+        overflow: visible;
+    }
+
+    #main-menu .main-menu-center {
+        order: -2;
+        height: auto;
+        padding: 8px 10px 14px;
+    }
+
+    #main-menu .main-menu-dock {
+        position: relative;
+        top: auto;
+        height: auto;
+        width: 100%;
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px 8px;
+        padding: 10px 10px 0;
+    }
+
+    #main-menu .main-menu-dock-left {
+        order: -1;
+    }
+
+    #main-menu .main-menu-dock-right {
+        order: 1;
+        padding-top: 4px;
+    }
+
+    #main-menu .main-menu-dock-sep,
+    #main-menu .main-menu-dock-rail,
+    #main-menu .main-menu-dock-tip,
+    #main-menu .main-menu-dock-nub,
+    #main-menu .main-menu-binary,
+    #main-menu .main-menu-particles {
+        display: none;
+    }
+
+    #main-menu .main-menu-dock-icon {
+        width: 46px;
+        height: 46px;
+    }
+
+    #main-menu .main-menu-dock-glyph,
+    #main-menu .main-menu-dock-glyph .card-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    #main-menu .holo-wrap {
+        width: min(100%, 320px);
+        height: 320px;
+        margin-top: 0;
+    }
+
+    #main-menu .hbeam {
+        border-left-width: 92px;
+        border-right-width: 92px;
+        border-bottom-width: 250px;
+        bottom: 8px;
+    }
+
+    #main-menu .hr1 { width: 290px; height: 290px; }
+    #main-menu .hr2 { width: 246px; height: 246px; }
+    #main-menu .hr3 { width: 198px; height: 198px; }
+    #main-menu .hr4 { width: 142px; height: 142px; }
+    #main-menu .hr5 { width: 92px; height: 92px; }
+
+    #main-menu .hmain {
+        font-size: 2.65rem;
+        letter-spacing: 0.07em;
+    }
+
+    #main-menu .hdf-row {
+        margin-top: -4px;
+    }
+
+    #main-menu .hdf-letter {
+        font-size: 20px;
+    }
+
+    #main-menu .joystick-btn {
+        width: 46px;
+        height: 46px;
+        margin: 0 8px;
+    }
+
+    #main-menu .joystick-btn::before {
+        width: 60px;
+        height: 60px;
+    }
+
+    #main-menu .joystick-btn::after {
+        width: 48px;
+        height: 48px;
+    }
+
+    #main-menu .joy-glow {
+        inset: -4px;
+    }
+
+    #main-menu .joy-icon {
+        font-size: 24px;
+    }
+
+    #main-menu .htag {
+        margin-top: 10px;
+        font-size: 7px;
+        letter-spacing: 0.22em;
+    }
+
+    #main-menu .hbase {
+        width: 210px;
+        height: 12px;
+        bottom: 6px;
+    }
+
+    #main-menu .main-menu-statusbar {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        height: auto;
+        min-height: 0;
+        padding: 8px 12px 10px;
+        margin-top: 8px;
+        justify-content: center;
+        gap: 8px 14px;
+    }
+
+    #main-menu .main-menu-statusbar-item,
+    #main-menu .main-menu-statusbar-utc {
+        font-size: 0.44rem;
+        letter-spacing: 0.14em;
+    }
+
+    #main-menu .main-menu-statusbar-utc {
+        width: 100%;
+        text-align: center;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 400px) {
+    #main-menu .main-menu-topbar {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    #main-menu .main-menu-brand-title {
+        font-size: 14px;
+        letter-spacing: 0.14em;
+    }
+
+    #main-menu .main-menu-brand-sub {
+        display: none;
+    }
+
+    #main-menu .main-menu-top-status {
+        gap: 6px 10px;
+        font-size: 0.4rem;
+    }
+
+    #main-menu .main-menu-clock {
+        font-size: 0.62rem;
+        letter-spacing: 0.18em;
+    }
+
+    #main-menu .holo-wrap {
+        width: min(100%, 280px);
+        height: 280px;
+    }
+
+    #main-menu .hr1 { width: 254px; height: 254px; }
+    #main-menu .hr2 { width: 214px; height: 214px; }
+    #main-menu .hr3 { width: 172px; height: 172px; }
+    #main-menu .hr4 { width: 126px; height: 126px; }
+    #main-menu .hr5 { width: 82px; height: 82px; }
+
+    #main-menu .hmain {
+        font-size: 2.2rem;
+    }
+
+    #main-menu .hdf-letter {
+        font-size: 18px;
+    }
+
+    #main-menu .joystick-btn {
+        width: 42px;
+        height: 42px;
+        margin: 0 6px;
+    }
+
+    #main-menu .joystick-btn::before {
+        width: 54px;
+        height: 54px;
+    }
+
+    #main-menu .joystick-btn::after {
+        width: 44px;
+        height: 44px;
+    }
+
+    #main-menu .joy-icon {
+        font-size: 21px;
+    }
+
+    #main-menu .main-menu-dock-icon {
+        width: 42px;
+        height: 42px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
