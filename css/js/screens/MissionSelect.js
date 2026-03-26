@@ -190,8 +190,22 @@ export class MissionSelect {
                         text: 'START MISSION',
                         class: 'btn-primary',
                         onClick: () => {
-                            this.game.startMission(mission);
-                        }
+                            try {
+                                this.ui.closeModal();
+                                setTimeout(() => {
+                                    try {
+                                        this.game.startMission(mission);
+                                    } catch (error) {
+                                        console.error('Failed to start mission:', error);
+                                        this.ui.showNotification('Mission failed to start. Check the latest level changes.', 'error');
+                                    }
+                                }, 20);
+                            } catch (error) {
+                                console.error('Failed to launch mission from briefing:', error);
+                                this.ui.showNotification('Mission failed to start. Check the latest level changes.', 'error');
+                            }
+                        },
+                        closeOnClick: false
                     },
                     {
                         text: 'BACK',

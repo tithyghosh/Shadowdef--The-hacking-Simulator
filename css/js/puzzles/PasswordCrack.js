@@ -1,6 +1,12 @@
 /**
  * PasswordCrack - Password cracking puzzle
- * Players must guess a password using hints
+ * IMPROVED v2 — fixes applied:
+ *  - Level 2: second attempt on wrong choice (costs vault, not instant fail)
+ *  - Level 6: saltDemoPanel rendered before multiSelect grid
+ *  - Level 7: tutorialOverlay + rampUpAfterSeconds spawn rate
+ *  - Level 9: tiered win condition (tiers array)
+ *  - Level 10: live rating preview on every dropdown change
+ *  - ALL: knowledgeSummary passed to gameScreen for post-completion overlay
  */
 
 import { CONFIG } from '../data/config.js';
@@ -12,13 +18,17 @@ export class PasswordCrack {
         this.audio = AudioManager.getInstance();
         this.mission = missionData || {};
         this.puzzleData = puzzleData || {};
-        
+
         this.interactionMode = this.puzzleData.interactionMode || 'typing';
         this.session = null;
         this.selectedOptions = new Set();
         this.riskSystem = this.puzzleData.riskSystem || null;
         this.riskValue = this.riskSystem ? (this.riskSystem.start || 0) : 0;
         this.singleChoiceSelected = null;
+        this.singleChoiceDefenseSelected = null;
+        this.singleChoiceStage = 'triage';
+        this.singleChoiceSelectedEntryIds = new Set();
+        this.singleChoiceFlagLimit = Number(this.puzzleData.singleChoiceFlagLimit || 3);
         this.singleChoiceTimerId = null;
         this.singleChoiceLogTimerId = null;
         this.singleChoiceRemaining = this.puzzleData.timeLimit || 60;
@@ -27,12 +37,20 @@ export class PasswordCrack {
         this.logEntryIndex = 0;
         this.predictionSession = null;
         this.predictionSelected = null;
+        this.predictionRatings = {};
         this.predictionTimerId = null;
         this.predictionRemaining = this.puzzleData.timeLimit || 60;
         this.investigationSelectedCause = null;
         this.investigationSelectedDefense = null;
         this.investigationStage = 'cause';
+        this.investigationSelectedEntryId = null;
+        this.investigationFlaggedEvents = new Set();
+        this.investigationFlagLimit = Number(this.puzzleData.investigationFlagLimit || 3);
         this.inspectionSelectedSystem = null;
+        this.inspectionSelectedDefense = null;
+        this.inspectionStage = 'audit';
+        this.inspectionViewedActions = new Set();
+        this.inspectionFeedbackHtml = '';
         this.strategySelectedDefenses = new Set();
         this.strategySimulationResult = null;
         this.liveVaultHealth = 100;
@@ -40,30 +58,13 @@ export class PasswordCrack {
         this.liveRemainingTime = 60;
         this.liveActiveAttack = null;
         this.liveDefenseCooldowns = {};
+        this.liveSuccessfulBlocks = 0;
+        this.liveMissedWaves = 0;
         this.liveAttackTimeoutId = null;
         this.liveSpawnTimeoutId = null;
         this.liveEnergyTimerId = null;
         this.liveDurationTimerId = null;
         this.liveCooldownTimerId = null;
-        this.multiVaultHealth = 100;
-        this.multiEnergy = 100;
-        this.multiRemainingTime = 90;
-        this.multiStageIndex = 0;
-        this.multiStageRemaining = 0;
-        this.multiActiveAttacks = [];
-        this.multiFlags = {
-            compromisedAccounts: 0,
-            elevatedAccess: false,
-            databaseStolen: false
-        };
-        this.multiDefenseCooldowns = {};
-        this.multiSpawnTimeoutId = null;
-        this.multiAttackResolveTimeoutId = null;
-        this.multiEnergyTimerId = null;
-        this.multiDurationTimerId = null;
-        this.multiCooldownTimerId = null;
-        this.multiStageTimerId = null;
-        this.multiUncounteredByStage = {};
         this.threatVaultHealth = 100;
         this.threatSystemIntegrity = 100;
         this.threatFalsePositiveCount = 0;
@@ -71,6 +72,10 @@ export class PasswordCrack {
         this.threatDetectedMajor = new Set();
         this.threatContainedMajor = new Set();
         this.threatInvestigatedEvents = new Set();
+        this.threatMarkedEvents = new Set();
+        this.threatSelectedEventId = null;
+        this.threatActionHistory = new Set();
+        this.threatActivityLog = [];
         this.threatTurn = 0;
         this.patchMetrics = {
             vaultHealth: 100,
@@ -81,6 +86,8 @@ export class PasswordCrack {
         };
         this.patchClosedVulns = new Set();
         this.patchAppliedActions = new Set();
+        this.patchStagedActions = new Set();
+        this.patchActivityLog = [];
         this.patchPrimaryFixed = false;
         this.patchSecondaryRevealed = false;
         this.patchTurnsSincePatch = 0;
@@ -89,19 +96,29 @@ export class PasswordCrack {
         this.enterpriseScores = null;
         this.enterpriseRating = '';
         this.enterpriseBadgeUnlocked = false;
-        
-        // Puzzle data
-        const dynamicPuzzle = this.puzzleData.randomized
-            ? this.generateDynamicPasswordProfile(this.puzzleData)
-            : null;
 
-        if (this.interactionMode === 'multiSelect') {
+        // FIX L6: salt demo state
+        this.saltDemoCompleted = false;
+        this.saltReuseState = null;
+
+        // FIX L7: ramp-up tracking
+        this.liveSimulationElapsed = 0;
+        this.liveRampActive = false;
+
+        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'humanPsychologyLab') {
             this.session = this.createMultiSelectSession();
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = 'Select all weak passwords and avoid selecting strong ones.';
             this.dynamicScenario = this.session.storyHint || null;
             this.dynamicUserTask = this.mission.userTask || null;
+        } else if (this.interactionMode === 'saltReuseLab') {
+            this.initializeSaltReuseLabState();
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
         } else if (this.interactionMode === 'singleChoice') {
             this.password = '';
             this.hints = [];
@@ -127,29 +144,12 @@ export class PasswordCrack {
             this.overallAnswerHint = null;
             this.dynamicScenario = null;
             this.dynamicUserTask = null;
-        } else if (this.interactionMode === 'strategyBuilder') {
-            this.password = '';
-            this.hints = [];
-            this.overallAnswerHint = null;
-            this.dynamicScenario = null;
-            this.dynamicUserTask = null;
+            this.inspectionStage = 'audit';
         } else if (this.interactionMode === 'liveDefenseSimulation') {
             const simConfig = this.puzzleData.simulationConfig || {};
             this.liveVaultHealth = Number(simConfig.vaultHealth || 100);
             this.liveEnergy = Number(simConfig.playerEnergy || 100);
             this.liveRemainingTime = Number(simConfig.simulationDuration || 60);
-            this.password = '';
-            this.hints = [];
-            this.overallAnswerHint = null;
-            this.dynamicScenario = null;
-            this.dynamicUserTask = null;
-        } else if (this.interactionMode === 'multiStageDefenseSimulation') {
-            const base = this.puzzleData.baseStats || {};
-            this.multiVaultHealth = Number(base.vaultHealth || 100);
-            this.multiEnergy = Number(base.playerEnergy || 100);
-            this.multiRemainingTime = Number(base.simulationDuration || 90);
-            this.multiStageIndex = 0;
-            this.multiFlags = { ...(this.puzzleData.escalationFlags || this.multiFlags) };
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = null;
@@ -187,293 +187,147 @@ export class PasswordCrack {
             this.dynamicScenario = null;
             this.dynamicUserTask = null;
         } else {
+            const dynamicPuzzle = this.puzzleData.randomized
+                ? this.generateDynamicPasswordProfile(this.puzzleData)
+                : null;
             this.password = (dynamicPuzzle?.password || this.puzzleData.password || '').toUpperCase();
             this.hints = dynamicPuzzle?.hints || this.puzzleData.hints || [];
             this.overallAnswerHint = dynamicPuzzle?.overallAnswerHint || null;
             this.dynamicScenario = dynamicPuzzle?.scenarioNarrative || null;
             this.dynamicUserTask = dynamicPuzzle?.taskNarrative || null;
         }
+
         this.visualProfile = this.puzzleData.visualProfile || null;
         this.visualMode = this.mission.visualMode || '2D';
-        this.enterpriseControls = this.puzzleData.enterpriseControls || null;
-        this.ratingBands = this.puzzleData.ratingBands || null;
         this.maxAttempts = this.puzzleData.maxAttempts || CONFIG.PUZZLES.PASSWORD.MAX_ATTEMPTS;
-        
-        // State
         this.attempts = 0;
         this.hintsShown = 0;
         this.isComplete = false;
         this.inputs = [];
         this.visualizerElement = null;
-        
+        this.humanLabLogEntries = [];
+        this.humanLabMatrixFrame = null;
+        this.humanLabMatrixResizeHandler = null;
+        this.humanLabMatrixDrops = [];
+
         console.log('🔐 Password puzzle initialized:', this.interactionMode);
     }
 
-    /**
-     * Generate a dynamic NAME## credential with long-form, story-driven reliable hints.
-     * This runs every time the mission is entered.
-     * @param {Object} puzzleData
-     * @returns {{password: string, hints: string[], scenarioNarrative: string, taskNarrative: string}}
-     */
-    generateDynamicPasswordProfile(puzzleData) {
-        if (puzzleData.randomizationType === 'keywordSuffix') {
-            return this.generateKeywordPasswordProfile(puzzleData);
-        }
+    // ─── session builders ────────────────────────────────────────────────────
 
-        const rawNames = Array.isArray(puzzleData.candidateNames) ? puzzleData.candidateNames : [];
-        const names = rawNames
-            .map(name => String(name || '').toUpperCase().replace(/[^A-Z]/g, ''))
-            .filter(name => name.length >= 4 && name.length <= 6);
-
-        const fallbackNames = ['SARAH', 'EMILY', 'DAVID', 'NADIA', 'RUBEL', 'JULIA'];
-        const namePool = names.length ? names : fallbackNames;
-
-        const selectedName = namePool[Math.floor(Math.random() * namePool.length)];
-        const selectedNameSorted = selectedName.split('').sort().join('');
-        const selectedNameVowels = (selectedName.match(/[AEIOU]/g) || []).length;
-        const key = `mission-${this.mission?.id || 'unknown'}-variant`;
-        const variant = this.pickNonRepeatingVariant(key, ['name_pin', 'codename_year', 'id_pattern', 'pure_word']);
-        const evidenceStyle = this.pickNonRepeatingVariant(`${key}-evidence`, ['helpdesk', 'siem', 'forensic', 'policy']);
-        const evidenceLabelMap = {
-            helpdesk: ['Helpdesk Ticket', 'Caller Verification', 'Reset Workflow Note'],
-            siem: ['SIEM Correlation', 'Auth Stream Pattern', 'Threat Timeline'],
-            forensic: ['Forensic Artifact', 'Endpoint Residue', 'Memory Note'],
-            policy: ['Identity Policy', 'Compliance Trace', 'Audit Comment']
-        };
-        const labels = evidenceLabelMap[evidenceStyle] || evidenceLabelMap.helpdesk;
-
-        let scenarioNarrative = '';
-        let taskNarrative = '';
-        let hints = [];
-        let password = '';
-
-        if (variant === 'name_pin') {
-            const d1 = Math.floor(Math.random() * 8) + 1;
-            const d2 = Math.min(9, d1 + (Math.floor(Math.random() * 2) + 1));
-            const sum = d1 + d2;
-            const diff = Math.abs(d2 - d1);
-            password = `${selectedName}${d1}${d2}`;
-            scenarioNarrative = 'HR profile leakage and badge OCR were correlated with old identity policy traces in SOC triage.';
-            taskNarrative = 'Recover credential format NAME## from profile and arithmetic evidence.';
-            hints = [
-                `${labels[0]}: Overall blueprint is NAME##. Name part has ${selectedName.length} letters, starts with '${selectedName[0]}' and ends with '${selectedName[selectedName.length - 1]}'.`,
-                `${labels[1]}: Name-letter checksum (sorted) is ${selectedNameSorted}, with ${selectedNameVowels} vowel(s). Numeric tail is exactly two digits.`,
-                `${labels[2]}: For the two-digit tail, sum = ${sum}, absolute difference = ${diff}, and the second digit is greater than the first.`
-            ];
-            const overallAnswerHint = 'Pattern is NAME## (a person name followed by two digits).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else if (variant === 'codename_year') {
-            const codenamePool = ['FALCON', 'ORBIT', 'PHOTON', 'SPECTRA', 'VECTOR', 'NEXUS'];
-            const code = codenamePool[Math.floor(Math.random() * codenamePool.length)];
-            const yearTail = `${Math.floor(Math.random() * 4) + 2}${Math.floor(Math.random() * 10)}`; // 20-59 range tail
-            password = `${code}${yearTail}`;
-            const codeSorted = code.split('').sort().join('');
-            scenarioNarrative = 'Red-team exercise artifacts indicate operators used project codenames followed by a short year token.';
-            taskNarrative = 'Infer CODENAME## from operation notes and timeline data.';
-            hints = [
-                `${labels[0]}: Overall blueprint is CODENAME##. Prefix is a project codename with ${code.length} letters.`,
-                `${labels[1]}: Codename letter signature (sorted) is ${codeSorted}.`,
-                `${labels[2]}: Year token maps to incident timestamp tail: '20${yearTail}'. Use only the last two digits.`
-            ];
-            const overallAnswerHint = 'Pattern is CODENAME## (operation codename + two-digit year tail).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else if (variant === 'id_pattern') {
-            const initials = `${selectedName[0]}${selectedName[selectedName.length - 1]}`;
-            const n1 = Math.floor(Math.random() * 9) + 1;
-            const n2 = Math.floor(Math.random() * 9) + 1;
-            const n3 = (n1 + n2) % 10;
-            password = `${initials}${n1}${n2}${n3}${selectedName[1]}`;
-            scenarioNarrative = 'Helpdesk reset tickets exposed a fallback employee-ID style password pattern during incident response.';
-            taskNarrative = 'Reconstruct ID-style credential using initials and numeric checksum rule.';
-            hints = [
-                `${labels[0]}: Overall blueprint is AA###A. Leading initials are '${initials}' and final letter is '${selectedName[1]}'.`,
-                `${labels[1]}: Middle numeric block contains 3 digits; first two are ${n1} and ${n2}.`,
-                `${labels[2]}: Third numeric digit follows checksum rule (d1 + d2) mod 10 = ${n3}.`
-            ];
-            const overallAnswerHint = 'Pattern is AA###A (two initials, three-digit block, one trailing letter).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else {
-            const wordPool = ['TRUST', 'SHIELD', 'FORENSIC', 'ACCESS', 'CONTROL', 'AUDIT'];
-            const word = wordPool[Math.floor(Math.random() * wordPool.length)];
-            password = word;
-            const sorted = word.split('').sort().join('');
-            const vowels = (word.match(/[AEIOU]/g) || []).length;
-            scenarioNarrative = 'SOC threat-model replay found a plaintext dictionary-only credential in one legacy service.';
-            taskNarrative = 'Recover the exact word credential from lexical evidence only.';
-            hints = [
-                `${labels[0]}: Overall blueprint is WORD (letters only). Length is ${word.length}, no digits/symbols.`,
-                `${labels[1]}: Sorted letter signature is ${sorted}.`,
-                `${labels[2]}: Starts with '${word[0]}', ends with '${word[word.length - 1]}', contains ${vowels} vowel(s).`
-            ];
-            const overallAnswerHint = 'Pattern is WORD (letters only, no digits or symbols).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        }
-    }
-
-    /**
-     * Generate dynamic LEVEL 2-style weak keyword + numeric suffix credentials
-     * with varied SOC hint narratives.
-     * @param {Object} puzzleData
-     * @returns {{password: string, hints: string[], scenarioNarrative: string, taskNarrative: string}}
-     */
-    generateKeywordPasswordProfile(puzzleData) {
-        const rawKeywords = Array.isArray(puzzleData.candidateKeywords) ? puzzleData.candidateKeywords : [];
-        const keywords = rawKeywords
-            .map(word => String(word || '').toUpperCase().replace(/[^A-Z]/g, ''))
-            .filter(word => word.length >= 5 && word.length <= 8);
-
-        const fallback = ['WELCOME', 'ACCESS', 'PORTAL', 'SECURE', 'SYSTEM', 'LOGIN'];
-        const pool = keywords.length ? keywords : fallback;
-        const selectedWord = pool[Math.floor(Math.random() * pool.length)];
-
-        const sorted = selectedWord.split('').sort().join('');
-        const uniqueCount = new Set(selectedWord.split('')).size;
-        const key = `mission-${this.mission?.id || 'unknown'}-variant`;
-        const variant = this.pickNonRepeatingVariant(key, ['keyword_pair', 'keyword_single', 'acronym_triplet', 'mixed_tail']);
-        const evidenceStyle = this.pickNonRepeatingVariant(`${key}-evidence`, ['telemetry', 'ticket', 'audit', 'threatintel']);
-        const evidenceLabelMap = {
-            telemetry: ['Telemetry Snapshot', 'Pattern Correlation', 'Speed Model'],
-            ticket: ['Support Ticket', 'Operator Comment', 'Reset Log'],
-            audit: ['Audit Finding', 'Control Review', 'Compliance Note'],
-            threatintel: ['Threat Intel', 'IOC Context', 'Campaign Tag']
-        };
-        const labels = evidenceLabelMap[evidenceStyle] || evidenceLabelMap.telemetry;
-
-        let scenarioNarrative = '';
-        let taskNarrative = '';
-        let hints = [];
-        let password = '';
-
-        if (variant === 'keyword_pair') {
-            const a = Math.floor(Math.random() * 8) + 1;
-            const b = Math.min(9, a + 1);
-            password = `${selectedWord}${a}${b}`;
-            scenarioNarrative = 'Crack-speed simulation flagged a weak default pattern: dictionary keyword plus predictable two-digit tail.';
-            taskNarrative = 'Recover KEYWORD## from lexical signature and numeric relation.';
-            hints = [
-                `${labels[0]}: Overall blueprint is KEYWORD##. Prefix is a common keyword (${selectedWord.length} chars).`,
-                `${labels[1]}: Keyword sorted-letter signature is ${sorted}; unique-letter count ${uniqueCount}.`,
-                `${labels[2]}: Two-digit suffix rule: sum = ${a + b}, and second digit is exactly one greater than first.`
-            ];
-            const overallAnswerHint = 'Pattern is KEYWORD## (keyword + two digits).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else if (variant === 'keyword_single') {
-            const digit = Math.floor(Math.random() * 10);
-            password = `${selectedWord}${digit}`;
-            scenarioNarrative = 'Audit replay shows users often append a single digit to a default word during first-login setup.';
-            taskNarrative = 'Reconstruct the exact weak credential as KEYWORD#.';
-            hints = [
-                `${labels[0]}: Overall blueprint is KEYWORD#. Total length is ${selectedWord.length + 1}.`,
-                `${labels[1]}: Keyword signature (sorted) is ${sorted}; unique letters ${uniqueCount}.`,
-                `${labels[2]}: Final numeric digit from risk tag is ${digit}.`
-            ];
-            const overallAnswerHint = 'Pattern is KEYWORD# (keyword + one digit).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else if (variant === 'acronym_triplet') {
-            const acronym = selectedWord.slice(0, 3);
-            const n1 = Math.floor(Math.random() * 8) + 1;
-            const n2 = Math.floor(Math.random() * 8) + 1;
-            const n3 = (n1 + n2) % 10;
-            password = `${acronym}${n1}${n2}${n3}`;
-            scenarioNarrative = 'High-speed cracking simulation identified an acronym-plus-numeric-block credential in privileged login traces.';
-            taskNarrative = 'Derive ACRONYM### by correlating acronym source and checksum rule.';
-            hints = [
-                `${labels[0]}: Overall blueprint is ACR###. Acronym is the first 3 letters of "${selectedWord}".`,
-                `${labels[1]}: First two digits in numeric block are ${n1} and ${n2}.`,
-                `${labels[2]}: Third digit checksum is (d1 + d2) mod 10 = ${n3}.`
-            ];
-            const overallAnswerHint = 'Pattern is ACR### (3-letter acronym + three-digit numeric block).';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        } else {
-            const tailLetter = selectedWord[selectedWord.length - 1];
-            const first = selectedWord.slice(0, Math.max(4, selectedWord.length - 2));
-            const d = Math.floor(Math.random() * 9) + 1;
-            password = `${first}${d}${tailLetter}`;
-            scenarioNarrative = 'Attack-path emulation detected a mixed weak format where users insert one digit before the final letter of a known keyword.';
-            taskNarrative = 'Reconstruct mixed pattern PREFIX + digit + last-letter.';
-            hints = [
-                `${labels[0]}: Overall blueprint is PREFIX + digit + final-letter.`,
-                `${labels[1]}: Prefix begins "${first}" and ending letter is "${tailLetter}".`,
-                `${labels[2]}: Inserted numeric value before last letter is ${d}.`
-            ];
-            const overallAnswerHint = 'Pattern is PREFIX+digit+last-letter.';
-            return { password, hints, scenarioNarrative, taskNarrative, overallAnswerHint };
-        }
-    }
-
-    /**
-     * Pick a variant while avoiding immediate repetition for the same mission.
-     * @param {string} stateKey
-     * @param {string[]} variants
-     * @returns {string}
-     */
-    pickNonRepeatingVariant(stateKey, variants) {
-        if (!Array.isArray(variants) || variants.length === 0) return '';
-
-        if (!window.__shadowdefVariantState) {
-            window.__shadowdefVariantState = {};
-        }
-
-        const last = window.__shadowdefVariantState[stateKey];
-        let pool = variants;
-        if (variants.length > 1 && last && variants.includes(last)) {
-            pool = variants.filter(v => v !== last);
-        }
-
-        const selected = pool[Math.floor(Math.random() * pool.length)];
-        window.__shadowdefVariantState[stateKey] = selected;
-        return selected;
-    }
-
-    /**
-     * Build a randomized session for multi-select level mode.
-     * @returns {Object}
-     */
     createMultiSelectSession() {
         if (typeof this.puzzleData.generateSession === 'function') {
             return this.puzzleData.generateSession.call(this.puzzleData);
         }
-
         const options = Array.isArray(this.puzzleData.options) ? this.puzzleData.options : [];
-        return {
-            options,
-            storyHint: this.mission.scenario || '',
-            subtleClueOnFail: '',
-            failHints: [],
-            securityInsight: []
-        };
+        return { options, storyHint: this.mission.scenario || '', subtleClueOnFail: '', failHints: [], securityInsight: [] };
     }
 
-    /**
-     * Build randomized session for prediction-choice mode.
-     * @returns {Object}
-     */
     createPredictionSession() {
         if (typeof this.puzzleData.generateSession === 'function') {
             return this.puzzleData.generateSession.call(this.puzzleData);
         }
         const options = Array.isArray(this.puzzleData.options) ? this.puzzleData.options : [];
-        return {
-            caseId: 'default',
-            options,
-            correctAnswer: this.puzzleData.correctAnswer || options[0] || '',
-            breakTimeSeconds: {},
-            simpleExplanation: this.puzzleData.simpleExplanation || ''
+        return { caseId: 'default', options, correctAnswer: this.puzzleData.correctAnswer || options[0] || '', breakTimeSeconds: {}, simpleExplanation: this.puzzleData.simpleExplanation || '' };
+    }
+
+    getSaltReuseLabConfig() {
+        return this.puzzleData.saltReuseLab || {};
+    }
+
+    shuffleArray(arr) {
+        const copy = Array.isArray(arr) ? arr.slice() : [];
+        for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+    }
+
+    initializeSaltReuseLabState() {
+        const config = this.getSaltReuseLabConfig();
+        const classifier = config.classifier || {};
+        const weakPool = Array.isArray(classifier.weakPool) && classifier.weakPool.length
+            ? classifier.weakPool
+            : ['password123', 'welcome123', 'admin123', 'letmein', 'qwerty123', '123456', 'iloveyou', 'dragon', 'sunshine99'];
+        const strongPool = Array.isArray(classifier.strongPool) && classifier.strongPool.length
+            ? classifier.strongPool
+            : ['T7!kP9@vQ2', 'BlueRiver!Train!Cloud!19', 'nR4$zL8#pW1'];
+        const weakCount = Math.max(1, Math.min(classifier.weakSelectionCount || 9, weakPool.length));
+        const strongCount = Math.max(1, Math.min(classifier.strongSelectionCount || 3, strongPool.length));
+        const selectedWeak = this.shuffleArray(weakPool).slice(0, weakCount);
+        const selectedStrong = this.shuffleArray(strongPool).slice(0, strongCount);
+
+        this.saltReuseState = {
+            phase: 1,
+            forgeInput: '',
+            forgeCount: 0,
+            hashA: '',
+            hashB: '',
+            divergence: { matches: 0, diffs: 0 },
+            insightVisible: false,
+            attackBadDone: false,
+            attackGoodDone: false,
+            attackBadRows: [],
+            attackGoodRows: [],
+            attackBadMessage: '',
+            attackGoodMessage: '',
+            phaseOneSelectedAnswer: null,
+            phaseOneValidated: false,
+            phaseOneFeedback: '',
+            phaseTwoSelectedAnswer: null,
+            phaseTwoValidated: false,
+            phaseTwoFeedback: '',
+            selectedPasswords: new Set(),
+            classifierSession: {
+                weak: selectedWeak,
+                strong: selectedStrong,
+                all: this.shuffleArray([...selectedWeak, ...selectedStrong])
+            },
+            feedback: null,
+            revealedWeak: new Set(),
+            falsePositives: new Set(),
+            completion: null
         };
     }
 
-    /**
-     * Apply risk increase after a wrong decision in multi-select mode.
-     */
+    simulateSaltHash(input) {
+        let hash = 5381;
+        for (let i = 0; i < input.length; i++) {
+            hash = ((hash * 33) + input.charCodeAt(i)) & 0xFFFFFFFF;
+        }
+        return Math.abs(hash).toString(16).padStart(8, '0');
+    }
+
+    makeSaltedHash(password, salt) {
+        const combined = `${password}${salt}`;
+        const h1 = this.simulateSaltHash(combined);
+        const h2 = this.simulateSaltHash(`${salt}${password}${h1}`);
+        const h3 = this.simulateSaltHash(`${h1}${combined}${h2}`);
+        const h4 = this.simulateSaltHash(`${h2}${h3}${password}`);
+        return `${h1}${h2}${h3}${h4}`.slice(0, 32);
+    }
+
+    calculateHashDivergence(hashA, hashB) {
+        let matches = 0;
+        let diffs = 0;
+        const maxLen = Math.max(hashA.length, hashB.length);
+        for (let i = 0; i < maxLen; i++) {
+            if (!hashA[i] || !hashB[i]) continue;
+            if (hashA[i] === hashB[i]) matches++;
+            else diffs++;
+        }
+        return { matches, diffs };
+    }
+
+    // ─── risk helpers ────────────────────────────────────────────────────────
+
     increaseRisk() {
         if (!this.riskSystem) return;
         this.riskValue = Math.min(this.riskSystem.max || 100, this.riskValue + (this.riskSystem.wrongAdd || 0));
         this.updateRiskDisplay();
     }
 
-    /**
-     * Update risk meter UI.
-     */
     updateRiskDisplay() {
         if (!this.riskSystem) return;
         const fill = document.getElementById('risk-fill');
@@ -484,805 +338,1124 @@ export class PasswordCrack {
         if (text) text.textContent = `${Math.floor(percent)}%`;
     }
 
-    /**
-     * Check if risk reached breach threshold.
-     * @returns {boolean}
-     */
     hasRiskBreached() {
         if (!this.riskSystem) return false;
         return this.riskValue >= (this.riskSystem.max || 100);
     }
 
-    /**
-     * Initialize and render the puzzle
-     * @param {HTMLElement} container - Container element
-     */
+    // ─── main render dispatcher ──────────────────────────────────────────────
+
     render(container) {
-        if (this.interactionMode === 'multiSelect') {
-            this.renderMultiSelectPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'singleChoice') {
-            this.renderSingleChoicePuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'predictionChoice') {
-            this.renderPredictionChoicePuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'investigation') {
-            this.renderInvestigationPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'inspection') {
-            this.renderInspectionPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'strategyBuilder') {
-            this.renderStrategyBuilderPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'liveDefenseSimulation') {
-            this.renderLiveDefenseSimulationPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'multiStageDefenseSimulation') {
-            this.renderMultiStageDefenseSimulationPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'threatHuntSimulation') {
-            this.renderThreatHuntSimulationPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'livePatchSimulation') {
-            this.renderLivePatchSimulationPuzzle(container);
-            return;
-        }
-        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-            this.renderEnterpriseArchitectureSimulationPuzzle(container);
-            return;
+        switch (this.interactionMode) {
+            case 'multiSelect':               return this.renderMultiSelectPuzzle(container);
+            case 'humanPsychologyLab':        return this.renderHumanPsychologyLab(container);
+            case 'saltReuseLab':              return this.renderSaltReuseLab(container);
+            case 'singleChoice':              return this.renderSingleChoicePuzzle(container);
+            case 'predictionChoice':          return this.renderPredictionChoicePuzzle(container);
+            case 'investigation':             return this.renderInvestigationPuzzle(container);
+            case 'inspection':                return this.renderInspectionPuzzle(container);
+            case 'liveDefenseSimulation':     return this.renderLiveDefenseSimulationPuzzle(container);
+            case 'threatHuntSimulation':      return this.renderThreatHuntSimulationPuzzle(container);
+            case 'livePatchSimulation':       return this.renderLivePatchSimulationPuzzle(container);
+            case 'enterpriseArchitectureSimulation': return this.renderEnterpriseArchitectureSimulationPuzzle(container);
         }
 
-        const showVisualizer = this.visualProfile && this.visualMode !== '2D';
-        const effectDescription = this.mission.threeDEffectDescription
-            ? `<p class="visualizer-description">${this.mission.threeDEffectDescription}</p>`
-            : '';
-
+        // typing / default
         container.innerHTML = `
             <div class="password-puzzle">
                 <h2 class="puzzle-title">PASSWORD CRACKING PROTOCOL</h2>
                 ${this.renderMissionBrief()}
-                ${showVisualizer ? `
-                    <div class="security-visualizer security-visualizer-${this.visualMode.toLowerCase()}" id="security-visualizer">
-                        ${this.renderVisualizerMarkup()}
-                        ${effectDescription}
-                    </div>
-                ` : ''}
-                
                 <div class="password-hints" id="password-hints">
-                    <strong style="color: var(--cyber-blue);">INTELLIGENCE BRIEFING:</strong>
-                    ${this.overallAnswerHint ? `<div class="hint"><strong>Overall Answer Hint:</strong> ${this.overallAnswerHint}</div>` : ''}
+                    <strong style="color:var(--cyber-blue);">INTELLIGENCE BRIEFING:</strong>
+                    ${this.overallAnswerHint ? `<div class="hint"><strong>Overall Hint:</strong> ${this.overallAnswerHint}</div>` : ''}
                     <div class="hint">→ ${this.hints[0]}</div>
                 </div>
-                
-                <div class="password-display" id="password-display">
-                    ${'_'.repeat(this.password.length)}
-                </div>
-
-                <div class="guess-feedback" id="guess-feedback">
-                    Submit a guess to receive letter-by-letter forensic feedback.
-                </div>
-                
-                <div class="password-input" id="password-input">
-                    ${this.createInputs()}
-                </div>
-                
+                <div class="password-display" id="password-display">${'_'.repeat(this.password.length)}</div>
+                <div class="guess-feedback" id="guess-feedback">Submit a guess to receive letter-by-letter forensic feedback.</div>
+                <div class="password-input" id="password-input">${this.createInputs()}</div>
                 <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="submit-password">
-                        SUBMIT
-                    </button>
-                    <button class="btn" id="clear-password">
-                        CLEAR
-                    </button>
+                    <button class="btn btn-primary" id="submit-password">SUBMIT</button>
+                    <button class="btn" id="clear-password">CLEAR</button>
                 </div>
-                
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Attempts: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                <div id="attempt-counter" style="text-align:center;margin-top:20px;color:var(--text-secondary);">
+                    Attempts: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
                 </div>
-            </div>
-        `;
-
-        // Setup event listeners
+            </div>`;
         this.setupEventListeners();
-        this.setupVisualizer();
     }
 
-    /**
-     * Render single-choice live attack detection mode
-     * @param {HTMLElement} container
-     */
-    renderSingleChoicePuzzle(container) {
-        const stream = this.puzzleData.loginAttemptStream || {};
-        const choices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
-        const choiceMarkup = choices.map(choice => `
-            <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
-                <input type="radio" name="attack-choice" value="${choice.id}" style="margin-right:8px;" />
-                ${choice.label}
-            </label>
-        `).join('');
+    // ─── LEVEL 6: multiSelect with salt demo panel ───────────────────────────
 
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">LIVE ATTACK DETECTION</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || 'Identify the attack type quickly.'}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || 'Watch login attempts and decide what attack is happening.'}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || 'Pick one attack type.'}</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header">
-                        <span>${this.puzzleData.timerLabel || 'Time Left'}</span>
-                        <span id="single-timer-text">${this.singleChoiceRemaining}s</span>
-                    </div>
-                    <div class="password-risk-header" style="margin-top: 8px;">
-                        <span>${this.vaultConfig?.label || 'Vault Integrity'}</span>
-                        <span id="vault-text">${Math.max(0, Math.floor(this.vaultIntegrity))}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="vault-fill" style="width: ${Math.max(0, Math.min(100, this.vaultIntegrity))}%;"></div>
-                    </div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">LIVE LOG STREAM:</strong>
-                    <div id="attack-log-stream" class="guess-feedback" style="text-align:left; max-height:180px; overflow:auto;">
-                        Waiting for incoming login attempts...
-                    </div>
-                </div>
-                <div class="password-options-grid" id="single-choice-grid">
-                    ${choiceMarkup}
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Read the pattern, choose one option, then submit.
-                </div>
-                <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="submit-single-choice">SUBMIT DECISION</button>
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                </div>
-            </div>
-        `;
+    renderMultiSelectPuzzle(container) {
+        const hasSaltDemo = this.puzzleData.saltDemoPanel && this.puzzleData.saltDemoPanel.enabled && !this.saltDemoCompleted;
 
-        this.setupSingleChoiceEventListeners();
-        this.startSingleChoiceSimulation();
+        if (hasSaltDemo) {
+            this.renderSaltDemoPanel(container);
+        } else {
+            this.renderMultiSelectGrid(container);
+        }
     }
 
-    /**
-     * Render prediction-choice password race mode
-     * @param {HTMLElement} container
-     */
-    renderPredictionChoicePuzzle(container) {
-        const session = this.predictionSession || this.createPredictionSession();
-        const options = Array.isArray(session.options) ? session.options : [];
-        const choiceMarkup = options.map((option, idx) => `
-            <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
-                <input type="radio" name="prediction-choice" value="${option}" style="margin-right:8px;" />
-                ${String.fromCharCode(65 + idx)}. ${option}
-            </label>
-        `).join('');
-
-        const raceMarkup = options.map((option, idx) => `
-            <div class="race-row" style="margin: 10px 0;">
-                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:4px;">
-                    <span>${String.fromCharCode(65 + idx)}. ${option}</span>
-                    <span id="race-time-${idx}">Estimating...</span>
-                </div>
-                <div style="height: 10px; background: rgba(100,116,139,0.2); border-radius: 999px; overflow: hidden;">
-                    <div id="race-bar-${idx}" style="height: 10px; width: 0%; transition: width ${this.puzzleData?.simulationUI?.animateDurationMs || 3200}ms linear; background: var(--cyber-blue);"></div>
-                </div>
-            </div>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">PASSWORD STRENGTH RACE</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || 'Predict which password breaks first.'}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || 'Compare passwords and predict the first one to fail.'}</div>
-                    <div><strong>TASK:</strong> Which password will break first?</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header">
-                        <span>Decision Time</span>
-                        <span id="prediction-timer-text">${this.predictionRemaining}s</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="prediction-timer-fill" style="width: 100%;"></div>
-                    </div>
-                </div>
-                <div class="password-options-grid" id="prediction-choice-grid">
-                    ${choiceMarkup}
-                </div>
-                <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="submit-prediction-choice">RUN SIMULATION</button>
-                </div>
-                <div id="prediction-race-board" class="password-hints" style="display:none;">
-                    <strong style="color: var(--cyber-blue);">CRACK SPEED RACE:</strong>
-                    <div id="prediction-race-rows">${raceMarkup}</div>
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Pick one password, then run the race to see what breaks first.
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                </div>
-            </div>
-        `;
-
-        this.setupPredictionChoiceEventListeners();
-        this.startPredictionTimer();
-    }
-
-    /**
-     * Render breach investigation mode
-     * @param {HTMLElement} container
-     */
-    renderInvestigationPuzzle(container) {
-        const logs = Array.isArray(this.puzzleData.evidenceLogs) ? this.puzzleData.evidenceLogs : [];
-        const profile = this.puzzleData.profileData || {};
-        const policy = this.puzzleData.systemPolicy || {};
-        const causeChoices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
-        const followUp = this.puzzleData.followUpDefenseQuestion || null;
-        const causeMarkup = causeChoices.map(choice => `
-            <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
-                <input type="radio" name="investigation-cause" value="${choice.id}" style="margin-right:8px;" />
-                ${choice.label}
-            </label>
-        `).join('');
-        const defenseMarkup = followUp
-            ? (Array.isArray(followUp.options) ? followUp.options.map(option => `
-                <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
-                    <input type="radio" name="investigation-defense" value="${option.id}" style="margin-right:8px;" />
-                    ${option.label}
-                </label>
-            `).join('') : '')
-            : '';
-        const logMarkup = logs.map(line => `<div>${line}</div>`).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">DATA BREACH INVESTIGATION</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || 'Find how the breach happened.'}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">EVIDENCE: LOGIN LOGS</strong>
-                    <div class="guess-feedback" style="text-align:left;">${logMarkup || 'No logs found.'}</div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">EVIDENCE: ACCOUNT PROFILE</strong>
-                    <div class="guess-feedback" style="text-align:left;">
-                        <div>Name: ${profile.name || 'Unknown'}</div>
-                        <div>Public info: ${profile.publicInfo || 'None'}</div>
-                        <div>Role: ${profile.role || 'Unknown'}</div>
-                    </div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">EVIDENCE: SYSTEM POLICY</strong>
-                    <div class="guess-feedback" style="text-align:left;">
-                        <div>${policy.rateLimiting || ''}</div>
-                        <div>${policy.accountLockout || ''}</div>
-                        <div>${policy.passwordRule || ''}</div>
-                    </div>
-                </div>
-                <div id="investigation-cause-block">
-                    <div class="password-hints">
-                        <strong style="color: var(--cyber-blue);">QUESTION 1: How did the breach happen?</strong>
-                    </div>
-                    <div class="password-options-grid">${causeMarkup}</div>
-                    <div class="puzzle-actions">
-                        <button class="btn btn-primary" id="submit-investigation-cause">SUBMIT CAUSE</button>
-                    </div>
-                </div>
-                <div id="investigation-defense-block" style="display:none;">
-                    ${followUp ? `
-                        <div class="password-hints">
-                            <strong style="color: var(--cyber-blue);">QUESTION 2: ${followUp.prompt}</strong>
-                        </div>
-                        <div class="password-options-grid">${defenseMarkup}</div>
-                        <div class="puzzle-actions">
-                            <button class="btn btn-primary" id="submit-investigation-defense">SUBMIT DEFENSE</button>
-                        </div>
-                    ` : ''}
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Review the evidence and choose the most likely cause.
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                </div>
-            </div>
-        `;
-
-        this.setupInvestigationEventListeners();
-    }
-
-    /**
-     * Render storage inspection mode
-     * @param {HTMLElement} container
-     */
-    renderInspectionPuzzle(container) {
-        const systems = Array.isArray(this.puzzleData.systems) ? this.puzzleData.systems : [];
-        const choices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
-
-        const systemsMarkup = systems.map(system => `
-            <div class="password-hints" style="margin-top: 14px;">
-                <strong style="color: var(--cyber-blue);">${system.name}</strong>
-                <div class="puzzle-actions" style="margin-top:8px;">
-                    <button class="btn btn-small" data-action="view-db" data-system-id="${system.id}">VIEW DATABASE</button>
-                    <button class="btn btn-small" data-action="simulate-breach" data-system-id="${system.id}">SIMULATE BREACH</button>
-                </div>
-                <div id="db-${system.id}" class="guess-feedback" style="display:none; text-align:left; margin-top:8px;"></div>
-                <div id="breach-${system.id}" class="guess-feedback" style="display:none; text-align:left; margin-top:8px;"></div>
-            </div>
-        `).join('');
-
-        const choiceMarkup = choices.map(choice => `
-            <label class="password-option" style="display:block; cursor:pointer; margin-bottom:8px;">
-                <input type="radio" name="inspection-choice" value="${choice.id}" style="margin-right:8px;" />
-                ${choice.label}
-            </label>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">STORAGE AUDIT</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                ${systemsMarkup}
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">QUESTION: Which system is safer?</strong>
-                </div>
-                <div class="password-options-grid">
-                    ${choiceMarkup}
-                </div>
-                <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="submit-inspection-choice">CHOOSE SAFER SYSTEM</button>
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Use "View Database" and "Simulate Breach" first, then choose.
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                </div>
-            </div>
-        `;
-
-        this.setupInspectionEventListeners();
-    }
-
-    /**
-     * Render strategy builder mode
-     * @param {HTMLElement} container
-     */
-    renderStrategyBuilderPuzzle(container) {
-        const intro = this.puzzleData.initialScenarioDisplay || {};
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const waves = Array.isArray(this.puzzleData.attackWaves) ? this.puzzleData.attackWaves : [];
-        const totalBudget = this.getStrategyTotalBudget();
-
-        const defenseMarkup = defenses.map(defense => `
-            <button class="password-option" data-defense-id="${defense.id}" type="button">
-                ${defense.name} (${defense.cost} pts)
-            </button>
-        `).join('');
-
-        const waveMarkup = waves.map((wave, idx) => `
-            <div id="strategy-wave-${wave.id}" style="display:flex; justify-content:space-between; gap: 10px; padding: 6px 0; border-bottom: ${idx === waves.length - 1 ? 'none' : '1px solid rgba(0,255,255,0.16)'};">
-                <span>${wave.name}</span>
-                <span id="strategy-wave-status-${wave.id}" style="color: var(--text-secondary);">Pending</span>
-            </div>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">DEFENSE STRATEGY BUILDER</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${intro.message || this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header">
-                        <span>${intro.budgetLabel || 'Total Security Budget'}</span>
-                        <span id="strategy-budget-text">0 / ${totalBudget}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="strategy-budget-fill" style="width: 0%;"></div>
-                    </div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">DEFENSE OPTIONS:</strong>
-                </div>
-                <div class="password-options-grid" id="strategy-defense-grid">
-                    ${defenseMarkup}
-                </div>
-                <div class="password-hints" style="margin-top: 14px;">
-                    <strong style="color: var(--cyber-blue);">ATTACK WAVES:</strong>
-                    <div class="guess-feedback" style="text-align:left;">${waveMarkup}</div>
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Choose defenses within budget, then run simulation.
-                </div>
-                <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="run-strategy-simulation">RUN SIMULATION</button>
-                    <button class="btn" id="clear-strategy-selection">RESET DEFENSES</button>
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Simulations: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                </div>
-            </div>
-        `;
-
-        this.updateStrategyBudgetUI();
-        this.setupStrategyBuilderEventListeners();
-    }
-
-    /**
-     * Render live defense simulation mode
-     * @param {HTMLElement} container
-     */
-    renderLiveDefenseSimulationPuzzle(container) {
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const defenseMarkup = defenses.map(defense => `
-            <button class="password-option" data-live-defense="${defense.name}" type="button">
-                ${defense.name}
-                <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 4px;">
-                    Energy: ${defense.energyCost} | CD: ${defense.cooldown}s
-                </div>
-                <div id="live-cd-${this.sanitizeId(defense.name)}" style="font-size: var(--font-size-xs); color: var(--cyber-blue); margin-top: 4px;">
-                    READY
-                </div>
-            </button>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">LIVE DEFENSE SIMULATION</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header">
-                        <span>Vault Health</span>
-                        <span id="live-vault-text">${Math.max(0, Math.floor(this.liveVaultHealth))}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="live-vault-fill" style="width: ${Math.max(0, Math.min(100, this.liveVaultHealth))}%;"></div>
-                    </div>
-                    <div class="password-risk-header" style="margin-top: 10px;">
-                        <span>Player Energy</span>
-                        <span id="live-energy-text">${Math.max(0, Math.floor(this.liveEnergy))}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="live-energy-fill" style="width: ${Math.max(0, Math.min(100, this.liveEnergy))}%;"></div>
-                    </div>
-                    <div class="password-risk-header" style="margin-top: 10px;">
-                        <span>Time Left</span>
-                        <span id="live-time-text">${Math.max(0, Math.floor(this.liveRemainingTime))}s</span>
-                    </div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">INCOMING ATTACK:</strong>
-                    <div class="guess-feedback" id="live-current-attack" style="text-align:left;">Waiting for first wave...</div>
-                </div>
-                <div class="password-options-grid" id="live-defense-grid">
-                    ${defenseMarkup}
-                </div>
-                <div class="guess-feedback" id="guess-feedback" style="max-height: 170px; overflow:auto; text-align:left;">
-                    Simulation started. Prepare your defenses.
-                </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Live defense active
-                </div>
-            </div>
-        `;
-
-        this.setupLiveDefenseEventListeners();
-        this.startLiveDefenseSimulation();
-    }
-
-    /**
-     * Render multi-stage boss simulation mode
-     * @param {HTMLElement} container
-     */
-    renderMultiStageDefenseSimulationPuzzle(container) {
-        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
-        const buttons = modules.map(defense => `
-            <button class="password-option" data-multi-defense="${defense.name}" type="button">
-                ${defense.name}
-                <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 4px;">
-                    Energy: ${defense.energyCost} | CD: ${defense.cooldown}s
-                </div>
-                <div id="multi-cd-${this.sanitizeId(defense.name)}" style="font-size: var(--font-size-xs); color: var(--cyber-blue); margin-top: 4px;">
-                    READY
-                </div>
-            </button>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">APT ASSAULT - BOSS CAMPAIGN</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header">
-                        <span>Vault Health</span>
-                        <span id="multi-vault-text">${Math.floor(this.multiVaultHealth)}%</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" id="multi-vault-fill" style="width:${this.multiVaultHealth}%"></div></div>
-                    <div class="password-risk-header" style="margin-top:10px;">
-                        <span>Player Energy</span>
-                        <span id="multi-energy-text">${Math.floor(this.multiEnergy)}%</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" id="multi-energy-fill" style="width:${this.multiEnergy}%"></div></div>
-                    <div class="password-risk-header" style="margin-top:10px;">
-                        <span>Total Time Left</span>
-                        <span id="multi-time-text">${Math.floor(this.multiRemainingTime)}s</span>
-                    </div>
-                    <div class="password-risk-header" style="margin-top:10px;">
-                        <span id="multi-stage-label">Stage 1/4</span>
-                        <span id="multi-stage-time">20s</span>
-                    </div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">ACTIVE THREATS:</strong>
-                    <div class="guess-feedback" id="multi-current-attacks" style="text-align:left;">Campaign initializing...</div>
-                </div>
-                <div class="password-options-grid">${buttons}</div>
-                <div class="guess-feedback" id="guess-feedback" style="max-height:170px; overflow:auto; text-align:left;">
-                    Stage chain loaded. Prevent early escalation.
-                </div>
-                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">Boss simulation active</div>
-            </div>
-        `;
-
-        this.setupMultiStageDefenseEventListeners();
-        this.startMultiStageDefenseSimulation();
-    }
-
-    /**
-     * Render threat hunt simulation mode
-     * @param {HTMLElement} container
-     */
-    renderThreatHuntSimulationPuzzle(container) {
-        const panels = Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
-        const panelMarkup = panels.map(panel => {
-            const rows = (panel.entries || []).map(entry => `
-                <div class="guess-feedback" style="margin-top:8px; text-align:left;">
-                    <div><strong>${entry.id}</strong> | ${entry.timestamp} | ${entry.user}</div>
-                    <div>${entry.action}</div>
-                    <div>${entry.locationOrIP} | ${entry.status}</div>
-                    <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-                        <button class="btn btn-small" data-threat-action="mark_suspicious" data-event-id="${entry.id}">MARK</button>
-                        <button class="btn btn-small" data-threat-action="investigate" data-event-id="${entry.id}">INVESTIGATE</button>
-                        <button class="btn btn-small" data-threat-action="isolate_account" data-event-id="${entry.id}">ISOLATE ACCOUNT</button>
-                        <button class="btn btn-small" data-threat-action="block_ip" data-event-id="${entry.id}">BLOCK IP</button>
-                        <button class="btn btn-small" data-threat-action="ignore" data-event-id="${entry.id}">IGNORE</button>
-                    </div>
-                </div>
-            `).join('');
-
+    renderHumanPsychologyLab(container) {
+        this.visualizerElement = container;
+        this.stopHumanLabMatrixAnimation();
+        const story = this.session?.storyHint || this.mission.scenario || '';
+        const options = this.session?.options || [];
+        const weakCount = options.filter(opt => opt.isWeak).length;
+        const threatBars = this.getHumanPsychologyThreatBars(options);
+        const selectedCount = this.selectedOptions.size;
+        const preview = this.getHumanLabPreviewMetrics(options);
+        const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
+        const feedbackEl = document.getElementById('guess-feedback');
+        const previousFeedback = feedbackEl ? feedbackEl.innerHTML : '';
+        const objectives = Array.isArray(this.mission.objectives) && this.mission.objectives.length
+            ? this.mission.objectives
+            : [
+                'Analyze the story-based investigative hint',
+                'Identify weak passwords via human behavior patterns',
+                'Classify credentials with SOC decision accuracy'
+            ];
+        const timeDisplay = this.gameScreen?.timer ? this.gameScreen.timer.getFormattedTime() : '00:00';
+        const scoreDisplay = String(this.gameScreen?.game?.score?.getScore?.() || 0).padStart(3, '0');
+        this.initializeHumanLabLog(options);
+        const cardMarkup = options.map(opt => {
+            const profile = this.getHumanPsychologyProfile(opt);
+            const selected = this.selectedOptions.has(opt.id);
             return `
-                <div class="password-hints" style="margin-top:14px;">
-                    <strong style="color: var(--cyber-blue);">${panel.title}</strong>
-                    ${rows}
-                </div>
-            `;
+                <button class="l1-card c-card ${selected ? `selected ${opt.isWeak ? 'flagged' : 'clear'}` : ''}" data-option-id="${opt.id}" type="button">
+                    <div class="l1-card__accent c-accent"></div>
+                    <div class="l1-card__body c-body">
+                        <div class="l1-card__top c-top">
+                            <div class="l1-card__id c-user">${profile.sourceLabel}</div>
+                            <div class="l1-card__state c-indicator">${selected ? (opt.isWeak ? 'FLAGGED' : 'SECURE') : 'READY'}</div>
+                        </div>
+                        <div class="l1-card__value c-password">${opt.value}</div>
+                        <div class="l1-card__tags c-tags">${profile.tagsMarkup}</div>
+                        <div class="l1-card__entropy c-entropy">
+                            <div class="l1-card__entropy-track c-bar">
+                                <div class="l1-card__entropy-fill c-fill ${profile.entropyClass}" style="width:${profile.strengthScore}%"></div>
+                            </div>
+                            <div class="l1-card__entropy-value c-pct">${profile.strengthScore}%</div>
+                        </div>
+                    </div>
+                </button>`;
         }).join('');
-
+        const threatMarkup = threatBars.map(bar => `
+            <div class="l1-threat-row">
+                <div class="l1-threat-top">
+                    <span>${bar.label}</span>
+                    <span class="tone-${bar.tone}">${bar.value}%</span>
+                </div>
+                <div class="l1-threat-track">
+                    <div class="l1-threat-fill tone-${bar.tone}" style="width:${bar.value}%"></div>
+                </div>
+            </div>`).join('');
+        const objectivesMarkup = objectives.map((objective, index) => `
+            <div class="l1-objective ${index < 2 ? 'on' : ''}" data-human-objective="${index}">
+                <div class="l1-objective__icon">${index < 2 ? '▸' : ''}</div>
+                <div class="l1-objective__text">${objective}</div>
+            </div>`).join('');
         container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">ENTERPRISE THREAT HUNT</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header"><span>Vault Health</span><span id="threat-vault-text">${Math.floor(this.threatVaultHealth)}%</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="threat-vault-fill" style="width:${this.threatVaultHealth}%"></div></div>
-                    <div class="password-risk-header" style="margin-top:10px;"><span>System Integrity</span><span id="threat-integrity-text">${Math.floor(this.threatSystemIntegrity)}%</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="threat-integrity-fill" style="width:${this.threatSystemIntegrity}%"></div></div>
-                    <div class="password-risk-header" style="margin-top:10px;"><span>False Positives</span><span id="threat-fp-text">${this.threatFalsePositiveCount}</span></div>
-                    <div class="password-risk-header" style="margin-top:6px;"><span>Attacker Progress</span><span id="threat-progress-text">${this.threatAttackerProgress}</span></div>
-                </div>
-                ${panelMarkup}
-                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
-                    Threat hunt initialized. Review evidence and act carefully.
-                </div>
-                <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="threat-finalize">FINALIZE HUNT</button>
-                </div>
-                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
-                    Investigation actions: <span style="color: var(--cyber-blue);">0</span>
-                </div>
-            </div>
-        `;
+            ${this.renderHumanPsychologyLabStyles()}
+            <div class="l1-shell">
+                <canvas class="l1-matrix" id="l1-matrix" aria-hidden="true"></canvas>
+                <div class="l1-crt" aria-hidden="true"></div>
+                <div class="l1-scanline" aria-hidden="true"></div>
 
-        this.setupThreatHuntEventListeners();
-        this.updateThreatHuntUI();
+                <header class="l1-top-hud">
+                    <div class="l1-hud-logo">
+                        <div class="l1-logo-badge">⬡</div>
+                        <div class="l1-logo-text">SHADOWDEF</div>
+                    </div>
+                    <div class="l1-hud-mission">
+                        <div class="l1-hud-kicker">// LEVEL 01 - CAMPAIGN ALPHA</div>
+                        <div class="l1-hud-title">HUMAN PASSWORD<br>PSYCHOLOGY</div>
+                    </div>
+                    <div class="l1-hud-stats">
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Time</div>
+                            <div class="l1-hud-value" id="l1-timer">${timeDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Score</div>
+                            <div class="l1-hud-value l1-hud-value--cyan" id="l1-score">${scoreDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Combo</div>
+                            <div class="l1-hud-value l1-hud-value--red" id="l1-combo">x${preview.combo}</div>
+                        </div>
+                        <div class="l1-hud-meter">
+                            <div class="l1-hud-label">XP</div>
+                            <div class="l1-hud-track">
+                                <div class="l1-hud-fill" id="l1-xp-fill" style="width:${preview.xpPercent}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="l1-hud-actions">
+                        <button class="l1-hud-btn" data-action="pause" type="button">[ PAUSE ]</button>
+                        <button class="l1-hud-btn" data-action="back-to-levels" type="button">[ BACK ]</button>
+                    </div>
+                </header>
+
+                <div class="l1-mission-strip">
+                    <div class="l1-phase active"><span class="l1-phase__dot"></span><strong>01</strong>RECOVERED SET</div>
+                    <div class="l1-phase-sep">//</div>
+                    <div class="l1-phase"><span class="l1-phase__dot"></span><strong>02</strong>BEHAVIORAL FILTER</div>
+                    <div class="l1-phase-sep">//</div>
+                    <div class="l1-phase"><span class="l1-phase__dot"></span><strong>03</strong>WEAKNESS CLASSIFIER</div>
+                    <div class="l1-mission-status">
+                        <span class="l1-mission-status__dot"></span>
+                        ANALYST LAB ACTIVE
+                    </div>
+                </div>
+
+                <div class="l1-body">
+                    <section class="l1-arena">
+                        <div class="l1-arena-header">
+                            <div>
+                                <div class="l1-arena-title">SELECT<br>EVERY<br><span>WEAK</span>PASSWORD</div>
+                                <div class="l1-arena-sub">// ${options.length} credentials recovered · identify ${weakCount} vulnerabilities</div>
+                            </div>
+                            <div class="l1-arena-hint">
+                                Flag passwords predictable via <b>breach lists</b>, <b>common patterns</b>, or <b>public info</b>
+                            </div>
+                        </div>
+
+                        <div class="l1-arena-scroll">
+                            <div class="l1-grid" id="password-options-grid">${cardMarkup}</div>
+                        </div>
+
+                        <div class="l1-submit-dock">
+                            <div class="l1-submit-cluster">
+                                <span class="l1-submit-label">Flagged</span>
+                                <div class="l1-flag-slots" id="l1-flag-slots"></div>
+                            </div>
+                            <div class="l1-submit-cluster l1-submit-cluster--summary">
+                                <div class="l1-submit-value ${preview.points < 0 ? 'neg' : ''}" id="ptsPreview">${preview.points >= 0 ? '+' : ''}${preview.points}</div>
+                                <div class="l1-submit-points-label">Potential pts</div>
+                            </div>
+                            <div class="l1-submit-meta">
+                                <div class="l1-attempts" id="attempt-counter">Submissions: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
+                            </div>
+                            <button class="l1-btn l1-btn-primary l1-fire-btn" id="submit-selection" type="button" ${selectedCount === 0 ? 'disabled' : ''}>BREACH REPORT</button>
+                        </div>
+                    </section>
+
+                    <aside class="l1-console">
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">Threat Exposure Index</div>
+                            <div class="l1-dial-wrap">
+                                <svg class="l1-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
+                                    <circle class="l1-dial-bg" cx="70" cy="70" r="65"></circle>
+                                    <circle class="l1-dial-ring" cx="70" cy="70" r="65" id="l1-dial-ring"></circle>
+                                </svg>
+                                <div class="l1-dial-inner">
+                                    <div class="l1-dial-num" id="l1-dial-num">${selectedCount}</div>
+                                    <div class="l1-dial-sub">FLAGGED</div>
+                                </div>
+                            </div>
+                            <div class="l1-threat-bars">${threatMarkup}</div>
+                        </section>
+
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">Mission Objectives</div>
+                            <div class="l1-objective-list">${objectivesMarkup}</div>
+                        </section>
+
+                        <section class="l1-console-panel l1-console-panel--fill">
+                            <div class="l1-console-head">
+                                <div class="l1-console-title">System Terminal</div>
+                                <div class="l1-console-chip">HINTS <span id="l1-hints-remaining">${hintsRemaining}</span>/3</div>
+                            </div>
+                            <div class="l1-risk-row">
+                                <span>Risk Meter</span>
+                                <div class="l1-risk-track">
+                                    <div class="l1-risk-fill" id="risk-fill" style="width:${Math.max(0, Math.min(100, this.riskValue))}%;"></div>
+                                </div>
+                                <span class="l1-risk-text" id="risk-text">${Math.floor(this.riskValue)}%</span>
+                            </div>
+                            <div class="l1-feedback guess-feedback" id="guess-feedback">${previousFeedback || `Objective: ${this.mission.objective || 'Classify weak credentials.'}<br>Scenario: ${story}`}</div>
+                            <div class="l1-hint-stack" id="password-hints"></div>
+                            <div class="l1-log-body" id="l1-log-body">${this.renderHumanLabLogMarkup()}</div>
+                        </section>
+                    </aside>
+                </div>
+            </div>`;
+
+        this.setupMultiSelectEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.updateHumanPsychologyLiveUI();
+        this.updateRiskDisplay();
+        this.updateAttemptCounter();
+        this.gameScreen.syncEmbeddedMissionHUD();
     }
 
-    /**
-     * Render zero-day live patch simulation mode
-     * @param {HTMLElement} container
-     */
-    renderLivePatchSimulationPuzzle(container) {
-        const modules = Array.isArray(this.puzzleData.architectureModules) ? this.puzzleData.architectureModules : [];
-        const moduleMarkup = modules
-            .sort((a, b) => Number(a.flowOrder || 0) - Number(b.flowOrder || 0))
-            .map(m => `
-                <div class="guess-feedback" style="text-align:left; margin-top:8px;">
-                    <div><strong>[ ${m.name} ]</strong>${m.editable ? ' (editable)' : ''}</div>
-                    <div>${m.notes || ''}</div>
-                </div>
-            `).join('');
+    getHumanPsychologyProfile(option) {
+        const tags = Array.isArray(option?.tags) ? option.tags : [];
+        const has = tag => tags.includes(tag);
+        let riskLabel = 'RESILIENT';
+        let riskClass = 'low';
+        let note = 'Longer, less personal, or more random credentials are slower to predict.';
+        let crackWindow = 'days to years';
+        let attackerLens = 'No immediate shortcut';
+        let strengthScore = 84;
+        let sourceLabel = 'Recovered signal';
 
-        const patchActions = (Array.isArray(this.puzzleData.patchOptions) ? this.puzzleData.patchOptions : [])
-            .map(p => `
-                <button class="btn btn-small" data-patch-action="${p.id}" style="margin:4px 6px 4px 0;">
-                    ${p.uiLabel || p.action}
-                </button>
-            `).join('');
+        if (option?.isWeak && (has('name_year') || has('osint'))) {
+            riskLabel = 'OSINT RISK';
+            riskClass = 'high';
+            note = 'Looks tied to identity data an attacker could gather from public profiles.';
+            crackWindow = 'seconds to minutes';
+            attackerLens = 'Public profile + year';
+            strengthScore = 16;
+            sourceLabel = 'Public profile leak';
+        } else if (option?.isWeak && (has('common') || has('leaked'))) {
+            riskLabel = 'LEAKED LIST';
+            riskClass = 'high';
+            note = 'This resembles entries that appear in breach wordlists and crack quickly.';
+            crackWindow = 'seconds';
+            attackerLens = 'Known breach wordlist';
+            strengthScore = 10;
+            sourceLabel = 'Breach intel archive';
+        } else if (option?.isWeak) {
+            riskLabel = 'PATTERNED';
+            riskClass = 'mid';
+            note = 'Predictable structure makes this easier to guess than it first appears.';
+            crackWindow = 'minutes to hours';
+            attackerLens = 'Pattern guessing';
+            strengthScore = 34;
+            sourceLabel = 'Pattern cluster';
+        } else if (has('random')) {
+            riskLabel = 'RANDOMIZED';
+            riskClass = 'low';
+            note = 'Randomized composition breaks the normal human-guessing shortcuts.';
+            crackWindow = 'months+';
+            attackerLens = 'No cheap shortcut';
+            strengthScore = 96;
+            sourceLabel = 'Entropy-forward build';
+        } else if (has('passphrase')) {
+            riskLabel = 'PASSPHRASE';
+            riskClass = 'low';
+            note = 'Long passphrases resist fast guessing better than short personal passwords.';
+            crackWindow = 'weeks to months';
+            attackerLens = 'Length beats guessing';
+            strengthScore = 82;
+            sourceLabel = 'Passphrase lane';
+        }
 
-        container.innerHTML = `
-            <div class="password-puzzle">
-                <h2 class="puzzle-title">ZERO-DAY LIVE PATCH LAB</h2>
-                <div class="password-brief">
-                    <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
-                    <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
-                </div>
-                <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">SYSTEM ARCHITECTURE FLOW:</strong>
-                    ${moduleMarkup}
-                </div>
-                <div class="password-risk-panel">
-                    <div class="password-risk-header"><span>Vault Health</span><span id="patch-vault">${Math.floor(this.patchMetrics.vaultHealth)}%</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="patch-vault-fill" style="width:${Math.max(0, Math.min(100, this.patchMetrics.vaultHealth))}%"></div></div>
-                    <div class="password-risk-header" style="margin-top:8px;"><span>Exploit Success Rate</span><span id="patch-exploit">${Math.floor(this.patchMetrics.exploitSuccessRate)}%</span></div>
-                    <div class="password-risk-header"><span>Server Load</span><span id="patch-load">${Math.floor(this.patchMetrics.serverLoad)}%</span></div>
-                    <div class="password-risk-header"><span>User Experience</span><span id="patch-ux">${Math.floor(this.patchMetrics.userExperienceScore)}%</span></div>
-                    <div class="password-risk-header"><span>Vulnerabilities Remaining</span><span id="patch-vuln">${this.patchMetrics.vulnerabilityCountRemaining}</span></div>
-                </div>
-                <div class="puzzle-actions" id="patch-actions">
-                    ${patchActions}
-                </div>
-                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
-                    Live patch lab online. Run exploit simulation to validate fixes.
-                </div>
-                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
-                    Patch operations: <span style="color: var(--cyber-blue);">0</span>
-                </div>
-            </div>
-        `;
+        const entropyClass = strengthScore < 40 ? 'low' : strengthScore < 70 ? 'mid' : 'high';
+        const tagTone = {
+            leaked: 'danger',
+            common: 'danger',
+            name_year: 'danger',
+            osint: 'danger',
+            pattern: 'warn',
+            company_number: 'warn',
+            keyboard: 'warn',
+            sequence: 'warn',
+            passphrase: 'safe',
+            random: 'safe',
+            strong: 'safe'
+        };
+        const tagsMarkup = (tags.length ? tags : ['unclassified'])
+            .map(tag => `<span class="l1-tag l1-tag--${tagTone[tag] || 'neutral'}">${tag.replace(/_/g, ' ')}</span>`)
+            .join('');
 
-        this.setupLivePatchEventListeners();
-        this.updatePatchUI();
+        return { riskLabel, riskClass, note, tagsMarkup, crackWindow, attackerLens, strengthScore, entropyClass, sourceLabel };
     }
 
-    /**
-     * Build default selections for enterprise config
-     * @returns {Object}
-     */
-    buildEnterpriseDefaultConfig() {
+    getHumanPsychologyBoardSummary(options = []) {
+        const summary = { osint: 0, leaked: 0, patterned: 0, resilient: 0 };
+        options.forEach(option => {
+            const tags = Array.isArray(option?.tags) ? option.tags : [];
+            if (option?.isWeak && (tags.includes('name_year') || tags.includes('osint'))) summary.osint++;
+            else if (option?.isWeak && (tags.includes('common') || tags.includes('leaked'))) summary.leaked++;
+            else if (option?.isWeak) summary.patterned++;
+            else summary.resilient++;
+        });
+        return summary;
+    }
+
+    getHumanPsychologyThreatBars(options = []) {
+        const total = Math.max(1, options.length);
+        const count = matcher => options.filter(option => matcher(Array.isArray(option?.tags) ? option.tags : [])).length;
+
+        return [
+            {
+                label: 'Dictionary Attack',
+                value: Math.round((count(tags => tags.includes('common') || tags.includes('leaked')) / total) * 100),
+                tone: 'danger'
+            },
+            {
+                label: 'Credential Stuffing',
+                value: Math.round((count(tags => tags.includes('leaked') || tags.includes('common') || tags.includes('company_number')) / total) * 100),
+                tone: 'warn'
+            },
+            {
+                label: 'Pattern Brute Force',
+                value: Math.round((count(tags => tags.includes('pattern') || tags.includes('keyboard') || tags.includes('sequence') || tags.includes('company_number')) / total) * 100),
+                tone: 'warn'
+            },
+            {
+                label: 'OSINT Targeting',
+                value: Math.round((count(tags => tags.includes('name_year') || tags.includes('osint')) / total) * 100),
+                tone: 'safe'
+            }
+        ];
+    }
+
+    getHumanLabPreviewMetrics(options = []) {
+        const weakCount = Math.max(1, options.filter(option => option.isWeak).length);
+        const selected = options.filter(option => this.selectedOptions.has(option.id));
+        const correct = selected.filter(option => option.isWeak).length;
+        const wrong = selected.length - correct;
+        const combo = wrong === 0 ? Math.max(1, Math.min(correct || selected.length || 1, 5)) : 1;
+        const points = (correct * 100 * combo) - (wrong * 50);
+        const xpPercent = Math.min(100, Math.round((selected.length / weakCount) * 100));
+
         return {
-            minimum_length: "12",
-            allow_passphrases: "yes",
-            require_complexity: "yes",
-            block_common_passwords: "yes",
-            password_storage: "hash_salt",
-            authentication_controls: "app_mfa",
-            login_protection: "rate_limiting",
-            monitoring_response: "breach_alerts"
+            weakCount,
+            correct,
+            wrong,
+            combo,
+            points,
+            xpPercent
         };
     }
 
-    /**
-     * Render enterprise architecture certification simulation
-     * @param {HTMLElement} container
-     */
-    renderEnterpriseArchitectureSimulationPuzzle(container) {
-        const opts = this.puzzleData.configurationOptions || {};
-        const policy = opts.passwordPolicy?.options || [];
-        const storage = opts.passwordStorage?.options || [];
-        const auth = opts.authenticationControls?.options || [];
-        const login = opts.loginProtection?.options || [];
-        const monitor = opts.monitoringResponse?.options || [];
+    initializeHumanLabLog(options = []) {
+        if (this.humanLabLogEntries.length) return;
 
-        const select = (id, values, current) => `
-            <select id="${id}">
-                ${values.map(v => {
-                    const val = typeof v === 'string' ? v : v.id;
-                    const label = typeof v === 'string' ? v : v.label;
-                    return `<option value="${val}" ${String(val) === String(current) ? 'selected' : ''}>${label}</option>`;
-                }).join('')}
-            </select>
-        `;
+        const weakCount = options.filter(option => option.isWeak).length;
+        this.humanLabLogEntries = [
+            { time: '[00:00]', tone: 'sys', label: 'SYS', message: 'Session initialized. Analyst HUD synced with recovered credential board.' },
+            { time: '[00:00]', tone: 'warn', label: 'WARN', message: `${weakCount} high-risk human patterns embedded in this recovered set.` },
+            { time: '[00:00]', tone: 'sys', label: 'SYS', message: 'Awaiting analyst classification...' }
+        ];
+    }
 
-        const policyMarkup = policy.map(p => `
-            <div class="guess-feedback" style="text-align:left; margin-top:6px;">
-                <div><strong>${p.label}</strong></div>
-                ${select(`ea-${p.id}`, p.values || [], this.enterpriseConfig[p.id])}
-            </div>
-        `).join('');
+    formatHumanLabClock() {
+        const elapsed = this.gameScreen?.timer?.getElapsed?.() || 0;
+        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const secs = String(elapsed % 60).padStart(2, '0');
+        return `[${mins}:${secs}]`;
+    }
+
+    pushHumanLabLog(tone, message) {
+        if (this.interactionMode !== 'humanPsychologyLab') return;
+
+        const labels = {
+            sys: 'SYS',
+            warn: 'WARN',
+            ok: 'OK',
+            danger: 'ALERT'
+        };
+
+        this.humanLabLogEntries.push({
+            time: this.formatHumanLabClock(),
+            tone,
+            label: labels[tone] || 'SYS',
+            message
+        });
+        this.humanLabLogEntries = this.humanLabLogEntries.slice(-10);
+        this.renderHumanLabLog();
+    }
+
+    renderHumanLabLogMarkup() {
+        return this.humanLabLogEntries.map((entry, index) => `
+            <span class="l1-log-line">
+                <span class="l1-log-time">${entry.time}</span>
+                <span class="l1-log-${entry.tone}">${entry.label}</span>
+                — ${entry.message}${index === this.humanLabLogEntries.length - 1 ? '<span class="l1-log-cursor"></span>' : ''}
+            </span>`).join('');
+    }
+
+    renderHumanLabLog() {
+        const logBody = document.getElementById('l1-log-body');
+        if (!logBody) return;
+        logBody.innerHTML = this.renderHumanLabLogMarkup();
+        logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    startHumanLabMatrixAnimation() {
+        const canvas = document.getElementById('l1-matrix');
+        if (!canvas) return;
+
+        this.stopHumanLabMatrixAnimation();
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const binaryDigits = ['0', '1'];
+        const baseSpacing = 18;
+        const chunkSize = 3;
+        const makeBinaryChunk = () => Array.from({ length: chunkSize }, () => binaryDigits[Math.floor(Math.random() * binaryDigits.length)]).join('');
+        const createStream = (width, height, index, count) => {
+            const laneWidth = width / Math.max(count, 1);
+            const depth = 0.32 + Math.random() * 0.68;
+            const fontSize = 9 + depth * 12;
+            const lineHeight = fontSize * 0.92;
+            const trail = 5 + Math.floor(depth * 5);
+
+            return {
+                baseX: laneWidth * index + laneWidth * 0.18 + Math.random() * Math.max(10, laneWidth * 0.45),
+                y: -Math.random() * Math.max(height, lineHeight * 10),
+                depth,
+                fontSize,
+                lineHeight,
+                speed: 70 + depth * 165,
+                swayAmplitude: 3 + depth * 14,
+                swaySpeed: 0.85 + depth * 1.5,
+                phase: Math.random() * Math.PI * 2,
+                tilt: (Math.random() - 0.5) * 0.16,
+                trail,
+                stepCarry: 0,
+                chunks: Array.from({ length: trail + 2 }, () => makeBinaryChunk())
+            };
+        };
+        const resize = () => {
+            const parent = canvas.parentElement;
+            const width = parent?.clientWidth || canvas.clientWidth || 0;
+            const height = parent?.clientHeight || canvas.clientHeight || 0;
+            canvas.width = width;
+            canvas.height = height;
+            const columns = Math.max(1, Math.floor(width / baseSpacing));
+            this.humanLabMatrixDrops = Array.from({ length: columns }, (_, index) => createStream(width, height, index, columns));
+        };
+
+        resize();
+        this.humanLabMatrixResizeHandler = resize;
+        window.addEventListener('resize', this.humanLabMatrixResizeHandler);
+
+        let lastFrame = performance.now();
+        const draw = (timestamp = performance.now()) => {
+            if (!canvas.width || !canvas.height) {
+                lastFrame = timestamp;
+                this.humanLabMatrixFrame = window.requestAnimationFrame(draw);
+                return;
+            }
+
+            const delta = Math.min(40, timestamp - lastFrame);
+            lastFrame = timestamp;
+
+            ctx.fillStyle = 'rgba(2, 6, 16, 0.07)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+
+            this.humanLabMatrixDrops.forEach((stream, index) => {
+                const travel = (stream.speed * delta) / 1000;
+                stream.y += travel;
+                stream.stepCarry += travel;
+
+                while (stream.stepCarry >= stream.lineHeight) {
+                    stream.stepCarry -= stream.lineHeight;
+                    stream.chunks.unshift(makeBinaryChunk());
+                    stream.chunks.pop();
+                }
+
+                const time = timestamp * 0.001;
+                const centerPull = ((canvas.width / 2) - stream.baseX) * (1 - stream.depth) * 0.16;
+                const sway = Math.sin(time * stream.swaySpeed + stream.phase) * stream.swayAmplitude;
+                const drawX = stream.baseX + centerPull + sway;
+
+                for (let offset = 0; offset < stream.trail; offset += 1) {
+                    const drawY = stream.y - offset * stream.lineHeight;
+                    if (drawY < -stream.lineHeight || drawY > canvas.height + stream.lineHeight) continue;
+
+                    const fade = 1 - offset / (stream.trail + 1);
+                    const alpha = fade * (0.2 + stream.depth * 0.75);
+                    const isLead = offset === 0;
+
+                    ctx.save();
+                    ctx.translate(drawX, drawY);
+                    ctx.transform(1, 0, stream.tilt * stream.depth, 1, 0, 0);
+                    ctx.font = `${stream.fontSize}px "Courier Prime"`;
+                    ctx.fillStyle = isLead
+                        ? `rgba(237, 247, 255, ${Math.min(1, alpha + 0.12)})`
+                        : `rgba(23, 216, 255, ${alpha})`;
+                    ctx.shadowColor = isLead ? 'rgba(237, 247, 255, 0.34)' : 'rgba(23, 216, 255, 0.22)';
+                    ctx.shadowBlur = (isLead ? 10 : 6) * stream.depth;
+                    ctx.fillText(stream.chunks[offset] || '000', 0, 0);
+                    ctx.restore();
+                }
+
+                if (stream.y - stream.trail * stream.lineHeight > canvas.height + stream.lineHeight) {
+                    this.humanLabMatrixDrops[index] = createStream(canvas.width, canvas.height, index, this.humanLabMatrixDrops.length);
+                    return;
+                }
+            });
+
+            this.humanLabMatrixFrame = window.requestAnimationFrame(draw);
+        };
+
+        this.humanLabMatrixFrame = window.requestAnimationFrame(draw);
+    }
+
+    stopHumanLabMatrixAnimation() {
+        if (this.humanLabMatrixFrame) {
+            window.cancelAnimationFrame(this.humanLabMatrixFrame);
+            this.humanLabMatrixFrame = null;
+        }
+        if (this.humanLabMatrixResizeHandler) {
+            window.removeEventListener('resize', this.humanLabMatrixResizeHandler);
+            this.humanLabMatrixResizeHandler = null;
+        }
+    }
+
+    updateHumanPsychologyLiveUI() {
+        if (this.interactionMode !== 'humanPsychologyLab') return;
+
+        const options = this.session?.options || [];
+        const preview = this.getHumanLabPreviewMetrics(options);
+        const weakCount = preview.weakCount;
+        const selectedIds = Array.from(this.selectedOptions);
+        const progressPercent = preview.xpPercent;
+
+        const dialNum = document.getElementById('l1-dial-num');
+        if (dialNum) dialNum.textContent = selectedIds.length;
+
+        const dialRing = document.getElementById('l1-dial-ring');
+        if (dialRing) {
+            const circumference = 408;
+            dialRing.style.strokeDashoffset = circumference - (circumference * progressPercent) / 100;
+        }
+
+        const xpFill = document.getElementById('l1-xp-fill');
+        if (xpFill) xpFill.style.width = `${progressPercent}%`;
+
+        const combo = document.getElementById('l1-combo');
+        if (combo) combo.textContent = `x${preview.combo}`;
+
+        const ptsPreview = document.getElementById('ptsPreview');
+        if (ptsPreview) {
+            ptsPreview.textContent = `${preview.points >= 0 ? '+' : ''}${preview.points}`;
+            ptsPreview.classList.toggle('neg', preview.points < 0);
+        }
+
+        const flagSlots = document.getElementById('l1-flag-slots');
+        if (flagSlots) {
+            flagSlots.innerHTML = Array.from({ length: weakCount }).map((_, index) => {
+                const option = options.find(entry => entry.id === selectedIds[index]);
+                if (!option) {
+                    return '<div class="l1-flag-slot">—</div>';
+                }
+
+                const shortValue = option.value.length > 6 ? `${option.value.slice(0, 4)}…` : option.value;
+                return `<div class="l1-flag-slot active">${shortValue}</div>`;
+            }).join('');
+        }
+
+        const submitBtn = document.getElementById('submit-selection');
+        if (submitBtn) submitBtn.disabled = selectedIds.length === 0;
+
+        document.querySelectorAll('[data-option-id]').forEach(card => {
+            const optionId = Number(card.dataset.optionId);
+            const option = options.find(entry => entry.id === optionId);
+            const state = card.querySelector('.l1-card__state');
+            const isSelected = this.selectedOptions.has(optionId);
+
+            card.classList.toggle('selected', isSelected);
+            card.classList.toggle('flagged', isSelected && Boolean(option?.isWeak));
+            card.classList.toggle('clear', isSelected && option && !option.isWeak);
+
+            if (!state) return;
+            if (!isSelected) {
+                state.textContent = 'READY';
+                return;
+            }
+
+            state.textContent = option?.isWeak ? 'FLAGGED' : 'SECURE';
+        });
+
+        document.querySelectorAll('[data-human-objective]').forEach((item, index) => {
+            item.classList.remove('on', 'done');
+            if (this.isComplete) {
+                item.classList.add('done');
+                item.querySelector('.l1-objective__icon').textContent = '✓';
+                return;
+            }
+
+            if (index === 0) {
+                item.classList.add(selectedIds.length > 0 || this.attempts > 0 || this.hintsShown > 0 ? 'done' : 'on');
+                item.querySelector('.l1-objective__icon').textContent = selectedIds.length > 0 || this.attempts > 0 || this.hintsShown > 0 ? '✓' : '▸';
+                return;
+            }
+
+            if (index === 1) {
+                if (selectedIds.length > 0) {
+                    item.classList.add('on');
+                    item.querySelector('.l1-objective__icon').textContent = '▸';
+                } else {
+                    item.querySelector('.l1-objective__icon').textContent = '';
+                }
+                return;
+            }
+
+            if (index === 2) {
+                if (this.attempts > 0) {
+                    item.classList.add('on');
+                    item.querySelector('.l1-objective__icon').textContent = '▸';
+                } else {
+                    item.querySelector('.l1-objective__icon').textContent = '';
+                }
+            }
+        });
+    }
+
+    getSingleChoiceConfidenceScore() {
+        const requiredEvidence = Array.isArray(this.puzzleData.requiredEvidenceIds) ? this.puzzleData.requiredEvidenceIds : [];
+        if (!requiredEvidence.length) return Math.min(100, this.singleChoiceSelectedEntryIds.size * 35);
+        const matched = requiredEvidence.filter(id => this.singleChoiceSelectedEntryIds.has(id)).length;
+        return Math.min(100, Math.round((matched / requiredEvidence.length) * 100));
+    }
+
+    getSingleChoiceEvidenceSummary() {
+        const matched = (this.getSingleChoiceEvidenceEntries() || []).filter(entry => this.singleChoiceSelectedEntryIds.has(entry.id));
+        if (!matched.length) return 'No high-signal evidence flagged yet.';
+        const keywords = matched.map(entry => entry.title).slice(0, 2).join(' + ');
+        return `${keywords}${matched.length > 2 ? ' +' : ''} supports a repeated wordlist-style guessing pattern.`;
+    }
+
+    getPredictionClassificationSummary(session) {
+        const options = Array.isArray(session?.options) ? session.options : [];
+        if (!options.length || !options.every(option => !!this.predictionRatings[option])) {
+            return 'Classify every password first to unlock the benchmark preview.';
+        }
+        const sorted = options.slice().sort((a, b) => this.getPredictionBreakTime(a) - this.getPredictionBreakTime(b));
+        const weakest = sorted[0];
+        const strongest = sorted[sorted.length - 1];
+        return `Most likely to break first: ${weakest}. Most likely to hold longest: ${strongest}.`;
+    }
+
+    getInvestigationFlagQuality(logs = []) {
+        const flaggedLogs = logs.filter(log => this.investigationFlaggedEvents.has(log.id));
+        const criticalFlags = flaggedLogs.filter(log => log.statusTone === 'critical').length;
+        return {
+            flaggedCount: flaggedLogs.length,
+            criticalFlags,
+            warningFlags: flaggedLogs.filter(log => log.statusTone === 'warning').length
+        };
+    }
+
+    getInspectionExposureScore(system) {
+        const preview = Array.isArray(system?.databasePreview) ? system.databasePreview.join(' ') : '';
+        const breach = String(system?.breachOutcome || '');
+        if (/plain text|admin@123|welcome123|rahim2001/i.test(`${preview} ${breach}`)) {
+            return { score: 96, label: 'Instant credential replay risk' };
+        }
+        if (/md5|hash|offline/i.test(`${preview} ${breach} ${system?.summary || ''}`)) {
+            return { score: 68, label: 'Offline cracking still viable' };
+        }
+        return { score: 40, label: 'Limited post-breach exposure' };
+    }
+
+    getThreatOperationsSummary() {
+        return {
+            detected: this.threatDetectedMajor.size,
+            contained: this.threatContainedMajor.size,
+            investigated: this.threatInvestigatedEvents.size
+        };
+    }
+
+    getPatchStagingPreview() {
+        const stagedIds = Array.from(this.patchStagedActions);
+        const preview = {
+            exploitSuccessRateDelta: 0,
+            serverLoadDelta: 0,
+            userExperienceScoreDelta: 0,
+            closes: 0
+        };
+        stagedIds.forEach(id => {
+            const option = (this.puzzleData.patchOptions || []).find(item => item.id === id);
+            if (!option) return;
+            const effects = option.effects || {};
+            preview.exploitSuccessRateDelta += Number(effects.exploitSuccessRateDelta || 0);
+            preview.serverLoadDelta += Number(effects.serverLoadDelta || 0);
+            preview.userExperienceScoreDelta += Number(effects.userExperienceScoreDelta || 0);
+            preview.closes += Array.isArray(effects.closesVulnerabilities) ? effects.closesVulnerabilities.length : 0;
+        });
+        return preview;
+    }
+
+    getEnterpriseAttackNarrative(result) {
+        if (result.outcome === 'Blocked') return 'Layered controls removed the main attacker path.';
+        if (result.outcome === 'Partially Mitigated') return 'At least one control slowed the attack, but gaps remain.';
+        return 'This attack path still reaches a business-critical objective.';
+    }
+
+    renderMissionDebrief({ tone = 'success', title = '', summary = '', details = [], insight = '' }) {
+        const accent = tone === 'success' ? '#00e87a' : tone === 'warning' ? '#ffcb6b' : '#ff4060';
+        const background = tone === 'success'
+            ? 'rgba(0,232,122,.08)'
+            : tone === 'warning'
+                ? 'rgba(255,176,0,.08)'
+                : 'rgba(255,64,96,.08)';
+        const border = tone === 'success'
+            ? 'rgba(0,232,122,.22)'
+            : tone === 'warning'
+                ? 'rgba(255,176,0,.22)'
+                : 'rgba(255,64,96,.22)';
+        const detailMarkup = details.length
+            ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">${details.slice(0, 4).map(item => `<span style="display:inline-flex;padding:4px 8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(220,228,245,.82);font-size:.78rem;">${item}</span>`).join('')}</div>`
+            : '';
+        const insightMarkup = insight ? `<div style="margin-top:10px;color:#ffcb6b;font-size:.82rem;line-height:1.5;">${insight}</div>` : '';
+        return `
+            <div style="margin-top:12px;padding:14px;border:1px solid ${border};background:${background};box-shadow:0 0 0 1px rgba(255,255,255,.02) inset;border-radius:12px;">
+                <div style="color:${accent};font-family:Consolas,'Courier New',monospace;letter-spacing:.16em;text-transform:uppercase;font-size:.72rem;">Mission Debrief</div>
+                <div style="margin-top:6px;color:#eef2ff;font-size:.98rem;font-weight:700;line-height:1.4;">${title}</div>
+                <div style="margin-top:6px;color:rgba(220,228,245,.82);line-height:1.6;font-size:.9rem;">${summary}</div>
+                ${detailMarkup}
+                ${insightMarkup}
+            </div>`;
+    }
+
+    renderSharedPasswordLabFrame({ levelLabel = '', title = '', status = 'ANALYST LAB ACTIVE', phases = [], content = '' }) {
+        const timeDisplay = this.gameScreen?.timer ? this.gameScreen.timer.getFormattedTime() : '00:00';
+        const scoreDisplay = String(this.gameScreen?.game?.score?.getScore?.() || 0).padStart(3, '0');
+        const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
+        const aiProgress = Math.floor(this.gameScreen?.aiOpponent?.getProgress?.() || 0);
+        const phaseMarkup = phases.map((phase, index) => `
+            ${index ? '<div class="lab-shared-phase-sep">//</div>' : ''}
+            <div class="lab-shared-phase ${phase.active ? 'active' : ''}">
+                <span class="lab-shared-phase__dot"></span>
+                <strong>${String(index + 1).padStart(2, '0')}</strong>${phase.label}
+            </div>`).join('');
+
+        return `
+            <div class="lab-shared-shell">
+                <canvas class="lab-shared-matrix" id="l1-matrix" aria-hidden="true"></canvas>
+                <div class="lab-shared-crt" aria-hidden="true"></div>
+                <div class="lab-shared-scanline" aria-hidden="true"></div>
+
+                <header class="lab-shared-hud">
+                    <div class="lab-shared-logo">
+                        <div class="lab-shared-logo-badge">⬡</div>
+                        <div class="lab-shared-logo-text">SHADOWDEF</div>
+                    </div>
+                    <div class="lab-shared-mission">
+                        <div class="lab-shared-kicker">${levelLabel}</div>
+                        <div class="lab-shared-title">${title}</div>
+                    </div>
+                    <div class="lab-shared-stats">
+                        <div class="lab-shared-stat">
+                            <div class="lab-shared-label">Time</div>
+                            <div class="lab-shared-value" id="l1-timer">${timeDisplay}</div>
+                        </div>
+                        <div class="lab-shared-stat">
+                            <div class="lab-shared-label">Score</div>
+                            <div class="lab-shared-value lab-shared-value--score" id="l1-score">${scoreDisplay}</div>
+                        </div>
+                        <div class="lab-shared-stat">
+                            <div class="lab-shared-label">AI</div>
+                            <div class="lab-shared-value lab-shared-value--alert" id="l1-ai-progress">${aiProgress}%</div>
+                        </div>
+                        <div class="lab-shared-stat">
+                            <div class="lab-shared-label">Hints</div>
+                            <div class="lab-shared-value lab-shared-value--safe" id="l1-hints-remaining">${hintsRemaining}</div>
+                        </div>
+                    </div>
+                    <div class="lab-shared-actions">
+                        <button class="lab-shared-btn" data-action="hint" type="button">[ HINT ]</button>
+                        <button class="lab-shared-btn" data-action="pause" type="button">[ PAUSE ]</button>
+                        <button class="lab-shared-btn" data-action="back-to-levels" type="button">[ BACK ]</button>
+                    </div>
+                </header>
+
+                <div class="lab-shared-strip">
+                    ${phaseMarkup}
+                    <div class="lab-shared-status">
+                        <span class="lab-shared-status__dot"></span>
+                        ${status}
+                    </div>
+                </div>
+
+                <div class="lab-shared-body">
+                    <div class="lab-shared-content">
+                        ${content}
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    renderSharedPasswordLabThemeStyles() {
+        return `<style>
+            .lab-shared-shell,.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell,.password-puzzle.investigation-shell,.password-puzzle.inspection-shell{--lab-cyan:#17d8ff;--lab-red:#ff3f78;--lab-green:#00ff88;--lab-gold:#ffcc00;--lab-white:#edf7ff;--lab-text:rgba(232,244,255,.86);--lab-text-mid:rgba(168,216,232,.58);--lab-text-low:rgba(168,216,232,.3);--lab-border:rgba(23,216,255,.16);display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:radial-gradient(circle at top left,rgba(23,216,255,.12),transparent 24%),radial-gradient(circle at bottom right,rgba(255,63,120,.08),transparent 28%),linear-gradient(180deg,#030914 0%,#020610 100%) !important;color:var(--lab-text)!important;border:1px solid var(--lab-border)!important;box-shadow:0 24px 72px rgba(0,0,0,.34)!important;font-family:'Courier Prime','Share Tech Mono',monospace;overflow:hidden}
+            .password-puzzle.investigation-shell,.password-puzzle.inspection-shell{overflow:auto}
+            .lab-shared-shell,.lab-shared-shell *,.lab-shared-shell *::before,.lab-shared-shell *::after,.l2-shell *,.l3-shell *,.srl-shell *,.ld-shell *,.th-shell *,.patch-shell *,.ea-shell *,.password-puzzle.investigation-shell *,.password-puzzle.inspection-shell *,.l2-shell *::before,.l3-shell *::before,.srl-shell *::before,.ld-shell *::before,.th-shell *::before,.patch-shell *::before,.ea-shell *::before,.password-puzzle.investigation-shell *::before,.password-puzzle.inspection-shell *::before,.l2-shell *::after,.l3-shell *::after,.srl-shell *::after,.ld-shell *::after,.th-shell *::after,.patch-shell *::after,.ea-shell *::after,.password-puzzle.investigation-shell *::after,.password-puzzle.inspection-shell *::after{box-sizing:border-box}
+            @keyframes labSharedScan{0%{top:-4px}100%{top:100%}}
+            @keyframes labSharedBlink{0%,100%{opacity:1}50%{opacity:0}}
+            @keyframes labSharedPulse{0%,100%{opacity:1}50%{opacity:.45}}
+            .lab-shared-shell{position:relative;cursor:crosshair}
+            .lab-shared-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.34}
+            .lab-shared-crt{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+            .lab-shared-crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(1,3,12,.78) 100%)}
+            .lab-shared-scanline{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(transparent,rgba(23,216,255,.12),transparent);z-index:2;animation:labSharedScan 5s linear infinite;pointer-events:none}
+            .lab-shared-hud,.lab-shared-strip,.lab-shared-body{position:relative;z-index:3}
+            .lab-shared-hud{display:flex;align-items:stretch;flex-wrap:wrap;min-height:60px;border-bottom:1px solid var(--lab-border);background:rgba(0,8,20,.95);flex-shrink:0}
+            .lab-shared-logo{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:1px solid var(--lab-border);flex-shrink:0}
+            .lab-shared-logo-badge{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid var(--lab-cyan);color:var(--lab-cyan);font-size:14px;background:rgba(23,216,255,.08);box-shadow:0 0 18px rgba(23,216,255,.2);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:labSharedPulse 2s infinite}
+            .lab-shared-logo-text{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--lab-cyan);text-shadow:0 0 16px rgba(23,216,255,.24)}
+            .lab-shared-kicker,.lab-shared-label,.lab-shared-btn,.lab-shared-phase,.lab-shared-status{font-family:'Courier Prime','Share Tech Mono',monospace;text-transform:uppercase}
+            .lab-shared-mission{display:flex;flex:1 1 240px;flex-direction:column;justify-content:center;padding:0 24px;border-right:1px solid var(--lab-border);min-width:220px}
+            .lab-shared-kicker{font-size:9px;letter-spacing:3px;color:var(--lab-text-mid);margin-bottom:3px}
+            .lab-shared-title{font-family:'Teko',sans-serif;font-size:18px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--lab-white);text-transform:uppercase}
+            .lab-shared-stats{display:flex;align-items:stretch;flex-wrap:wrap;min-width:0;margin-left:auto}
+            .lab-shared-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 18px;border-left:1px solid var(--lab-border);min-width:80px}
+            .lab-shared-label{font-size:8px;letter-spacing:3px;color:var(--lab-text-low);margin-bottom:2px}
+            .lab-shared-value{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1;color:var(--lab-cyan)}
+            .lab-shared-value--score{color:var(--lab-gold)}
+            .lab-shared-value--alert{color:var(--lab-red)}
+            .lab-shared-value--safe{color:var(--lab-green)}
+            #l1-timer.danger{color:var(--lab-red)!important;text-shadow:0 0 16px rgba(255,63,120,.3)}
+            .lab-shared-actions{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--lab-border);flex-wrap:wrap}
+            .lab-shared-btn{padding:6px 14px;border:1px solid rgba(23,216,255,.26);background:transparent;color:var(--lab-text-mid);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s ease}
+            .lab-shared-btn:hover{border-color:var(--lab-cyan);color:var(--lab-cyan);box-shadow:0 0 18px rgba(23,216,255,.16)}
+            .lab-shared-strip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:40px;padding:0 24px;border-bottom:1px solid var(--lab-border);background:rgba(23,216,255,.04);flex-shrink:0}
+            .lab-shared-phase{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:2px;color:var(--lab-text-low)}
+            .lab-shared-phase strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;font-weight:400}
+            .lab-shared-phase__dot{width:8px;height:8px;border-radius:50%;background:rgba(23,216,255,.14);flex-shrink:0}
+            .lab-shared-phase.active{color:var(--lab-cyan)}
+            .lab-shared-phase.active .lab-shared-phase__dot{background:var(--lab-cyan);box-shadow:0 0 14px rgba(23,216,255,.42)}
+            .lab-shared-phase-sep{color:rgba(23,216,255,.3);font-size:16px}
+            .lab-shared-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:3px;color:var(--lab-cyan);text-shadow:0 0 12px rgba(23,216,255,.28)}
+            .lab-shared-status__dot{width:8px;height:8px;background:var(--lab-green);box-shadow:0 0 12px rgba(0,255,136,.75);animation:labSharedBlink 1s step-end infinite}
+            .lab-shared-body{display:flex;flex:1;min-height:0;overflow:hidden}
+            .lab-shared-content{display:flex;flex:1;min-height:0;overflow:hidden}
+            .lab-shared-content > *{flex:1;min-height:0}
+            .lab-shared-content .l2-shell,.lab-shared-content .l3-shell,.lab-shared-content .srl-shell,.lab-shared-content .ld-shell,.lab-shared-content .th-shell,.lab-shared-content .patch-shell,.lab-shared-content .ea-shell,.lab-shared-content .password-puzzle.investigation-shell,.lab-shared-content .password-puzzle.inspection-shell{background:transparent !important;border:0 !important;box-shadow:none !important}
+            .lab-shared-content .l2-header,.lab-shared-content .l2-phases,.lab-shared-content .l2-hint-strip,.lab-shared-content .l3-header,.lab-shared-content .l3-phases,.lab-shared-content .l3-hint-strip,.lab-shared-content .srl-header,.lab-shared-content .srl-phases,.lab-shared-content .ld-header,.lab-shared-content .ld-phases,.lab-shared-content .ld-hint-strip,.lab-shared-content .th-header,.lab-shared-content .th-hint-strip,.lab-shared-content .patch-header,.lab-shared-content .patch-phases,.lab-shared-content .patch-hint-strip,.lab-shared-content .ea-header,.lab-shared-content .ea-phases,.lab-shared-content .ea-hint-strip,.lab-shared-content .investigation-masthead,.lab-shared-content .investigation-progress-rail,.lab-shared-content .investigation-hint-strip,.lab-shared-content .inspection-masthead,.lab-shared-content .inspection-progress-rail,.lab-shared-content .inspection-hint-strip{display:none !important}
+            .l2-header,.l3-header,.srl-header,.ld-header,.th-header,.patch-header,.ea-header,.investigation-masthead,.inspection-masthead{background:rgba(1,8,24,.94)!important;border-bottom:1px solid var(--lab-border)!important}
+            .l2-brand,.l3-brand,.srl-brand,.ld-brand,.th-brand,.patch-brand,.ea-brand,.investigation-masthead__brand,.inspection-masthead__brand{color:var(--lab-cyan)!important;font-family:'Orbitron',sans-serif!important;font-weight:800!important;letter-spacing:4px!important}
+            .l2-level,.l3-level,.srl-level,.ld-level,.th-level,.patch-level,.ea-level,.investigation-masthead__case,.inspection-masthead__case{color:rgba(23,216,255,.66)!important;font-family:'Share Tech Mono',monospace!important;letter-spacing:.18em!important;text-transform:uppercase}
+            .l2-status,.l3-status,.srl-status,.ld-status,.th-status,.patch-status,.ea-status,.investigation-masthead__status,.inspection-masthead__status{color:var(--lab-green)!important;font-family:'Share Tech Mono',monospace!important;letter-spacing:.16em!important;text-transform:uppercase}
+            .l2-phases,.l3-phases,.srl-phases,.ld-phases,.ea-phases,.investigation-progress-rail,.inspection-progress-rail{background:rgba(1,8,24,.86)!important;border-bottom:1px solid rgba(23,216,255,.08)!important}
+            .l2-phase,.l3-phase,.srl-phase,.ld-phase,.ea-phase,.investigation-progress-step,.inspection-progress-step{color:var(--lab-text-low)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-phase.active,.l3-phase.active,.srl-phase.active,.ld-phase.active,.ea-phase.active,.investigation-progress-step.is-active,.inspection-progress-step.is-active{color:var(--lab-cyan)!important;background:rgba(23,216,255,.06)!important;border-bottom-color:var(--lab-cyan)!important}
+            .srl-phase.done{color:var(--lab-green)!important;border-bottom-color:rgba(0,255,136,.35)!important}
+            .l2-hint-strip,.l3-hint-strip,.srl-hint-strip,.ld-hint-strip,.th-hint-strip,.patch-hint-strip,.ea-hint-strip,.investigation-hint-strip,.inspection-hint-strip{background:rgba(23,216,255,.04)!important;border-bottom:1px solid rgba(23,216,255,.12)!important;color:rgba(23,216,255,.78)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-frame,.l3-frame,.ld-grid,.th-grid,.patch-grid,.ea-grid,.investigation-grid,.inspection-grid{flex:1;min-height:0!important;height:100%}
+            .l2-panel,.l3-panel,.ld-panel,.th-main,.th-side,.patch-main,.patch-side,.ea-main,.ea-side,.investigation-panel,.investigation-question-panel,.investigation-selected-entry,.inspection-card,.inspection-side-panel,.inspection-question-panel,.inspection-scorecard{background:rgba(2,10,24,.6)!important;border-color:rgba(23,216,255,.12)!important;box-shadow:0 18px 40px rgba(0,0,0,.22)!important;backdrop-filter:blur(12px)}
+            .l2-brief-box,.l2-metric-box,.l2-guide,.l2-log-panel,.l2-feedback,.l2-choice-card,.l2-evidence-card,.l3-brief-box,.l3-metric-box,.l3-guide,.l3-card,.l3-feedback,.l3-race-board,.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-divergence,.srl-result,.srl-feedback,.srl-completion-card,.th-overview,.th-sidebox,.th-panel,.th-selected,.th-log,.patch-overview,.patch-sidebox,.patch-action-board,.patch-log,.patch-module,.patch-vuln{background:rgba(2,10,24,.6)!important;border-color:rgba(23,216,255,.12)!important}
+            .l2-section-kicker,.l3-section-kicker,.srl-section-kicker,.ld-kicker,.th-kicker,.patch-kicker,.ea-kicker,.investigation-panel__header strong,.inspection-side-panel__label{color:rgba(23,216,255,.72)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-main-title,.l3-main-title,.ld-title,.th-title,.patch-title,.ea-title,.investigation-title,.inspection-title{color:var(--lab-white)!important;font-family:'Orbitron',sans-serif!important}
+            .l2-choice-card__title,.l3-rate-label,.l3-card__label,.srl-label,.ld-card__status,.ld-card__cost,.th-panel__head span,.patch-action-card__meta,.ea-config-card__title,.investigation-case-meta,.inspection-hero__meta{color:rgba(23,216,255,.68)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-btn,.l3-btn,.srl-nav-btn,.srl-sim-btn,.srl-quick-btn,.srl-primary-btn,.l2-flag-btn,.l3-rate-btn,.investigation-action-btn,.inspection-action-btn,.th-card-action,.password-puzzle .btn{border-color:rgba(23,216,255,.24)!important;color:rgba(232,244,255,.82)!important;background:rgba(23,216,255,.06)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-btn-primary,.l3-btn-primary,.srl-primary-btn,.password-puzzle .btn.btn-primary{background:linear-gradient(90deg,rgba(23,216,255,.16),rgba(255,63,120,.08))!important;border-color:rgba(23,216,255,.36)!important;color:var(--lab-white)!important}
+            .l2-panel,.l3-panel,.ld-panel,.th-main,.th-side,.patch-main,.patch-side,.ea-main,.ea-side,.l2-panel-right,.l3-panel-right,.investigation-panel--logs,.investigation-side-stack,.inspection-main,.inspection-sidebar{min-height:0;overflow:auto}
+            .l2-log-feed,.l2-evidence-grid,.l3-card-grid,.investigation-log-list,.inspection-main,.th-main,.patch-main,.ea-main{min-height:0;overflow:auto}
+            @media (max-width:1200px){.lab-shared-mission{min-width:0;flex:1 1 100%}.lab-shared-stats{order:4;width:100%;margin-left:0;border-top:1px solid var(--lab-border)}.lab-shared-actions{margin-left:auto}}
+            @media (max-width:1080px){.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell{overflow:auto}.l2-frame,.l3-frame,.ld-grid,.th-grid,.patch-grid,.ea-grid{height:auto}}
+            @media (max-width:760px){.lab-shared-hud{display:grid;grid-template-columns:1fr}.lab-shared-logo,.lab-shared-mission,.lab-shared-stats,.lab-shared-actions{border-right:0;border-left:0;border-bottom:1px solid var(--lab-border)}.lab-shared-actions{padding:12px 16px}.lab-shared-strip{padding:10px 16px;align-items:flex-start}.lab-shared-status{width:100%;margin-left:0;padding-top:4px}}
+        </style>`;
+    }
+
+    renderHumanPsychologyLabStyles() {
+        return `<style>
+            .l1-shell{--l1-black:#01060f;--l1-deep:#020910;--l1-panel:rgba(6,18,34,.92);--l1-panel-2:rgba(4,12,26,.96);--l1-rim:rgba(23,216,255,.16);--l1-rim2:rgba(23,216,255,.28);--l1-cyan:#17d8ff;--l1-red:#ff3f78;--l1-green:#00ff88;--l1-gold:#ffcc00;--l1-white:rgba(255,255,255,.92);--l1-text:rgba(232,244,255,.86);--l1-text-mid:rgba(168,216,232,.48);--l1-text-low:rgba(168,216,232,.24);position:relative;display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:100%;max-height:100%;min-width:0;min-height:0;overflow:hidden;background:var(--l1-black);color:var(--l1-text);font-family:'Courier Prime','Share Tech Mono',monospace;cursor:crosshair}
+            .l1-shell,.l1-shell *,.l1-shell *::before,.l1-shell *::after{box-sizing:border-box}
+            @keyframes l1ScanDown{0%{top:-4px}100%{top:100%}}
+            @keyframes l1Blink{0%,100%{opacity:1}50%{opacity:0}}
+            @keyframes l1Pulse{0%,100%{opacity:1}50%{opacity:.45}}
+            @keyframes l1Spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+            .l1-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.32}
+            .l1-crt{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+            .l1-crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(1,3,12,.78) 100%)}
+            .l1-scanline{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(transparent,rgba(23,216,255,.12),transparent);z-index:2;animation:l1ScanDown 5s linear infinite;pointer-events:none}
+            .l1-top-hud,.l1-mission-strip,.l1-body{position:relative;z-index:5}
+            .l1-top-hud{display:flex;align-items:stretch;min-height:60px;border-bottom:1px solid var(--l1-rim);background:rgba(0,8,20,.95);flex-shrink:0}
+            .l1-hud-logo{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:1px solid var(--l1-rim);flex-shrink:0}
+            .l1-logo-badge{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-cyan);color:var(--l1-cyan);font-size:14px;background:rgba(23,216,255,.08);box-shadow:0 0 18px rgba(23,216,255,.2);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:l1Pulse 2s infinite}
+            .l1-logo-text{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--l1-cyan);text-shadow:0 0 16px rgba(23,216,255,.24)}
+            .l1-hud-kicker,.l1-hud-label,.l1-card__id,.l1-card__state,.l1-tag,.l1-hud-btn,.l1-attempts,.l1-submit-label,.l1-submit-points-label,.l1-console-title,.l1-console-chip,.l1-risk-row,.l1-phase,.l1-mission-status{font-family:'Courier Prime','Share Tech Mono',monospace;text-transform:uppercase}
+            .l1-hud-mission{display:flex;flex-direction:column;justify-content:center;padding:0 24px;border-right:1px solid var(--l1-rim);min-width:220px}
+            .l1-hud-kicker{font-size:9px;letter-spacing:3px;color:var(--l1-text-mid);margin-bottom:3px}
+            .l1-hud-title{font-family:'Teko',sans-serif;font-size:18px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--l1-white);text-transform:uppercase}
+            .l1-hud-stats{display:flex;align-items:stretch;margin-left:auto;min-width:0}
+            .l1-hud-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;border-left:1px solid var(--l1-rim);min-width:84px}
+            .l1-hud-meter{display:flex;align-items:center;gap:12px;padding:0 24px;border-left:1px solid var(--l1-rim);min-width:164px}
+            .l1-hud-label{font-size:8px;letter-spacing:3px;color:var(--l1-text-low);margin-bottom:2px}
+            .l1-hud-value{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1;color:var(--l1-cyan)}
+            .l1-hud-value--cyan{color:var(--l1-gold)}
+            .l1-hud-value--red{color:var(--l1-red)}
+            #l1-timer.danger{color:var(--l1-red);text-shadow:0 0 16px rgba(255,63,120,.32)}
+            .l1-hud-track{flex:1;height:6px;background:rgba(23,216,255,.14);border-radius:999px;overflow:hidden}
+            .l1-hud-fill{height:100%;background:linear-gradient(90deg,var(--l1-cyan),rgba(135,241,255,.92));box-shadow:0 0 12px rgba(23,216,255,.26);transition:width .35s ease}
+            .l1-hud-actions{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--l1-rim)}
+            .l1-hud-btn{padding:6px 14px;border:1px solid var(--l1-rim2);background:transparent;color:var(--l1-text-mid);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s ease}
+            .l1-hud-btn:hover{border-color:var(--l1-cyan);color:var(--l1-cyan);box-shadow:0 0 18px rgba(23,216,255,.16)}
+            .l1-mission-strip{display:flex;align-items:center;gap:14px;height:40px;padding:0 24px;border-bottom:1px solid var(--l1-rim);background:rgba(23,216,255,.04);flex-shrink:0}
+            .l1-phase{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:2px;color:var(--l1-text-low)}
+            .l1-phase strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;font-weight:400}
+            .l1-phase__dot{width:8px;height:8px;border-radius:50%;background:rgba(23,216,255,.14);flex-shrink:0}
+            .l1-phase.active{color:var(--l1-cyan)}
+            .l1-phase.active .l1-phase__dot{background:var(--l1-cyan);box-shadow:0 0 14px rgba(23,216,255,.42)}
+            .l1-phase-sep{color:rgba(23,216,255,.3);font-size:16px}
+            .l1-mission-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:3px;color:var(--l1-cyan);text-shadow:0 0 12px rgba(23,216,255,.28)}
+            .l1-mission-status__dot{width:8px;height:8px;background:var(--l1-green);box-shadow:0 0 12px rgba(0,255,136,.75);animation:l1Blink 1s step-end infinite}
+            .l1-body{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;overflow:hidden}
+            .l1-arena{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--l1-rim)}
+            .l1-arena-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:16px 24px 12px;border-bottom:1px solid var(--l1-rim);background:rgba(0,4,14,.58);flex-shrink:0}
+            .l1-arena-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,4.4vw,72px);letter-spacing:3px;line-height:.88;color:var(--l1-white);text-transform:uppercase}
+            .l1-arena-title span{color:var(--l1-red);text-shadow:0 0 18px rgba(255,63,120,.28)}
+            .l1-arena-sub{margin-top:4px;font-size:10px;letter-spacing:1px;color:var(--l1-text-mid)}
+            .l1-arena-hint{max-width:280px;text-align:right;font-size:10px;letter-spacing:1px;line-height:1.5;color:var(--l1-text-mid)}
+            .l1-arena-hint b{color:var(--l1-cyan);font-weight:700}
+            .l1-arena-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 24px;scrollbar-width:thin;scrollbar-color:rgba(23,216,255,.28) transparent}
+            .l1-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+            .l1-card{position:relative;overflow:hidden;padding:0;border:1px solid var(--l1-rim);background:rgba(2,15,34,.9);color:var(--l1-text);text-align:left;cursor:pointer;transition:border-color .2s ease,transform .2s ease,box-shadow .2s ease}
+            .l1-card:hover{border-color:var(--l1-cyan);transform:translateX(4px);box-shadow:-4px 0 0 rgba(23,216,255,.48),0 0 28px rgba(23,216,255,.12)}
+            .l1-card.selected.flagged{border-color:var(--l1-red);background:rgba(22,4,14,.96);box-shadow:0 0 0 1px rgba(255,63,120,.22) inset,0 0 28px rgba(255,63,120,.14)}
+            .l1-card.selected.clear{border-color:var(--l1-green);background:rgba(0,12,11,.96);box-shadow:0 0 0 1px rgba(0,255,136,.18) inset,0 0 28px rgba(0,255,136,.12)}
+            .l1-card__accent{height:2px;background:var(--l1-rim2);transition:background .3s ease}
+            .l1-card:hover .l1-card__accent{background:var(--l1-cyan)}
+            .l1-card.selected.flagged .l1-card__accent{background:var(--l1-red);box-shadow:0 0 10px rgba(255,63,120,.42)}
+            .l1-card.selected.clear .l1-card__accent{background:var(--l1-green);box-shadow:0 0 10px rgba(0,255,136,.38)}
+            .l1-card__body{padding:16px}
+            .l1-card__top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+            .l1-card__id{font-size:10px;letter-spacing:1px;color:var(--l1-text-mid)}
+            .l1-card__state{font-size:9px;letter-spacing:2px;font-weight:700;opacity:0;transition:opacity .25s ease}
+            .l1-card.selected.flagged .l1-card__state{opacity:1;color:var(--l1-red)}
+            .l1-card.selected.clear .l1-card__state{opacity:1;color:var(--l1-green)}
+            .l1-card__value{font-family:'Teko',sans-serif;font-size:32px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--l1-cyan);margin-bottom:10px;word-break:break-all;text-shadow:0 0 10px rgba(23,216,255,.18)}
+            .l1-card.selected.flagged .l1-card__value{color:var(--l1-red);text-shadow:0 0 14px rgba(255,63,120,.24)}
+            .l1-card.selected.clear .l1-card__value{color:var(--l1-green);text-shadow:0 0 14px rgba(0,255,136,.22)}
+            .l1-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+            .l1-tag{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid;font-size:8px;letter-spacing:2px}
+            .l1-tag--danger{color:#ffd4e1;border-color:rgba(255,63,120,.32);background:rgba(255,63,120,.08)}
+            .l1-tag--warn{color:#ffe59b;border-color:rgba(255,204,0,.28);background:rgba(255,204,0,.08)}
+            .l1-tag--safe{color:#a8fff0;border-color:rgba(0,255,136,.28);background:rgba(0,255,136,.08)}
+            .l1-tag--neutral{color:var(--l1-cyan);border-color:rgba(23,216,255,.24);background:rgba(23,216,255,.06)}
+            .l1-card__entropy{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+            .l1-card__entropy-track{flex:1;height:3px;background:rgba(23,216,255,.12)}
+            .l1-card__entropy-fill{height:100%}
+            .l1-card__entropy-fill.low{background:var(--l1-red);box-shadow:0 0 6px rgba(255,63,120,.42)}
+            .l1-card__entropy-fill.mid{background:var(--l1-gold)}
+            .l1-card__entropy-fill.high{background:var(--l1-green);box-shadow:0 0 6px rgba(0,255,136,.34)}
+            .l1-card__entropy-value{min-width:28px;text-align:right;font-size:9px;color:var(--l1-text-low)}
+            .l1-feedback{margin-bottom:12px;padding:12px 14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.82);color:var(--l1-text-mid);line-height:1.65;font-size:11px}
+            .l1-submit-dock{display:flex;align-items:center;gap:20px;padding:16px 24px;border-top:1px solid var(--l1-rim);background:rgba(0,4,14,.84);flex-shrink:0;min-width:0}
+            .l1-submit-cluster{display:flex;align-items:center;gap:8px;min-width:0}
+            .l1-submit-cluster--summary{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:0}
+            .l1-submit-label{margin-right:4px;font-size:9px;letter-spacing:2px;color:var(--l1-text-low)}
+            .l1-flag-slots{display:flex;align-items:center;gap:8px}
+            .l1-flag-slot{width:44px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-rim2);background:rgba(23,216,255,.03);color:var(--l1-text-low);font-family:'Teko',sans-serif;font-size:13px;letter-spacing:1px;transition:all .3s ease}
+            .l1-flag-slot.active{border-color:var(--l1-red);background:rgba(255,63,120,.08);color:var(--l1-red);box-shadow:0 0 10px rgba(255,63,120,.16)}
+            .l1-submit-value{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--l1-cyan);line-height:1}
+            .l1-submit-value.neg{color:var(--l1-red)}
+            .l1-submit-points-label{font-size:8px;letter-spacing:2px;color:var(--l1-text-low)}
+            .l1-submit-meta{min-width:112px;text-align:right}
+            .l1-attempts{color:var(--l1-text-low);font-size:8px;letter-spacing:2px}
+            .l1-attempts span.is-hot{color:var(--l1-red)}
+            .l1-fire-btn{margin-left:4px;border:none;background:var(--l1-red);color:#03070d;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:12px 36px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:all .2s ease}
+            .l1-fire-btn:hover{background:#ff5a8f;transform:scaleX(1.05);box-shadow:0 10px 32px rgba(255,63,120,.26)}
+            .l1-fire-btn:disabled,.l1-fire-btn:disabled:hover{background:rgba(168,216,232,.18);color:rgba(3,7,13,.48);cursor:not-allowed;transform:none;box-shadow:none}
+            .l1-console{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;overflow:hidden;background:rgba(0,3,12,.97)}
+            .l1-console-panel{position:relative;padding:18px 20px;background:rgba(0,3,12,.94);border-bottom:1px solid var(--l1-rim);flex-shrink:0}
+            .l1-console-panel--fill{display:flex;flex-direction:column;flex:1;min-height:0}
+            .l1-console-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:9px;letter-spacing:3px;color:var(--l1-text-low)}
+            .l1-console-title::before{content:'//';color:var(--l1-cyan);font-size:11px}
+            .l1-dial-wrap{position:relative;width:160px;height:160px;margin:0 auto 16px}
+            .l1-dial-wrap::after{content:'';position:absolute;inset:-10px;border:1px solid rgba(23,216,255,.08);border-radius:50%;animation:l1Spin 20s linear infinite}
+            .l1-dial-svg{width:100%;height:100%;transform:rotate(-90deg)}
+            .l1-dial-bg{fill:none;stroke:rgba(23,216,255,.12);stroke-width:8}
+            .l1-dial-ring{fill:none;stroke:var(--l1-red);stroke-width:8;stroke-linecap:round;stroke-dasharray:408;stroke-dashoffset:408;filter:drop-shadow(0 0 6px rgba(255,63,120,.34));transition:stroke-dashoffset .5s ease}
+            .l1-dial-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+            .l1-dial-num{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:2px;line-height:1;color:var(--l1-red);text-shadow:0 0 16px rgba(255,63,120,.32)}
+            .l1-dial-sub{margin-top:2px;font-size:9px;letter-spacing:3px;color:var(--l1-text-low)}
+            .l1-threat-bars{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:16px}
+            .l1-threat-row{display:flex;flex-direction:column;gap:3px}
+            .l1-threat-top{display:flex;justify-content:space-between;gap:12px;font-size:9px;letter-spacing:1px;color:var(--l1-text-mid)}
+            .l1-threat-track,.l1-risk-track{height:3px;background:rgba(23,216,255,.12)}
+            .l1-threat-fill,.l1-risk-fill{height:100%}
+            .tone-danger{color:var(--l1-red)}
+            .tone-warn{color:var(--l1-gold)}
+            .tone-safe{color:var(--l1-green)}
+            .l1-threat-fill.tone-danger{background:var(--l1-red);box-shadow:0 0 6px rgba(255,63,120,.28)}
+            .l1-threat-fill.tone-warn{background:var(--l1-gold)}
+            .l1-threat-fill.tone-safe,.l1-risk-fill{background:var(--l1-green);box-shadow:0 0 6px rgba(0,255,136,.22)}
+            .l1-objective-list{display:flex;flex-direction:column;gap:0}
+            .l1-objective{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(23,216,255,.06)}
+            .l1-objective:last-child{border-bottom:0}
+            .l1-objective__icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-rim2);font-size:9px;color:var(--l1-text-low);flex-shrink:0;margin-top:1px}
+            .l1-objective__text{font-size:11px;line-height:1.5;color:var(--l1-text-mid)}
+            .l1-objective.on .l1-objective__icon{border-color:var(--l1-cyan);color:var(--l1-cyan);background:rgba(23,216,255,.08);box-shadow:0 0 8px rgba(23,216,255,.16)}
+            .l1-objective.on .l1-objective__text{color:var(--l1-text)}
+            .l1-objective.done .l1-objective__icon{border-color:rgba(0,255,136,.36);color:var(--l1-green);background:rgba(0,255,136,.08)}
+            .l1-objective.done .l1-objective__text{color:#baffdf}
+            .l1-console-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .l1-console-chip{padding:5px 9px;border:1px solid rgba(255,63,120,.24);background:rgba(255,63,120,.08);color:#ffd9e5;font-size:9px;letter-spacing:2px}
+            .l1-risk-row{display:flex;align-items:center;gap:12px;margin:12px 0 14px;font-size:9px;letter-spacing:2px;color:var(--l1-text-low)}
+            .l1-risk-row .l1-risk-track{flex:1}
+            .l1-risk-text{min-width:38px;text-align:right;color:var(--l1-red)}
+            .l1-hint-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+            .l1-hint{padding:10px 12px;border-left:2px solid var(--l1-cyan);background:rgba(23,216,255,.05);color:var(--l1-text);font-size:11px;line-height:1.6}
+            .l1-log-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;font-size:11px;line-height:1.8;color:var(--l1-text-mid)}
+            .l1-log-line{display:block}
+            .l1-log-time{color:var(--l1-text-low);margin-right:8px}
+            .l1-log-sys{color:var(--l1-cyan)}
+            .l1-log-warn{color:var(--l1-gold)}
+            .l1-log-ok{color:var(--l1-green)}
+            .l1-log-danger{color:var(--l1-red)}
+            .l1-log-cursor{display:inline-block;width:8px;height:12px;margin-left:4px;background:var(--l1-cyan);vertical-align:middle;animation:l1Blink 1s step-end infinite}
+            .l1-arena-scroll::-webkit-scrollbar,.l1-log-body::-webkit-scrollbar{width:4px}
+            .l1-arena-scroll::-webkit-scrollbar-thumb,.l1-log-body::-webkit-scrollbar-thumb{background:rgba(23,216,255,.28);border-radius:999px}
+            @media (max-width:1280px){.l1-body{grid-template-columns:minmax(0,1fr) 350px}.l1-arena-title{font-size:clamp(46px,4vw,62px)}}
+            @media (max-width:1080px){.l1-shell{overflow:auto}.l1-top-hud{flex-wrap:wrap}.l1-hud-logo,.l1-hud-mission{border-right:0}.l1-hud-stats{order:3;width:100%;margin-left:0}.l1-hud-actions{margin-left:auto}.l1-body{grid-template-columns:1fr;height:auto;overflow:visible}}
+            @media (max-width:760px){.l1-top-hud,.l1-mission-strip,.l1-arena-header,.l1-arena-scroll,.l1-submit-dock,.l1-console-panel{padding-left:16px;padding-right:16px}.l1-mission-strip{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px}.l1-mission-status{width:100%;margin-left:0}.l1-arena-header{flex-direction:column;align-items:flex-start}.l1-arena-hint{text-align:left;max-width:none}.l1-grid{grid-template-columns:1fr}.l1-submit-dock{flex-wrap:wrap}.l1-submit-cluster--summary,.l1-submit-meta{margin-left:0;align-items:flex-start;text-align:left}.l1-fire-btn{width:100%;margin-left:0}.l1-hud-actions,.l1-hud-stats{width:100%;border-left:0}.l1-hud-stats{flex-wrap:wrap}.l1-hud-meter{min-width:0;flex:1 1 180px}}
+        </style>`;
+    }
+
+    renderSaltDemoPanel(container) {
+        const demo = this.puzzleData.saltDemoPanel;
+        const examplesHtml = (demo.examples || []).map(ex => `
+            <div style="background:var(--darker-bg);border:1px solid var(--panel-border);padding:12px;margin-bottom:10px;border-radius:4px;">
+                <div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:6px;">${ex.label}</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:0.85rem;">
+                    <span style="color:var(--cyber-orange);">Password: <strong>${demo.password}</strong></span>
+                    <span style="color:var(--cyber-blue);">+ Salt: <strong>${ex.salt}</strong></span>
+                </div>
+                <div style="margin-top:8px;color:var(--cyber-green);font-family:var(--font-mono);font-size:0.8rem;word-break:break-all;">
+                    → Stored hash: ${ex.hash}
+                </div>
+            </div>`).join('');
 
         container.innerHTML = `
             <div class="password-puzzle">
-                <h2 class="puzzle-title">ENTERPRISE ARCHITECT CERTIFICATION</h2>
+                <h2 class="puzzle-title">LEVEL 6: SALT DEMONSTRATION</h2>
                 <div class="password-brief">
                     <div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div>
                     <div><strong>SCENARIO:</strong> ${this.mission.scenario || ''}</div>
-                    <div><strong>TASK:</strong> ${this.mission.userTask || ''}</div>
                 </div>
                 <div class="password-hints">
-                    <strong style="color: var(--cyber-blue);">Phase 1: System Design</strong>
-                    ${policyMarkup}
-                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
-                        <div><strong>Password Storage</strong></div>
-                        ${select('ea-password_storage', storage, this.enterpriseConfig.password_storage)}
+                    <strong style="color:var(--cyber-blue);">${demo.heading}</strong>
+                    <p style="color:var(--text-secondary);margin:10px 0 14px;">${demo.description}</p>
+                    ${examplesHtml}
+                    <div style="margin-top:14px;padding:12px;background:rgba(0,243,255,0.07);border:1px solid rgba(0,243,255,0.3);border-radius:4px;">
+                        <strong style="color:var(--cyber-blue);">Key insight:</strong>
+                        <span style="color:var(--text-secondary);margin-left:6px;">${demo.takeaway}</span>
                     </div>
-                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
-                        <div><strong>Authentication Controls</strong></div>
-                        ${select('ea-authentication_controls', auth, this.enterpriseConfig.authentication_controls)}
-                    </div>
-                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
-                        <div><strong>Login Protection</strong></div>
-                        ${select('ea-login_protection', login, this.enterpriseConfig.login_protection)}
-                    </div>
-                    <div class="guess-feedback" style="text-align:left; margin-top:6px;">
-                        <div><strong>Monitoring & Response</strong></div>
-                        ${select('ea-monitoring_response', monitor, this.enterpriseConfig.monitoring_response)}
-                    </div>
+                </div>
+                <div class="guess-feedback" id="guess-feedback" style="margin-top:16px;">
+                    Same password. Different salt. Completely different hash — every single time.
                 </div>
                 <div class="puzzle-actions">
-                    <button class="btn btn-primary" id="ea-run-assessment">RUN CERTIFICATION EVALUATION</button>
+                    <button class="btn btn-primary" id="salt-demo-continue">${demo.continueLabel || 'Continue to selection task'}</button>
                 </div>
-                <div class="guess-feedback" id="guess-feedback" style="max-height:180px; overflow:auto; text-align:left;">
-                    Configure architecture and run evaluation.
-                </div>
-                <div id="attempt-counter" style="text-align:center; margin-top:20px; color: var(--text-secondary);">
-                    Certification run pending
-                </div>
-            </div>
-        `;
+            </div>`;
 
-        this.setupEnterpriseArchitectureEventListeners();
+        document.getElementById('salt-demo-continue').addEventListener('click', () => {
+            this.saltDemoCompleted = true;
+            this.audio.playButtonClick();
+            this.renderMultiSelectGrid(container);
+        });
     }
 
-    /**
-     * Render level-1 multi-select mode (no typing required)
-     * @param {HTMLElement} container
-     */
-    renderMultiSelectPuzzle(container) {
+    renderMultiSelectGrid(container) {
         const story = this.session?.storyHint || this.mission.scenario || '';
         const options = this.session?.options || [];
         const optionMarkup = options.map(opt => `
-            <button class="password-option" data-option-id="${opt.id}" type="button">
-                ${opt.value}
-            </button>
-        `).join('');
+            <button class="password-option" data-option-id="${opt.id}" type="button">${opt.value}</button>`).join('');
 
         container.innerHTML = `
             <div class="password-puzzle">
@@ -1298,417 +1471,919 @@ export class PasswordCrack {
                             <span>${this.riskSystem.label || 'Risk Meter'}</span>
                             <span id="risk-text">0%</span>
                         </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="risk-fill" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                ` : ''}
+                        <div class="progress-bar"><div class="progress-fill" id="risk-fill" style="width:0%;"></div></div>
+                    </div>` : ''}
                 <div class="password-hints" id="password-hints">
-                    <strong style="color: var(--cyber-blue);">INVESTIGATIVE STORY HINT:</strong>
+                    <strong style="color:var(--cyber-blue);">INVESTIGATIVE STORY HINT:</strong>
                     <div class="hint">→ ${story}</div>
                 </div>
-                <div class="password-options-grid" id="password-options-grid">
-                    ${optionMarkup}
-                </div>
-                <div class="guess-feedback" id="guess-feedback">
-                    Select suspected weak passwords, then submit your classification.
-                </div>
+                <div class="password-options-grid" id="password-options-grid">${optionMarkup}</div>
+                <div class="guess-feedback" id="guess-feedback">Select suspected weak passwords, then submit your classification.</div>
                 <div class="puzzle-actions">
                     <button class="btn btn-primary" id="submit-selection">SUBMIT ANALYSIS</button>
                     <button class="btn" id="clear-selection">CLEAR SELECTION</button>
                 </div>
-                <div id="attempt-counter" style="text-align: center; margin-top: 20px; color: var(--text-secondary);">
-                    Submissions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                <div id="attempt-counter" style="text-align:center;margin-top:20px;color:var(--text-secondary);">
+                    Submissions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
                 </div>
-            </div>
-        `;
+            </div>`;
 
         this.setupMultiSelectEventListeners();
         this.updateRiskDisplay();
     }
 
-    /**
-     * Create password input fields
-     * @returns {string} HTML for input fields
-     */
-    createInputs() {
-        let html = '';
-        for (let i = 0; i < this.password.length; i++) {
-            html += `<input 
-                type="text" 
-                class="char-input" 
-                maxlength="1" 
-                data-index="${i}"
-                autocomplete="off"
-                spellcheck="false"
-            >`;
-        }
-        return html;
-    }
-
-    /**
-     * Render SOC mission context block
-     * @returns {string}
-     */
-    renderMissionBrief() {
-        if (!this.mission || !this.mission.scenario) return '';
-        const scenarioText = this.dynamicScenario || this.mission.scenario;
-        const taskText = this.dynamicUserTask || this.mission.userTask || 'Identify and validate the credential.';
-
-        return `
-            <div class="password-brief">
-                <div><strong>OBJECTIVE:</strong> ${this.mission.objective || 'Complete credential analysis.'}</div>
-                <div><strong>SCENARIO:</strong> ${scenarioText}</div>
-                <div><strong>TASK:</strong> ${taskText}</div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render visualizer markup based on profile
-     * @returns {string}
-     */
-    renderVisualizerMarkup() {
-        switch (this.visualProfile) {
-            case 'vault-crack':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-vault" id="viz-vault"></div>
-                        <div class="viz-metric">Vault Integrity: <span id="viz-vault-integrity">100%</span></div>
-                    </div>
-                `;
-            case 'entropy-shield':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-shield" id="viz-shield"></div>
-                        <div class="viz-metric">Entropy Index: <span id="viz-entropy-index">LOW</span></div>
-                    </div>
-                `;
-            case 'plaintext-hash-morph':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-morph">
-                            <div class="viz-plain" id="viz-plain">PLAINTEXT</div>
-                            <div class="viz-arrow">→</div>
-                            <div class="viz-hash" id="viz-hash">HASHED</div>
-                        </div>
-                    </div>
-                `;
-            case 'hash-strength-blocks':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-hash-grid">
-                            <div class="viz-hash-block weak" id="viz-weak-hash">WEAK</div>
-                            <div class="viz-hash-block strong" id="viz-strong-hash">STRONG</div>
-                        </div>
-                    </div>
-                `;
-            case 'salt-divergence':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-salt-pair">
-                            <div class="viz-hash-shape" id="viz-hash-a">HASH-A</div>
-                            <div class="viz-hash-shape" id="viz-hash-b">HASH-B</div>
-                        </div>
-                    </div>
-                `;
-            case 'soc-control-room':
-                return `
-                    <div class="viz-stage soc-room" id="viz-soc-room">
-                        <div class="viz-log-panel">AUTH: Burst from geo-variant sources</div>
-                        <div class="viz-log-panel">IAM: Repeated account probe pattern</div>
-                        <div class="viz-log-panel">SIEM: Correlated brute-force signal</div>
-                    </div>
-                `;
-            case 'enterprise-architecture':
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-enterprise-controls" id="viz-enterprise-controls">
-                            <label>Length
-                                <select id="ctrl-length">
-                                    <option value="strong">12+</option>
-                                    <option value="medium">10-11</option>
-                                    <option value="weak">8-9</option>
-                                </select>
-                            </label>
-                            <label>Complexity
-                                <select id="ctrl-complexity">
-                                    <option value="strong">Upper/Lower/Number</option>
-                                    <option value="medium">Upper+Number</option>
-                                    <option value="weak">Basic pattern</option>
-                                </select>
-                            </label>
-                            <label>Hashing
-                                <select id="ctrl-hash">
-                                    <option value="strong">Argon2id</option>
-                                    <option value="medium">bcrypt</option>
-                                    <option value="weak">Legacy hash</option>
-                                </select>
-                            </label>
-                            <label>Salting
-                                <select id="ctrl-salt">
-                                    <option value="strong">Per-user unique</option>
-                                    <option value="medium">Static salt</option>
-                                    <option value="weak">No salt</option>
-                                </select>
-                            </label>
-                            <label>Rate Limit
-                                <select id="ctrl-rate">
-                                    <option value="strong">5 attempts / lockout</option>
-                                    <option value="medium">10 attempts</option>
-                                    <option value="weak">No throttling</option>
-                                </select>
-                            </label>
-                            <label>MFA
-                                <select id="ctrl-mfa">
-                                    <option value="strong">Required</option>
-                                    <option value="medium">Optional</option>
-                                    <option value="weak">Disabled</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="viz-enterprise-stack" id="viz-enterprise-stack">
-                            <div class="viz-layer">Length Policy</div>
-                            <div class="viz-layer">Complexity Rules</div>
-                            <div class="viz-layer">Hashing Method</div>
-                            <div class="viz-layer">Salting</div>
-                            <div class="viz-layer">Rate Limiting</div>
-                            <div class="viz-layer">MFA</div>
-                        </div>
-                        <div class="viz-metric">Security Rating: <span id="viz-security-rating">C</span></div>
-                    </div>
-                `;
-            default:
-                return `
-                    <div class="viz-stage">
-                        <div class="viz-neutral">Security posture simulation active</div>
-                    </div>
-                `;
-        }
-    }
-
-    /**
-     * Initialize visualizer references
-     */
-    setupVisualizer() {
-        this.visualizerElement = document.getElementById('security-visualizer');
-        if (!this.visualizerElement) return;
-        if (this.visualProfile === 'enterprise-architecture') {
-            this.setupEnterpriseControls();
-        }
-        this.updateVisualizerState();
-    }
-
-    /**
-     * Setup enterprise control listeners for level 10
-     */
-    setupEnterpriseControls() {
-        const controlIds = ['ctrl-length', 'ctrl-complexity', 'ctrl-hash', 'ctrl-salt', 'ctrl-rate', 'ctrl-mfa'];
-        controlIds.forEach((id) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('change', () => this.updateVisualizerState());
-            }
-        });
-    }
-
-    /**
-     * Calculate enterprise security rating from selected controls
-     * @returns {string}
-     */
-    calculateEnterpriseRating() {
-        const controlIds = ['ctrl-length', 'ctrl-complexity', 'ctrl-hash', 'ctrl-salt', 'ctrl-rate', 'ctrl-mfa'];
-        const valueScore = { strong: 3, medium: 2, weak: 1 };
-
-        let score = 0;
-        let count = 0;
-
-        controlIds.forEach((id) => {
-            const element = document.getElementById(id);
-            if (!element) return;
-            score += valueScore[element.value] || 1;
-            count++;
-        });
-
-        const average = count ? (score / count) : 1;
-        if (average >= 2.85) return 'A+';
-        if (average >= 2.5) return 'A';
-        if (average >= 2.0) return 'B';
-        return 'C';
-    }
-
-    /**
-     * Build enterprise audit summary for notifications
-     * @returns {string}
-     */
-    buildEnterpriseSummary() {
-        const rating = this.calculateEnterpriseRating();
-        const detail = this.ratingBands && this.ratingBands[rating]
-            ? this.ratingBands[rating]
-            : 'Control baseline evaluated.';
-        return `Security Rating ${rating}. ${detail}`;
-    }
-
-    /**
-     * Update visualizer state using attempts/hints
-     */
-    updateVisualizerState() {
-        if (!this.visualizerElement) return;
-
-        const risk = Math.min(1, (this.attempts / this.maxAttempts) + (this.hintsShown / Math.max(this.hints.length, 1)) * 0.25);
-        this.visualizerElement.style.setProperty('--viz-risk', String(risk.toFixed(2)));
-
-        if (this.visualProfile === 'vault-crack') {
-            const integrity = document.getElementById('viz-vault-integrity');
-            if (integrity) integrity.textContent = `${Math.max(0, Math.floor((1 - risk) * 100))}%`;
-        }
-
-        if (this.visualProfile === 'entropy-shield') {
-            const entropy = document.getElementById('viz-entropy-index');
-            if (entropy) {
-                entropy.textContent = risk < 0.35 ? 'HIGH' : risk < 0.7 ? 'MEDIUM' : 'LOW';
-            }
-        }
-
-        if (this.visualProfile === 'enterprise-architecture') {
-            const rating = document.getElementById('viz-security-rating');
-            if (rating) {
-                const grade = this.calculateEnterpriseRating();
-                rating.textContent = grade;
-                rating.style.color = grade === 'A+' || grade === 'A' ? 'var(--cyber-green)' : grade === 'B' ? 'var(--cyber-blue)' : 'var(--cyber-orange)';
-            }
-        }
-    }
-
-    /**
-     * Setup event listeners
-     */
-    setupEventListeners() {
-        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation' || this.interactionMode === 'inspection' || this.interactionMode === 'strategyBuilder' || this.interactionMode === 'liveDefenseSimulation' || this.interactionMode === 'multiStageDefenseSimulation' || this.interactionMode === 'threatHuntSimulation' || this.interactionMode === 'livePatchSimulation' || this.interactionMode === 'enterpriseArchitectureSimulation') return;
-
-        // Get input elements
-        this.inputs = Array.from(document.querySelectorAll('.char-input'));
-
-        // Submit button
-        const submitBtn = document.getElementById('submit-password');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.checkPassword());
-        }
-
-        // Clear button
-        const clearBtn = document.getElementById('clear-password');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => this.clearInputs());
-        }
-
-        // Input handling
-        this.inputs.forEach((input, index) => {
-            // Auto-advance on input
-            input.addEventListener('input', (e) => {
-                const value = e.target.value.toUpperCase();
-                e.target.value = value;
-
-                if (value && index < this.inputs.length - 1) {
-                    this.inputs[index + 1].focus();
-                }
-
-                this.audio.playTyping();
-                this.updateDisplay();
-            });
-
-            // Backspace handling
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    this.inputs[index - 1].focus();
-                    this.inputs[index - 1].select();
-                }
-
-                // Enter to submit
-                if (e.key === 'Enter') {
-                    this.checkPassword();
-                }
-            });
-
-            // Prevent non-alphanumeric input
-            input.addEventListener('keypress', (e) => {
-                const char = e.key;
-                if (!/[a-zA-Z0-9]/.test(char)) {
-                    e.preventDefault();
-                }
-            });
-
-            // Handle paste
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pastedText = e.clipboardData.getData('text').toUpperCase();
-                this.fillInputs(pastedText, index);
-            });
-        });
-
-        // Focus first input
-        if (this.inputs[0]) {
-            this.inputs[0].focus();
-        }
-    }
-
-    /**
-     * Setup click/toggle flow for multi-select level mode
-     */
     setupMultiSelectEventListeners() {
-        const optionButtons = Array.from(document.querySelectorAll('.password-option'));
-        optionButtons.forEach(btn => {
+        document.querySelectorAll('[data-option-id]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = parseInt(btn.dataset.optionId, 10);
                 if (Number.isNaN(id)) return;
                 if (this.selectedOptions.has(id)) {
                     this.selectedOptions.delete(id);
                     btn.classList.remove('selected');
+                    if (this.interactionMode === 'humanPsychologyLab') {
+                        this.pushHumanLabLog('sys', `Entry ${String(id).padStart(2, '0')} removed from analyst shortlist.`);
+                    }
                 } else {
                     this.selectedOptions.add(id);
                     btn.classList.add('selected');
+                    if (this.interactionMode === 'humanPsychologyLab') {
+                        const option = (this.session?.options || []).find(entry => entry.id === id);
+                        this.pushHumanLabLog('warn', `Entry ${String(id).padStart(2, '0')} queued for review: ${option?.value || 'Unknown credential'}.`);
+                    }
                 }
                 this.audio.playButtonClick();
+                if (this.interactionMode === 'humanPsychologyLab') {
+                    this.updateHumanPsychologyLiveUI();
+                }
             });
         });
-
-        const submitBtn = document.getElementById('submit-selection');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.submitMultiSelectSelection());
-        }
-
-        const clearBtn = document.getElementById('clear-selection');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => this.clearMultiSelectSelection());
-        }
+        document.getElementById('submit-selection')?.addEventListener('click', () => this.submitMultiSelectSelection());
+        document.getElementById('clear-selection')?.addEventListener('click', () => this.clearMultiSelectSelection());
     }
 
-    /**
-     * Setup listeners for single-choice attack decision mode
-     */
+    renderSaltReuseLab(container) {
+        this.visualizerElement = container;
+        const config = this.getSaltReuseLabConfig();
+        const state = this.saltReuseState || {};
+        const sharedPhases = [
+            { label: 'HASH FORGE', active: state.phase === 1 },
+            { label: 'ATTACK SIM', active: state.phase === 2 },
+            { label: 'CLASSIFIER', active: state.phase === 3 }
+        ];
+
+        if (state.completion) {
+            container.innerHTML = `
+                ${this.renderSaltReuseLabStyles()}
+                ${this.renderSharedPasswordLabThemeStyles()}
+                ${this.renderSharedPasswordLabFrame({
+                    levelLabel: '// LEVEL 06 - CRYPTOGRAPHY LAB',
+                    title: 'SALT & REUSE<br>RISK',
+                    status: state.completion.success ? 'CRYPTOGRAPHY LAB COMPLETE' : 'CRYPTOGRAPHY LAB REVIEW',
+                    phases: sharedPhases,
+                    content: `
+                        <div class="srl-shell">
+                            <div class="srl-completion">
+                                <div class="srl-completion-badge">${state.completion.success ? 'OK' : '!!'}</div>
+                                <div class="srl-completion-title">${state.completion.success ? 'LEVEL 6 COMPLETE' : 'LEVEL 6 REVIEW'}</div>
+                                <div class="srl-completion-sub">${state.completion.success ? 'SALT & REUSE RISK - MASTERED' : 'REASSESS SHARED HASH RISK'}</div>
+                                <div class="srl-completion-card">
+                                    <div class="srl-section-kicker">Security Knowledge Unlocked</div>
+                                    ${(this.mission.knowledgeSummary?.bullets || []).map(item => `
+                                        <div class="srl-completion-item">
+                                            <span class="srl-completion-arrow">></span>
+                                            <span>${item}</span>
+                                        </div>`).join('')}
+                                    ${this.mission.knowledgeSummary?.insight ? `<div class="srl-completion-insight">${this.mission.knowledgeSummary.insight}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>`
+                })}`;
+            this.startHumanLabMatrixAnimation();
+            this.gameScreen.syncEmbeddedMissionHUD();
+            return;
+        }
+
+        const phaseContent = state.phase === 1
+            ? this.renderSaltReusePhaseOne(config, state)
+            : state.phase === 2
+                ? this.renderSaltReusePhaseTwo(config, state)
+                : this.renderSaltReusePhaseThree(config, state);
+
+        container.innerHTML = `
+            ${this.renderSaltReuseLabStyles()}
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 06 - CRYPTOGRAPHY LAB',
+                title: 'SALT & REUSE<br>RISK',
+                status: 'CRYPTOGRAPHY LAB ACTIVE',
+                phases: sharedPhases,
+                content: `
+                    <div class="srl-shell">
+                        <div class="srl-header">
+                            <div class="srl-brand">SHADOWDEF</div>
+                            <div class="srl-level">LEVEL 6 - SALT & REUSE RISK</div>
+                            <div class="srl-status">CRYPTOGRAPHY LAB ACTIVE</div>
+                        </div>
+                        <div class="srl-phases">
+                            <div class="srl-phase ${state.phase === 1 ? 'active' : ''} ${state.phase > 1 ? 'done' : ''}"><span>01</span>Hash Forge Lab</div>
+                            <div class="srl-phase ${state.phase === 2 ? 'active' : ''} ${state.phase > 2 ? 'done' : ''}"><span>02</span>Attack Simulator</div>
+                            <div class="srl-phase ${state.phase === 3 ? 'active' : ''}"><span>03</span>Threat Classifier</div>
+                        </div>
+                        ${phaseContent}
+                    </div>`
+            })}`;
+
+        this.setupSaltReuseLabEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    renderSaltReusePhaseOne(config, state) {
+        const quickPicks = Array.isArray(config.quickPicks) ? config.quickPicks : [];
+        const salts = Array.isArray(config.fixedSalts) && config.fixedSalts.length >= 2
+            ? config.fixedSalts
+            : ['yR!x2v&*', 'RUnO1oBW'];
+        const password = state.forgeInput || 'password';
+        const hashA = state.hashA || 'Waiting for input...';
+        const hashB = state.hashB || 'Waiting for input...';
+        const divergenceMarkup = state.hashA && state.hashB
+            ? Array.from({ length: Math.max(state.hashA.length, state.hashB.length) }, (_, idx) => {
+                const same = state.hashA[idx] && state.hashB[idx] && state.hashA[idx] === state.hashB[idx];
+                return `<div class="srl-div-seg ${same ? 'match' : 'diff'}"></div>`;
+            }).join('')
+            : Array.from({ length: 16 }, () => '<div class="srl-div-seg"></div>').join('');
+        const phaseOneAnswers = [
+            {
+                id: 'same_hash_everywhere',
+                label: 'Cracking one user reveals every identical password instantly, even with salt.',
+                description: 'This is false because per-user salt forces each hash to be solved separately.'
+            },
+            {
+                id: 'salt_breaks_shared_path',
+                label: 'Salt breaks shared crack paths because the same password stores as different hashes per user.',
+                description: 'This is the key security property you need to recognize before moving on.'
+            },
+            {
+                id: 'salt_makes_weak_strong',
+                label: 'Salt makes weak passwords effectively strong, so attackers stop guessing them.',
+                description: 'This is false because weak passwords are still easy to guess; salt only isolates records.'
+            }
+        ];
+        const phaseOneChoiceMarkup = phaseOneAnswers.map(answer => `
+            <label class="srl-check-card ${state.phaseOneSelectedAnswer === answer.id ? 'selected' : ''}">
+                <input type="radio" name="srl-phase1-check" value="${answer.id}" ${state.phaseOneSelectedAnswer === answer.id ? 'checked' : ''}/>
+                <div class="srl-check-card__copy">
+                    <div class="srl-check-card__title">${answer.label}</div>
+                    <div class="srl-check-card__desc">${answer.description}</div>
+                </div>
+            </label>`).join('');
+
+        return `
+            <div class="srl-hint-strip">HINT: Type any password below and watch what salt does to the stored output.</div>
+            <div class="srl-phase-screen">
+                <div class="srl-lab">
+                    <div class="srl-panel srl-panel-left">
+                        <div class="srl-section-kicker">Password Input</div>
+                        <div class="srl-brief-box">
+                            Salt is <strong>random data added to a password before hashing</strong>.
+                            Two users with identical passwords get completely different stored values.
+                            This destroys rainbow table attacks and prevents chain-cracking.
+                        </div>
+                        <label class="srl-label" for="srl-pw-input">ENTER PASSWORD TO HASH</label>
+                        <input id="srl-pw-input" class="srl-input" type="text" value="${state.forgeInput || ''}" placeholder="e.g. password123" maxlength="32" autocomplete="off" spellcheck="false">
+                        <div class="srl-label">QUICK PICKS - COMMON PASSWORDS</div>
+                        <div class="srl-quick-picks">
+                            ${quickPicks.map(pw => `<button class="srl-quick-btn" type="button" data-srl-quick="${pw}">${pw}</button>`).join('')}
+                        </div>
+                        <button class="srl-primary-btn" id="srl-forge-btn" type="button">FORGE HASH WITH SALT</button>
+                    </div>
+                    <div class="srl-panel">
+                        <div class="srl-section-kicker">Dual Reactor Output</div>
+                        <div class="srl-reactor">
+                            <div class="srl-reactor-cell ${state.hashA ? 'firing' : ''}">
+                                <div class="srl-reactor-top">
+                                    <div class="srl-reactor-id">REACTOR A - USER ALICE</div>
+                                    <div class="srl-salt-pill">SALT: ${salts[0]}</div>
+                                </div>
+                                <div class="srl-formula">
+                                    <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
+                                    <span>+</span>
+                                    <span class="srl-token salt">${salts[0]}</span>
+                                    <span>&rarr;</span>
+                                </div>
+                                <div class="srl-hash-output ${state.hashA ? 'has-value' : ''}">${hashA}</div>
+                            </div>
+                            <div class="srl-reactor-cell ${state.hashB ? 'firing' : ''}">
+                                <div class="srl-reactor-top">
+                                    <div class="srl-reactor-id">REACTOR B - USER BOB</div>
+                                    <div class="srl-salt-pill">SALT: ${salts[1]}</div>
+                                </div>
+                                <div class="srl-formula">
+                                    <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
+                                    <span>+</span>
+                                    <span class="srl-token salt">${salts[1]}</span>
+                                    <span>&rarr;</span>
+                                </div>
+                                <div class="srl-hash-output ${state.hashB ? 'has-value' : ''}">${hashB}</div>
+                            </div>
+                        </div>
+                        <div class="srl-divergence">
+                            <div class="srl-section-kicker">Hash Divergence Analysis</div>
+                            <div class="srl-div-track">${divergenceMarkup}</div>
+                            <div class="srl-div-stats">
+                                <span>Chars matching: <strong>${state.hashA ? state.divergence.matches : '--'}</strong></span>
+                                <span>Chars different: <strong>${state.hashA ? state.divergence.diffs : '--'}</strong></span>
+                            </div>
+                        </div>
+                        <div class="srl-insight ${state.insightVisible ? 'visible' : ''}">
+                            <strong>Same password. Two salts. No shared crack path.</strong>
+                            Alice and Bob both used <span class="accent">${state.forgeInput ? `"${state.forgeInput}"` : '"password123"'}</span>,
+                            but cracking Alice's hash still leaves Bob's record as a separate problem.
+                        </div>
+                        <div class="srl-knowledge-check ${state.insightVisible ? 'visible' : ''}">
+                            <div class="srl-section-kicker">Knowledge Check</div>
+                            <div class="srl-check-list">${phaseOneChoiceMarkup}</div>
+                            <div class="srl-check-feedback ${state.phaseOneFeedback ? 'visible' : ''} ${state.phaseOneValidated ? 'success' : 'error'}">
+                                ${state.phaseOneFeedback || 'Choose the statement that correctly explains why salt changes the attacker workflow.'}
+                            </div>
+                        </div>
+                        <div class="srl-nav-row solo">
+                            <button class="srl-nav-btn" id="srl-phase1-next" type="button" ${state.phaseOneValidated ? '' : 'disabled'}>CONTINUE TO ATTACK SIMULATOR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    renderSaltReusePhaseTwo(config, state) {
+        const attack = config.attackSimulator || {};
+        const users = Array.isArray(attack.users) && attack.users.length ? attack.users : ['alice', 'bob', 'carol', 'dave', 'eve'];
+        const unsaltedHash = attack.noSaltHash || '5f4dcc3b5aa765d6';
+        const saltedHashes = Array.isArray(attack.saltedHashes) && attack.saltedHashes.length === users.length
+            ? attack.saltedHashes
+            : ['a3f8c2e1d74b56f0', '7c5d1f8b02e6a4c9', '2e9b4d7a15c8f3e0', 'f1a2b3c4d5e6f7a8', '9d8c7b6a5f4e3d2c'];
+        const phaseTwoAnswers = [
+            {
+                id: 'salted_still_all_fall',
+                label: 'Once Alice is cracked, the other salted users fall immediately too.',
+                description: 'False. Salted records do not share a single crack result.'
+            },
+            {
+                id: 'salted_isolate_work',
+                label: 'Salted storage isolates work per user, so one crack does not unlock every matching account.',
+                description: 'This is the correct operational difference shown by the simulator.'
+            },
+            {
+                id: 'salt_prevents_breach',
+                label: 'Salt prevents the database breach itself, so the attacker gets nothing useful.',
+                description: 'False. Salt helps after theft, but it does not stop theft from happening.'
+            }
+        ];
+        const phaseTwoChoiceMarkup = phaseTwoAnswers.map(answer => `
+            <label class="srl-check-card ${state.phaseTwoSelectedAnswer === answer.id ? 'selected' : ''}">
+                <input type="radio" name="srl-phase2-check" value="${answer.id}" ${state.phaseTwoSelectedAnswer === answer.id ? 'checked' : ''}/>
+                <div class="srl-check-card__copy">
+                    <div class="srl-check-card__title">${answer.label}</div>
+                    <div class="srl-check-card__desc">${answer.description}</div>
+                </div>
+            </label>`).join('');
+
+        return `
+            <div class="srl-hint-strip">HINT: Watch what happens when an attacker cracks one hash, with and without salt.</div>
+            <div class="srl-phase-screen">
+                <div class="srl-attack-grid">
+                    <div class="srl-panel srl-attack-panel danger">
+                        <div class="srl-attack-title bad">SCENARIO A - NO SALT</div>
+                        <div class="srl-mini-copy">Database stolen. All 5 users had "password123". No salt was used.</div>
+                        <div class="srl-db-table">
+                            <div class="srl-db-row header"><div>USER</div><div>STORED HASH</div></div>
+                            ${users.map(user => `<div class="srl-db-row"><div class="user">${user}</div><div class="hash">${unsaltedHash}</div></div>`).join('')}
+                        </div>
+                        <div class="srl-observation bad">OBSERVATION: All 5 users have identical stored hashes</div>
+                        <button class="srl-sim-btn bad" id="srl-crack-bad" type="button" ${state.attackBadDone ? 'disabled' : ''}>SIMULATE CRACK ATTEMPT</button>
+                        <div class="srl-result ${state.attackBadDone ? 'visible bad' : ''}">
+                            ${state.attackBadMessage || 'Run the simulation to see the chain reaction.'}
+                        </div>
+                        <div class="srl-chain">
+                            ${state.attackBadRows.map(row => `<div class="srl-chain-row cracked"><span>x</span><strong>${row.user}</strong><em>${row.note}</em></div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="srl-panel srl-attack-panel safe">
+                        <div class="srl-attack-title good">SCENARIO B - WITH SALT</div>
+                        <div class="srl-mini-copy">Same passwords. Salt applied per-user. Database stolen again.</div>
+                        <div class="srl-db-table">
+                            <div class="srl-db-row header"><div>USER</div><div>STORED HASH (salted)</div></div>
+                            ${users.map((user, idx) => `<div class="srl-db-row"><div class="user">${user}</div><div class="hash">${saltedHashes[idx]}</div></div>`).join('')}
+                        </div>
+                        <div class="srl-observation good">OBSERVATION: All 5 hashes are unique despite the same password</div>
+                        <button class="srl-sim-btn good" id="srl-crack-good" type="button" ${state.attackBadDone && !state.attackGoodDone ? '' : 'disabled'}>SIMULATE CRACK ATTEMPT</button>
+                        <div class="srl-result ${state.attackGoodDone ? 'visible good' : ''}">
+                            ${state.attackGoodMessage || 'Crack the unsalted case first to compare outcomes.'}
+                        </div>
+                        <div class="srl-chain">
+                            ${state.attackGoodRows.map(row => `<div class="srl-chain-row ${row.state}"><span>${row.icon}</span><strong>${row.user}</strong><em>${row.note}</em></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="srl-check-panel">
+                    <div class="srl-section-kicker">Attacker Workflow Check</div>
+                    <div class="srl-check-list">${phaseTwoChoiceMarkup}</div>
+                    <div class="srl-check-feedback ${state.phaseTwoFeedback ? 'visible' : ''} ${state.phaseTwoValidated ? 'success' : 'error'}">
+                        ${state.phaseTwoFeedback || 'Choose the statement that best matches the difference between the two attack scenarios.'}
+                    </div>
+                </div>
+                <div class="srl-nav-row">
+                    <button class="srl-nav-btn" id="srl-phase2-back" type="button">BACK</button>
+                    <button class="srl-nav-btn" id="srl-phase2-next" type="button" ${state.attackGoodDone && state.phaseTwoValidated ? '' : 'disabled'}>CONTINUE TO THREAT CLASSIFIER</button>
+                </div>
+            </div>`;
+    }
+
+    renderSaltReusePhaseThree(config, state) {
+        const classifier = config.classifier || {};
+        const session = state.classifierSession || { weak: [], strong: [], all: [] };
+        const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
+        const selectedCount = state.selectedPasswords.size;
+        const riskLevel = this.riskValue >= 60 ? 'high' : (this.riskValue >= 30 ? 'medium' : '');
+        const feedbackClass = state.feedback?.type === 'success' ? 'success' : (state.feedback?.type === 'error' ? 'error' : '');
+
+        return `
+            <div class="srl-hint-strip">TASK: Select ALL passwords that create the highest chain-failure risk if no salt is used. Avoid selecting strong or unique passwords.</div>
+            <div class="srl-phase-screen">
+                <div class="srl-classifier-grid">
+                    <div class="srl-panel srl-classifier-left">
+                        <div class="srl-mission-box">
+                            <div class="srl-section-kicker">SOC Threat Assessment</div>
+                            <p>A stolen database has <strong>no salt</strong>. Your job is to identify which passwords create the largest chain-failure risk, passwords so common that cracking one entry instantly exposes every account that shares it.</p>
+                        </div>
+                        <div class="srl-risk-box">
+                            <div class="srl-section-kicker danger-text">Chain Failure Risk Index</div>
+                            <div class="srl-risk-value ${riskLevel}">${Math.round(this.riskValue)}%</div>
+                            <div class="srl-risk-track"><div class="srl-risk-fill" style="width:${Math.max(0, Math.min(100, this.riskValue))}%"></div></div>
+                            <div class="srl-risk-sub">Wrong selections increase attacker advantage</div>
+                        </div>
+                        <div>
+                            <div class="srl-section-kicker">Attempts Remaining</div>
+                            <div class="srl-attempt-row">
+                                ${Array.from({ length: this.maxAttempts }, (_, idx) => {
+                                    const cls = idx < this.attempts ? 'used' : (idx === this.attempts ? 'active' : '');
+                                    return `<span class="srl-attempt-pip ${cls}"></span>`;
+                                }).join('')}
+                                <span>${attemptsLeft} left</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="srl-section-kicker">Selection Count</div>
+                            <div class="srl-selection-total">${selectedCount}<span> FLAGGED</span></div>
+                        </div>
+                        <div class="srl-feedback ${feedbackClass ? `visible ${feedbackClass}` : ''}">
+                            ${state.feedback ? state.feedback.message : 'Select the highest chain-risk passwords, then submit your classification.'}
+                        </div>
+                    </div>
+                    <div class="srl-panel">
+                        <div class="srl-section-kicker">Password Intelligence - Flag High Chain-Risk Entries</div>
+                        <div class="srl-password-grid">
+                            ${session.all.map(pw => {
+                                const selected = state.selectedPasswords.has(pw);
+                                const correct = state.revealedWeak.has(pw);
+                                const falsePositive = state.falsePositives.has(pw);
+                                const cls = selected ? 'selected' : correct ? 'correct' : falsePositive ? 'false' : '';
+                                return `<button class="srl-password-card ${cls}" type="button" data-srl-password="${pw}" ${this.isComplete ? 'disabled' : ''}>${pw}</button>`;
+                            }).join('')}
+                        </div>
+                        <div class="srl-submit-row">
+                            <button class="srl-primary-btn" id="srl-submit-classifier" type="button" ${selectedCount ? '' : 'disabled'}>SUBMIT CLASSIFICATION</button>
+                            <div class="srl-submit-copy">${selectedCount ? `${selectedCount} password${selectedCount === 1 ? '' : 's'} flagged as high risk` : `Select at least ${classifier.minSelection || 1} to submit`}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="srl-nav-row">
+                    <button class="srl-nav-btn" id="srl-phase3-back" type="button">BACK</button>
+                </div>
+            </div>`;
+    }
+
+    setupSaltReuseLabEventListeners() {
+        const state = this.saltReuseState;
+        if (!state || this.isComplete) return;
+
+        document.getElementById('srl-pw-input')?.addEventListener('input', (e) => {
+            state.forgeInput = e.target.value;
+        });
+        document.getElementById('srl-pw-input')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.handleSaltReuseForge();
+        });
+        document.querySelectorAll('[data-srl-quick]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.forgeInput = btn.dataset.srlQuick || '';
+                this.audio.playButtonClick();
+                this.renderSaltReuseLab(this.visualizerElement);
+            });
+        });
+        document.getElementById('srl-forge-btn')?.addEventListener('click', () => this.handleSaltReuseForge());
+        document.getElementById('srl-phase1-next')?.addEventListener('click', () => this.changeSaltReusePhase(2));
+        document.getElementById('srl-phase2-back')?.addEventListener('click', () => this.changeSaltReusePhase(1));
+        document.getElementById('srl-phase2-next')?.addEventListener('click', () => this.changeSaltReusePhase(3));
+        document.getElementById('srl-phase3-back')?.addEventListener('click', () => this.changeSaltReusePhase(2));
+        document.getElementById('srl-crack-bad')?.addEventListener('click', () => this.runSaltReuseAttackScenario('bad'));
+        document.getElementById('srl-crack-good')?.addEventListener('click', () => this.runSaltReuseAttackScenario('good'));
+        document.querySelectorAll('input[name="srl-phase1-check"]').forEach(radio => {
+            radio.addEventListener('change', () => this.answerSaltReusePhaseOne(radio.value));
+        });
+        document.querySelectorAll('input[name="srl-phase2-check"]').forEach(radio => {
+            radio.addEventListener('change', () => this.answerSaltReusePhaseTwo(radio.value));
+        });
+        document.querySelectorAll('[data-srl-password]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleSaltReusePassword(btn.dataset.srlPassword || ''));
+        });
+        document.getElementById('srl-submit-classifier')?.addEventListener('click', () => this.submitSaltReuseClassification());
+    }
+
+    handleSaltReuseForge() {
+        if (this.isComplete) return;
+        const state = this.saltReuseState;
+        const config = this.getSaltReuseLabConfig();
+        const salts = Array.isArray(config.fixedSalts) && config.fixedSalts.length >= 2
+            ? config.fixedSalts
+            : ['yR!x2v&*', 'RUnO1oBW'];
+        const password = (state.forgeInput || '').trim();
+        if (!password) {
+            this.gameScreen.ui.showNotification('Enter a password first.', 'warning');
+            return;
+        }
+
+        state.forgeCount += 1;
+        state.hashA = this.makeSaltedHash(password, salts[0]);
+        state.hashB = this.makeSaltedHash(password, salts[1]);
+        state.divergence = this.calculateHashDivergence(state.hashA, state.hashB);
+        state.insightVisible = true;
+        this.audio.playButtonClick();
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    changeSaltReusePhase(phase) {
+        if (this.isComplete || !this.saltReuseState) return;
+        this.saltReuseState.phase = phase;
+        this.audio.playButtonClick();
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    answerSaltReusePhaseOne(answerId) {
+        if (!this.saltReuseState || this.isComplete) return;
+        this.saltReuseState.phaseOneSelectedAnswer = answerId;
+        this.saltReuseState.phaseOneValidated = answerId === 'salt_breaks_shared_path';
+        this.saltReuseState.phaseOneFeedback = this.saltReuseState.phaseOneValidated
+            ? 'Correct. Salt does not stop guessing, but it forces attackers to solve each user record separately.'
+            : 'Not quite. Salt isolates identical passwords into different stored hashes; it does not magically strengthen weak passwords.';
+        this.audio.playButtonClick();
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    runSaltReuseAttackScenario(type) {
+        if (this.isComplete || !this.saltReuseState) return;
+        const config = this.getSaltReuseLabConfig();
+        const users = config.attackSimulator?.users || ['alice', 'bob', 'carol', 'dave', 'eve'];
+        this.audio.playButtonClick();
+
+        if (type === 'bad') {
+            this.saltReuseState.attackBadDone = true;
+            this.saltReuseState.attackBadRows = users.map(user => ({ user, note: 'password123 exposed' }));
+            this.saltReuseState.attackBadMessage = 'Hash 5f4dcc3b... matched "password123" in 0.3s via rainbow table. One crack instantly exposed every matching user.';
+            this.renderSaltReuseLab(this.visualizerElement);
+            return;
+        }
+
+        this.saltReuseState.attackGoodDone = true;
+        this.saltReuseState.attackGoodRows = users.map((user, idx) => ({
+            user,
+            icon: idx === 0 ? '>' : '-',
+            state: idx === 0 ? 'cracked' : 'isolated',
+            note: idx === 0 ? 'cracked after 4.2h' : 'still computing independently'
+        }));
+        this.saltReuseState.attackGoodMessage = 'Alice cracked does not mean Bob cracked. Per-user salt forces the attacker to solve each record as a separate problem.';
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    answerSaltReusePhaseTwo(answerId) {
+        if (!this.saltReuseState || this.isComplete) return;
+        this.saltReuseState.phaseTwoSelectedAnswer = answerId;
+        this.saltReuseState.phaseTwoValidated = answerId === 'salted_isolate_work';
+        this.saltReuseState.phaseTwoFeedback = this.saltReuseState.phaseTwoValidated
+            ? 'Correct. Salt changes one stolen database from a shared crack into many separate cracking problems.'
+            : 'Look again at the simulator. Salt does not prevent theft, and cracking one salted record does not automatically unlock the rest.';
+        this.audio.playButtonClick();
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    toggleSaltReusePassword(password) {
+        if (!password || this.isComplete || !this.saltReuseState) return;
+        const state = this.saltReuseState;
+        if (state.revealedWeak.has(password) || state.falsePositives.has(password)) return;
+        if (state.selectedPasswords.has(password)) state.selectedPasswords.delete(password);
+        else state.selectedPasswords.add(password);
+        this.audio.playButtonClick();
+        this.renderSaltReuseLab(this.visualizerElement);
+    }
+
+    submitSaltReuseClassification() {
+        if (this.isComplete || !this.saltReuseState) return;
+        const state = this.saltReuseState;
+        const classifier = this.getSaltReuseLabConfig().classifier || {};
+        if (!state.selectedPasswords.size) {
+            this.gameScreen.ui.showNotification('Select at least one password before submission.', 'warning');
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const selected = Array.from(state.selectedPasswords);
+        const falsePositives = selected.filter(pw => state.classifierSession.strong.includes(pw));
+        const missed = state.classifierSession.weak.filter(pw => !state.selectedPasswords.has(pw));
+
+        if (falsePositives.length) {
+            falsePositives.forEach(pw => {
+                state.selectedPasswords.delete(pw);
+                state.falsePositives.add(pw);
+            });
+            this.riskValue = Math.min(100, this.riskValue + ((classifier.falsePositiveRisk || 15) * falsePositives.length));
+            state.feedback = {
+                type: 'error',
+                message: `${falsePositives.length} strong password${falsePositives.length === 1 ? '' : 's'} incorrectly flagged. Strong, unique passwords do not create a chain failure across many users.`
+            };
+            this.audio.playFailure();
+            this.renderSaltReuseLab(this.visualizerElement);
+            this.gameScreen.ui.showNotification('Strong passwords were incorrectly flagged.', 'error');
+            return;
+        }
+
+        if (missed.length) {
+            this.riskValue = Math.min(100, this.riskValue + (classifier.missedWeakRisk || 20));
+            state.feedback = {
+                type: 'error',
+                message: `${missed.length} high-risk password${missed.length === 1 ? '' : 's'} missed. Common and predictable values create the biggest blast radius when salt is absent.`
+            };
+            this.audio.playFailure();
+            this.renderSaltReuseLab(this.visualizerElement);
+            if (this.attempts >= this.maxAttempts || this.hasRiskBreached()) {
+                state.classifierSession.weak.forEach(pw => state.revealedWeak.add(pw));
+                state.feedback = {
+                    type: 'error',
+                    message: 'Analysis exhausted. The correct high chain-risk passwords are now revealed.'
+                };
+                this.renderSaltReuseLab(this.visualizerElement);
+                this.startSaltReuseCompletion(false);
+                return;
+            }
+            this.gameScreen.ui.showNotification('Incomplete analysis. Reassess the common passwords.', 'error');
+            return;
+        }
+
+        state.classifierSession.weak.forEach(pw => state.revealedWeak.add(pw));
+        state.feedback = {
+            type: 'success',
+            message: `All ${state.classifierSession.weak.length} high chain-risk passwords identified with zero false positives. Salt isolates each account, but weak passwords still remain easy attacker targets.`
+        };
+        this.audio.playSuccess();
+        this.renderSaltReuseLab(this.visualizerElement);
+        this.startSaltReuseCompletion(true);
+    }
+
+    startSaltReuseCompletion(success) {
+        if (this.isComplete || !this.saltReuseState) return;
+        this.isComplete = true;
+        if (success) {
+            this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Credential vulnerability identified.', 'success');
+        } else {
+            this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Security oversight detected.', 'error');
+        }
+        this.saltReuseState.completion = { success };
+        this.renderSaltReuseLab(this.visualizerElement);
+        setTimeout(() => this.gameScreen.completePuzzle(success), success ? 1500 : 1700);
+    }
+
+    renderSaltReuseLabStyles() {
+        return `<style>
+            .srl-shell{background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+            .srl-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
+            .srl-brand,.srl-level,.srl-status,.srl-phase,.srl-label,.srl-section-kicker,.srl-nav-btn,.srl-sim-btn,.srl-quick-btn,.srl-submit-copy{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
+            .srl-brand{color:#f5a623;font-weight:700}.srl-level{color:rgba(245,166,35,.72);font-size:.85rem}.srl-status{color:#00e87a;font-size:.82rem}
+            .srl-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
+            .srl-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.srl-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+            .srl-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}.srl-phase.done{color:rgba(0,232,122,.75);border-bottom-color:rgba(0,232,122,.35)}
+            .srl-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.72);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+            .srl-lab,.srl-attack-grid,.srl-classifier-grid{display:grid;grid-template-columns:1fr 1fr;min-height:520px}.srl-classifier-grid{grid-template-columns:320px 1fr}
+            .srl-panel{padding:28px;background:rgba(0,0,0,.18)}.srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:1px solid rgba(245,166,35,.12)}
+            .srl-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-reactor-cell,.srl-divergence,.srl-db-table,.srl-result,.srl-feedback,.srl-completion-card{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
+            .srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-divergence,.srl-result,.srl-feedback,.srl-completion-card{padding:16px;line-height:1.7}.srl-brief-box strong,.srl-mission-box strong,.srl-insight strong{color:#f5a623}
+            .srl-label{display:block;color:rgba(245,166,35,.55);font-size:.74rem;margin:18px 0 8px}.srl-input{width:100%;padding:12px 14px;background:rgba(0,0,0,.48);border:1px solid rgba(245,166,35,.28);border-left:3px solid #f5a623;color:#ffcb6b;outline:none}
+            .srl-quick-picks{display:flex;gap:8px;flex-wrap:wrap}.srl-quick-btn,.srl-nav-btn,.srl-sim-btn{padding:7px 12px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.72);cursor:pointer}
+            .srl-quick-btn:hover,.srl-nav-btn:hover,.srl-sim-btn:hover{border-color:rgba(245,166,35,.45);color:#ffcb6b}.srl-primary-btn{padding:13px 18px;margin-top:20px;background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border:1px solid rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em;text-transform:uppercase;cursor:pointer}
+            .srl-primary-btn:disabled,.srl-nav-btn:disabled,.srl-sim-btn:disabled{opacity:.45;cursor:not-allowed}.srl-reactor{display:flex;flex-direction:column;gap:16px}.srl-reactor-cell{padding:16px}.srl-reactor-cell.firing{border-color:rgba(245,166,35,.44);box-shadow:0 0 24px rgba(245,166,35,.08)}
+            .srl-reactor-top,.srl-div-stats,.srl-submit-row,.srl-nav-row,.srl-attempt-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.srl-reactor-id{font-family:Consolas,"Courier New",monospace;color:rgba(245,166,35,.48);font-size:.74rem;letter-spacing:.16em}
+            .srl-salt-pill{padding:4px 8px;border:1px solid rgba(245,166,35,.22);background:rgba(245,166,35,.08);color:#ffcb6b}.srl-formula{display:flex;align-items:center;gap:8px;margin:10px 0;color:rgba(180,190,230,.58)}
+            .srl-token{padding:4px 8px;border:1px solid}.srl-token.pw{border-color:rgba(0,212,255,.35);color:#00d4ff;background:rgba(0,212,255,.08)}.srl-token.salt{border-color:rgba(245,166,35,.35);color:#f5a623;background:rgba(245,166,35,.08)}
+            .srl-hash-output{font-family:Consolas,"Courier New",monospace;color:rgba(180,190,230,.38);word-break:break-all;font-style:italic}.srl-hash-output.has-value{color:#00e87a;font-style:normal}
+            .srl-div-track{display:flex;gap:2px;margin:10px 0}.srl-div-seg{height:8px;flex:1;background:rgba(0,212,255,.12)}.srl-div-seg.match{background:rgba(255,64,96,.48)}.srl-div-seg.diff{background:rgba(0,232,122,.54)}
+            .srl-div-stats{font-family:Consolas,"Courier New",monospace;color:rgba(180,190,230,.62);font-size:.82rem}.srl-insight{display:none;margin-top:16px;padding:16px;background:rgba(0,232,122,.05);border:1px solid rgba(0,232,122,.22);line-height:1.7;color:rgba(220,245,230,.86)}
+            .srl-insight.visible{display:block}.srl-insight .accent{color:#ffcb6b}.srl-knowledge-check,.srl-check-panel{display:none;margin-top:16px;padding:16px;background:rgba(255,255,255,.02);border:1px solid rgba(245,166,35,.12)}
+            .srl-knowledge-check.visible,.srl-check-panel{display:block}.srl-check-list{display:grid;gap:10px}.srl-check-card{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid rgba(245,166,35,.12);background:rgba(0,0,0,.26);cursor:pointer}
+            .srl-check-card.selected,.srl-check-card:has(input:checked){border-color:rgba(0,212,255,.34);background:rgba(0,212,255,.06)}.srl-check-card input{margin-top:4px}.srl-check-card__copy{display:grid;gap:6px}
+            .srl-check-card__title{color:#eef2ff;line-height:1.5}.srl-check-card__desc{color:rgba(180,190,230,.58);font-size:.82rem;line-height:1.5}.srl-check-feedback{display:none;margin-top:12px;padding:14px;border:1px solid rgba(245,166,35,.12);font-size:.88rem;line-height:1.6}
+            .srl-check-feedback.visible{display:block}.srl-check-feedback.success{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}.srl-check-feedback.error{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.9)}
+            .srl-nav-row{padding:18px 28px;border-top:1px solid rgba(245,166,35,.12);background:#0a0d18}.srl-nav-row.solo{padding:0;margin-top:18px;border-top:0;background:transparent;justify-content:flex-end}
+            .srl-attack-title{font-size:1rem;font-weight:700;letter-spacing:.18em;margin-bottom:6px}.srl-attack-title.bad,.danger-text{color:#ff4060}.srl-attack-title.good{color:#00e87a}
+            .srl-mini-copy,.srl-observation,.srl-submit-copy,.srl-risk-sub{color:rgba(180,190,230,.58);font-size:.82rem;line-height:1.6}.srl-db-table{margin-top:16px}.srl-db-row{display:grid;grid-template-columns:90px 1fr}
+            .srl-db-row>div{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04)}.srl-db-row.header{background:rgba(255,255,255,.03);color:rgba(180,190,230,.46);font-size:.75rem;letter-spacing:.16em}.srl-db-row .user{color:#00d4ff}.srl-db-row .hash{color:rgba(180,190,230,.56);font-family:Consolas,"Courier New",monospace}
+            .srl-observation{padding:10px 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);margin:14px 0}.srl-observation.bad{color:rgba(255,64,96,.76)}.srl-observation.good{color:rgba(0,232,122,.76)}
+            .srl-sim-btn.bad{border-color:rgba(255,64,96,.32);color:#ff4060}.srl-sim-btn.good{border-color:rgba(0,232,122,.28);color:#00e87a}.srl-result{display:none;margin-top:14px}.srl-result.visible{display:block}
+            .srl-result.bad{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.9)}.srl-result.good{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}
+            .srl-chain{display:flex;flex-direction:column;gap:6px;margin-top:12px}.srl-chain-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-left:2px solid transparent;font-size:.85rem}
+            .srl-chain-row span{width:14px;text-align:center}.srl-chain-row em{margin-left:auto;font-style:normal;color:inherit;opacity:.8}.srl-chain-row.cracked{border-left-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}.srl-chain-row.isolated{border-left-color:rgba(180,190,230,.28);background:rgba(0,0,0,.25);color:rgba(180,190,230,.62)}
+            .srl-classifier-left{display:flex;flex-direction:column;gap:18px}.srl-risk-value{font-size:2rem;font-weight:700;color:#eef2ff}.srl-risk-value.medium{color:#f5a623}.srl-risk-value.high{color:#ff4060}
+            .srl-risk-track{height:5px;background:rgba(255,64,96,.12);margin-top:10px}.srl-risk-fill{height:100%;background:linear-gradient(90deg,#f5a623,#ff4060)}.srl-attempt-row span:last-child{margin-left:8px;color:rgba(180,190,230,.62);font-family:Consolas,"Courier New",monospace}
+            .srl-attempt-pip{width:10px;height:10px;transform:rotate(45deg);border:1px solid rgba(180,190,230,.28);display:inline-block}.srl-attempt-pip.used{background:#ff4060;border-color:#ff4060}.srl-attempt-pip.active{background:#f5a623;border-color:#f5a623}
+            .srl-selection-total{font-size:2rem;font-weight:700}.srl-selection-total span{font-size:.85rem;color:rgba(180,190,230,.48);font-family:Consolas,"Courier New",monospace;letter-spacing:.18em}.srl-feedback{display:none}.srl-feedback.visible{display:block}
+            .srl-feedback.error{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.92)}.srl-feedback.success{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}
+            .srl-password-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:440px;overflow:auto}.srl-password-card{padding:12px;background:rgba(0,0,0,.42);border:1px solid rgba(245,166,35,.12);color:rgba(200,210,240,.72);text-align:left;word-break:break-all;cursor:pointer}
+            .srl-password-card:hover{border-color:rgba(245,166,35,.38);color:#ffcb6b}.srl-password-card.selected{border-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}.srl-password-card.correct{border-color:#00e87a;background:rgba(0,232,122,.08);color:#00e87a}.srl-password-card.false{border-color:#f5a623;background:rgba(245,166,35,.08);color:#f5a623}
+            .srl-submit-row{margin-top:18px;padding-top:18px;border-top:1px solid rgba(245,166,35,.12)}.srl-completion{min-height:540px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:20px;background:radial-gradient(circle at center,rgba(0,232,122,.06),transparent 60%)}
+            .srl-completion-badge{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(0,232,122,.35);background:rgba(0,232,122,.08);font-weight:700;color:#00e87a}.srl-completion-title{font-size:1.5rem;font-weight:700;letter-spacing:.24em}.srl-completion-sub{font-family:Consolas,"Courier New",monospace;color:rgba(0,232,122,.72);letter-spacing:.18em}
+            .srl-completion-card{max-width:620px;text-align:left}.srl-completion-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,232,122,.08)}.srl-completion-arrow{color:#00e87a}.srl-completion-insight{margin-top:14px;color:#ffcb6b}
+            @media (max-width:980px){.srl-lab,.srl-attack-grid,.srl-classifier-grid{grid-template-columns:1fr}.srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}.srl-password-grid{grid-template-columns:repeat(2,1fr)}}
+            @media (max-width:640px){.srl-header{padding:14px 18px}.srl-panel{padding:20px}.srl-password-grid,.srl-phases{grid-template-columns:1fr}.srl-reactor-top,.srl-submit-row,.srl-nav-row{flex-direction:column;align-items:flex-start}}
+        </style>`;
+    }
+
+    // ─── LEVEL 2: singleChoice with second attempt support ──────────────────
+
+    renderSingleChoicePuzzle(container) {
+        this.visualizerElement = container;
+        const choices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
+        const defenseOptions = Array.isArray(this.puzzleData.followUpDefenseQuestion?.options) ? this.puzzleData.followUpDefenseQuestion.options : [];
+        const evidenceEntries = this.getSingleChoiceEvidenceEntries();
+        const confidenceScore = this.getSingleChoiceConfidenceScore();
+        const evidenceSummary = this.getSingleChoiceEvidenceSummary();
+        const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
+        const choiceMarkup = choices.map(c => `
+            <label class="l2-choice-card ${this.singleChoiceSelected === c.id ? 'selected' : ''}">
+                <input type="radio" name="attack-choice" value="${c.id}" ${this.singleChoiceSelected === c.id ? 'checked' : ''}/>
+                <div class="l2-choice-card__title">${c.label}</div>
+                <div class="l2-choice-card__desc">${this.getSingleChoiceDescription(c.id)}</div>
+            </label>`).join('');
+        const defenseMarkup = defenseOptions.map(option => `
+            <label class="l2-choice-card ${this.singleChoiceDefenseSelected === option.id ? 'selected' : ''}">
+                <input type="radio" name="single-choice-defense" value="${option.id}" ${this.singleChoiceDefenseSelected === option.id ? 'checked' : ''}/>
+                <div class="l2-choice-card__title">${option.label}</div>
+                <div class="l2-choice-card__desc">${option.description || option.explanation || 'Choose the best defensive control for the attack you identified.'}</div>
+            </label>`).join('');
+        const evidenceMarkup = evidenceEntries.map(entry => `
+            <article class="l2-evidence-card ${this.singleChoiceSelectedEntryIds.has(entry.id) ? 'selected' : ''}">
+                <div class="l2-evidence-card__meta">
+                    <span>${entry.timestamp}</span>
+                    <span>${entry.code}</span>
+                </div>
+                <div class="l2-evidence-card__title">${entry.title}</div>
+                <div class="l2-evidence-card__desc">${entry.description}</div>
+                <button class="l2-flag-btn ${this.singleChoiceSelectedEntryIds.has(entry.id) ? 'active' : ''}" type="button" data-single-flag="${entry.id}">
+                    ${this.singleChoiceSelectedEntryIds.has(entry.id) ? 'FLAGGED' : 'FLAG AS EVIDENCE'}
+                </button>
+            </article>`).join('');
+        const showDefenseStage = this.singleChoiceStage === 'defense';
+
+        container.innerHTML = `
+            ${this.renderSingleChoiceLabStyles()}
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 02 - SOC INCIDENT LAB',
+                title: 'LIVE ATTACK<br>DETECTION',
+                status: 'SOC INCIDENT ACTIVE',
+                phases: [
+                    { label: 'LOG MONITOR', active: this.singleChoiceStage !== 'defense' },
+                    { label: 'ATTACK LABEL', active: this.singleChoiceStage === 'defense' },
+                    { label: 'CONTAINMENT', active: this.singleChoiceStage === 'defense' }
+                ],
+                content: `
+                    <div class="l2-shell">
+                        <div class="l2-header">
+                            <div class="l2-brand">SHADOWDEF</div>
+                            <div class="l2-level">LEVEL 2 - LIVE ATTACK DETECTION</div>
+                            <div class="l2-status">SOC INCIDENT ACTIVE</div>
+                        </div>
+                        <div class="l2-phases">
+                            <div class="l2-phase active"><span>01</span>LOG MONITOR</div>
+                            <div class="l2-phase ${this.singleChoiceStage === 'defense' ? 'active' : ''}"><span>02</span>ATTACK LABEL</div>
+                            <div class="l2-phase ${this.singleChoiceStage === 'defense' ? 'active' : ''}"><span>03</span>CONTAINMENT</div>
+                        </div>
+                        <div class="l2-hint-strip">HINT: Common words with small number changes point to a dictionary attack, not full brute-force coverage.</div>
+                        <div class="l2-frame">
+                            <aside class="l2-panel l2-panel-left">
+                                <div class="l2-section-kicker">Mission Brief</div>
+                                <div class="l2-brief-box">
+                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                    <div><strong>Task:</strong> ${this.mission.userTask || ''}</div>
+                                </div>
+                                <div class="l2-section-kicker">System Status</div>
+                                <div class="l2-metric-box">
+                                    <div class="l2-metric-box__row">
+                                        <span>${this.puzzleData.timerLabel || 'Time Left'}</span>
+                                        <strong id="single-timer-text">${this.singleChoiceRemaining}s</strong>
+                                    </div>
+                                    <div class="l2-metric-box__row" style="margin-top:8px;">
+                                        <span>${this.vaultConfig?.label || 'Vault Integrity'}</span>
+                                        <strong id="vault-text">${Math.floor(this.vaultIntegrity)}%</strong>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill" id="vault-fill" style="width:${this.vaultIntegrity}%;"></div></div>
+                                    <div class="l2-metric-box__meta">
+                                        <span>${attemptsLeft} attempts left</span>
+                                        <span>${this.attempts} decisions used</span>
+                                    </div>
+                                </div>
+                                <div class="l2-section-kicker">Analyst Notes</div>
+                                <div class="l2-guide">
+                                    <div class="l2-hint">Dictionary attacks use known words and common passwords.</div>
+                                    <div class="l2-hint">Brute force tries wider random combinations.</div>
+                                    <div class="l2-hint">Credential stuffing reuses real leaked username-password pairs.</div>
+                                </div>
+                                <div class="l2-section-kicker" style="margin-top:18px;">Evidence Confidence</div>
+                                <div class="l2-metric-box">
+                                    <div class="l2-metric-box__row">
+                                        <span>Confidence</span>
+                                        <strong>${confidenceScore}%</strong>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill" style="width:${confidenceScore}%;"></div></div>
+                                    <div class="l2-metric-box__meta">
+                                        <span>Read: ${evidenceSummary}</span>
+                                    </div>
+                                </div>
+                            </aside>
+                            <main class="l2-panel l2-panel-right">
+                                <div class="l2-main-head">
+                                    <div>
+                                        <div class="l2-section-kicker">Live Authentication Stream</div>
+                                        <div class="l2-main-title">Triage the evidence, label the attack, then activate the right containment before the vault collapses</div>
+                                    </div>
+                                    <div id="attempt-counter" class="l2-attempts">
+                                        Decisions: <span>${this.attempts}</span> / ${this.maxAttempts}
+                                    </div>
+                                </div>
+                                <div class="l2-log-panel">
+                                    <div class="l2-log-header">
+                                        <span>LOGIN STREAM</span>
+                                        <span>REAL-TIME</span>
+                                    </div>
+                                    <div id="attack-log-stream" class="l2-log-feed">Waiting for incoming login attempts...</div>
+                                </div>
+                                ${showDefenseStage ? `
+                                    <div class="l2-section-kicker">Containment Selection</div>
+                                    <div class="l2-choice-grid" id="single-choice-defense-grid">${defenseMarkup}</div>
+                                    <div class="l2-feedback guess-feedback" id="guess-feedback">Choose the control that best stops repeated wordlist-based guessing against the account.</div>
+                                    <div class="l2-actions">
+                                        <button class="l2-btn l2-btn-primary" id="submit-single-choice-defense">ACTIVATE CONTAINMENT</button>
+                                    </div>` : `
+                                    <div class="l2-section-kicker">Evidence Triage</div>
+                                    <div class="l2-evidence-grid">${evidenceMarkup}</div>
+                                    <div class="l2-triage-meta">${this.singleChoiceSelectedEntryIds.size}/${this.singleChoiceFlagLimit} evidence markers flagged</div>
+                                    <div class="l2-section-kicker">Attack Classification</div>
+                                    <div class="l2-choice-grid" id="single-choice-grid">${choiceMarkup}</div>
+                                    <div class="l2-feedback guess-feedback" id="guess-feedback">
+                                        Flag the strongest indicators first, then choose one attack type.
+                                        ${this.maxAttempts > 1 ? `<br><span style="color:var(--cyber-orange);">You have ${this.maxAttempts} attack-label attempts. A wrong guess costs vault integrity.</span>` : ''}
+                                    </div>
+                                    <div class="l2-actions">
+                                        <button class="l2-btn l2-btn-primary" id="submit-single-choice">SUBMIT ATTACK LABEL</button>
+                                    </div>`}
+                            </main>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupSingleChoiceEventListeners();
+        if (!this.singleChoiceTimerId && !this.singleChoiceLogTimerId) this.startSingleChoiceSimulation();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    getSingleChoiceDescription(choiceId) {
+        const map = {
+            brute_force: 'Wide random combination coverage across many possible passwords.',
+            dictionary_attack: 'Known words and common password patterns tried in sequence.',
+            credential_stuffing: 'Leaked real credentials reused across accounts or services.',
+            insider_access: 'Legitimate internal access abused by an authorized user.'
+        };
+        return map[choiceId] || 'Review the stream and choose the attack category that best fits the evidence.';
+    }
+
+    getSingleChoiceEvidenceEntries() {
+        const provided = Array.isArray(this.puzzleData.evidenceMarkers) ? this.puzzleData.evidenceMarkers : [];
+        if (provided.length) return provided;
+        return (this.puzzleData.loginAttemptStream?.entries || []).slice(0, 4).map((line, index) => ({
+            id: `E${index + 1}`,
+            code: `IOC-${index + 1}`,
+            timestamp: this.extractInvestigationTimestamp(line) || `02:14:0${index + 1}`,
+            title: line.split(' - ')[1] || line,
+            description: 'Recovered from the live auth stream. Determine whether it supports a repeated wordlist pattern.'
+        }));
+    }
+
+    toggleSingleChoiceEvidence(entryId) {
+        if (!entryId || this.isComplete || this.singleChoiceStage !== 'triage') return;
+        if (this.singleChoiceSelectedEntryIds.has(entryId)) this.singleChoiceSelectedEntryIds.delete(entryId);
+        else if (this.singleChoiceSelectedEntryIds.size < this.singleChoiceFlagLimit) this.singleChoiceSelectedEntryIds.add(entryId);
+        else {
+            this.gameScreen.ui.showNotification(`Evidence flag limit reached (${this.singleChoiceFlagLimit}).`, 'warning');
+            return;
+        }
+        this.audio.playButtonClick();
+        this.renderSingleChoicePuzzle(this.visualizerElement);
+    }
+
+    renderSingleChoiceLabStyles() {
+        return `<style>
+            .l2-shell{background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+            .l2-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
+            .l2-brand,.l2-level,.l2-status,.l2-phase,.l2-section-kicker,.l2-choice-card__title,.l2-btn,.l2-attempts,.l2-log-header{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
+            .l2-brand{color:#f5a623;font-weight:700}.l2-level{color:rgba(245,166,35,.72);font-size:.85rem}.l2-status{color:#00e87a;font-size:.82rem}
+            .l2-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
+            .l2-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.l2-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+            .l2-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}
+            .l2-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+            .l2-frame{display:grid;grid-template-columns:340px 1fr;min-height:640px}
+            .l2-panel{padding:28px;background:rgba(0,0,0,.18)}.l2-panel-left{border-right:1px solid rgba(245,166,35,.12)}
+            .l2-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}
+            .l2-brief-box,.l2-metric-box,.l2-guide,.l2-log-panel,.l2-feedback,.l2-choice-card,.l2-evidence-card{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
+            .l2-brief-box,.l2-metric-box,.l2-feedback{padding:16px;line-height:1.7}.l2-brief-box strong{color:#f5a623}
+            .l2-metric-box__row,.l2-metric-box__meta,.l2-main-head,.l2-actions,.l2-log-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .l2-metric-box__row strong{font-size:1.8rem;color:#eef2ff}.l2-metric-box__meta{margin-top:10px;flex-wrap:wrap;color:rgba(180,190,230,.62);font-size:.82rem}
+            .l2-guide{padding:0}.l2-hint{padding:12px 14px;border-bottom:1px solid rgba(245,166,35,.08);color:rgba(220,228,245,.84);line-height:1.65}.l2-hint:last-child{border-bottom:0}
+            .l2-main-title{font-size:1.35rem;color:#eef2ff;line-height:1.45}
+            .l2-attempts{padding:10px 12px;border:1px solid rgba(245,166,35,.18);background:rgba(245,166,35,.06);color:rgba(245,166,35,.82);font-size:.74rem}
+            .l2-log-panel{margin-bottom:18px}.l2-log-header{padding:12px 14px;border-bottom:1px solid rgba(245,166,35,.12);color:rgba(245,166,35,.72);font-size:.72rem}
+            .l2-log-feed{max-height:240px;overflow:auto;padding:14px;color:rgba(220,228,245,.8);font-family:Consolas,"Courier New",monospace;line-height:1.7}
+            .l2-evidence-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:10px}
+            .l2-evidence-card{padding:14px;transition:border-color .18s ease,box-shadow .18s ease}
+            .l2-evidence-card.selected{border-color:#00d4ff;background:rgba(0,212,255,.06);box-shadow:0 0 0 1px rgba(0,212,255,.18) inset}
+            .l2-evidence-card__meta{display:flex;justify-content:space-between;gap:12px;color:rgba(245,166,35,.62);font-family:Consolas,"Courier New",monospace;font-size:.74rem;letter-spacing:.14em;text-transform:uppercase}
+            .l2-evidence-card__title{margin-top:10px;color:#eef2ff;font-weight:700}
+            .l2-evidence-card__desc{margin-top:8px;color:rgba(180,190,230,.66);line-height:1.6}
+            .l2-flag-btn{margin-top:12px;padding:9px 12px;background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.76);cursor:pointer;font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
+            .l2-flag-btn.active{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
+            .l2-triage-meta{margin:2px 0 18px;color:rgba(180,190,230,.62);font-size:.82rem}
+            .l2-choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+            .l2-choice-card{display:block;padding:16px;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;color:#eef2ff}
+            .l2-choice-card:hover{transform:translateY(-2px);border-color:rgba(245,166,35,.36);box-shadow:0 14px 30px rgba(0,0,0,.18)}
+            .l2-choice-card input{display:none}
+            .l2-choice-card.selected{border-color:#00d4ff;background:rgba(0,212,255,.06);box-shadow:0 0 0 1px rgba(0,212,255,.18) inset}
+            .l2-choice-card__title{margin-bottom:10px;color:#f5a623;font-size:.84rem}
+            .l2-choice-card__desc{color:rgba(180,190,230,.66);line-height:1.6}
+            .l2-feedback{margin-top:18px;color:rgba(220,228,245,.86);min-height:74px}
+            .l2-actions{margin-top:18px;justify-content:flex-end}
+            .l2-btn{padding:13px 18px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.78);cursor:pointer}
+            .l2-btn:hover{border-color:rgba(245,166,35,.45);color:#ffcb6b}
+            .l2-btn-primary{background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border-color:rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em}
+            @media (max-width:1080px){.l2-frame{grid-template-columns:1fr}.l2-panel-left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
+            @media (max-width:720px){.l2-header{padding:14px 18px}.l2-panel{padding:20px}.l2-choice-grid,.l2-phases,.l2-evidence-grid{grid-template-columns:1fr}.l2-main-head,.l2-actions{flex-direction:column;align-items:flex-start}}
+        </style>`;
+    }
+
     setupSingleChoiceEventListeners() {
-        const radios = Array.from(document.querySelectorAll('input[name="attack-choice"]'));
-        radios.forEach(radio => {
+        document.querySelectorAll('[data-single-flag]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleSingleChoiceEvidence(btn.dataset.singleFlag || ''));
+        });
+        document.querySelectorAll('input[name="attack-choice"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 this.singleChoiceSelected = radio.value;
+                document.querySelectorAll('.l2-choice-card').forEach(card => {
+                    const input = card.querySelector('input[name="attack-choice"]');
+                    card.classList.toggle('selected', !!input && input.checked);
+                });
                 this.audio.playButtonClick();
             });
         });
-
-        const submitBtn = document.getElementById('submit-single-choice');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.submitSingleChoiceDecision());
-        }
+        document.querySelectorAll('input[name="single-choice-defense"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.singleChoiceDefenseSelected = radio.value;
+                document.querySelectorAll('.l2-choice-card').forEach(card => {
+                    const attackInput = card.querySelector('input[name="attack-choice"]');
+                    const defenseInput = card.querySelector('input[name="single-choice-defense"]');
+                    card.classList.toggle('selected', !!attackInput && attackInput.checked || !!defenseInput && defenseInput.checked);
+                });
+                this.audio.playButtonClick();
+            });
+        });
+        document.getElementById('submit-single-choice')?.addEventListener('click', () => this.submitSingleChoiceDecision());
+        document.getElementById('submit-single-choice-defense')?.addEventListener('click', () => this.submitSingleChoiceDefense());
     }
 
-    /**
-     * Start timers/log stream for single-choice mode
-     */
     startSingleChoiceSimulation() {
         const stream = this.puzzleData.loginAttemptStream || {};
         const entries = Array.isArray(stream.entries) ? stream.entries : [];
         const tickMs = stream.tickMs || 1000;
         const passiveDrop = this.vaultConfig?.passiveDropPerSecond || 0;
-
         this.updateSingleChoiceTimerUI();
         this.updateVaultIntegrityUI();
 
@@ -1722,39 +2397,25 @@ export class PasswordCrack {
 
         this.singleChoiceTimerId = setInterval(() => {
             if (this.isComplete) return;
-
             this.singleChoiceRemaining = Math.max(0, this.singleChoiceRemaining - 1);
             this.vaultIntegrity = Math.max(this.vaultConfig?.min || 0, this.vaultIntegrity - passiveDrop);
             this.updateSingleChoiceTimerUI();
             this.updateVaultIntegrityUI();
-
             if (this.vaultIntegrity <= (this.vaultConfig?.min || 0)) {
                 this.onSingleChoiceFailure(this.vaultConfig?.breachMessage || 'Breach simulation: Vault Integrity reached 0.');
                 return;
             }
-
             if (this.singleChoiceRemaining <= 0) {
-                const timeoutMessage = this.puzzleData.breachOnTimeout
-                    ? (this.vaultConfig?.breachMessage || 'Breach simulation: time ran out.')
-                    : (this.mission.failureFeedback || 'Time is up.');
-                this.onSingleChoiceFailure(timeoutMessage);
+                this.onSingleChoiceFailure(this.mission.failureFeedback || 'Time is up.');
             }
         }, 1000);
     }
 
-    /**
-     * Append next log line to stream panel
-     */
     appendNextLogEntry() {
-        const stream = this.puzzleData.loginAttemptStream || {};
-        const entries = Array.isArray(stream.entries) ? stream.entries : [];
+        const entries = this.puzzleData.loginAttemptStream?.entries || [];
         const panel = document.getElementById('attack-log-stream');
-        if (!panel || entries.length === 0) return;
-
-        if (panel.textContent.includes('Waiting for incoming login attempts...')) {
-            panel.innerHTML = '';
-        }
-
+        if (!panel || !entries.length) return;
+        if (panel.textContent.includes('Waiting for incoming login attempts...')) panel.innerHTML = '';
         const line = document.createElement('div');
         line.textContent = entries[this.logEntryIndex % entries.length];
         panel.appendChild(line);
@@ -1762,11 +2423,18 @@ export class PasswordCrack {
         this.logEntryIndex++;
     }
 
-    /**
-     * Handle single-choice submission
-     */
+    // FIX L2: second attempt on wrong guess
     submitSingleChoiceDecision() {
         if (this.isComplete) return;
+        const requiredEvidence = Array.isArray(this.puzzleData.requiredEvidenceIds) ? this.puzzleData.requiredEvidenceIds : [];
+        const matchedEvidence = requiredEvidence.filter(id => this.singleChoiceSelectedEntryIds.has(id));
+        const minimumEvidence = Math.min(requiredEvidence.length || 2, 2);
+        if (this.singleChoiceSelectedEntryIds.size === 0 || matchedEvidence.length < minimumEvidence) {
+            this.gameScreen.ui.showNotification('Flag the strongest evidence before submitting your attack label.', 'warning');
+            const feedback = document.getElementById('guess-feedback');
+            if (feedback) feedback.innerHTML = `<strong style="color:var(--cyber-orange);">More evidence needed.</strong><br>Flag at least ${minimumEvidence} high-signal indicators that support your conclusion.`;
+            return;
+        }
         if (!this.singleChoiceSelected) {
             this.gameScreen.ui.showNotification('Select one attack type first.', 'warning');
             return;
@@ -1777,98 +2445,124 @@ export class PasswordCrack {
         this.gameScreen.updateAttempts(this.attempts);
 
         const correctChoice = this.puzzleData.correctChoice;
+
         if (this.singleChoiceSelected === correctChoice) {
-            this.onSingleChoiceSuccess();
+            this.onSingleChoiceLabelSuccess();
             return;
         }
 
-        this.vaultIntegrity = Math.max(this.vaultConfig?.min || 0, this.vaultIntegrity - (this.vaultConfig?.wrongChoicePenalty || 0));
+        // Wrong answer
+        this.vaultIntegrity = Math.max(
+            this.vaultConfig?.min || 0,
+            this.vaultIntegrity - (this.vaultConfig?.wrongChoicePenalty || 0)
+        );
         this.updateVaultIntegrityUI();
+        this.audio.playFailure();
 
         const feedback = document.getElementById('guess-feedback');
-        if (feedback) {
-            feedback.textContent = this.puzzleData.choiceFeedback?.wrong || 'Incorrect choice.';
-        }
+        const attemptsLeft = this.maxAttempts - this.attempts;
 
         if (this.vaultIntegrity <= (this.vaultConfig?.min || 0)) {
             this.onSingleChoiceFailure(this.vaultConfig?.breachMessage || 'Breach simulation: Vault Integrity reached 0.');
             return;
         }
 
-        this.onSingleChoiceFailure(this.mission.failureFeedback || 'Wrong decision. The attack continued.');
+        if (attemptsLeft <= 0) {
+            // Out of attempts
+            if (feedback) feedback.textContent = this.puzzleData.choiceFeedback?.wrong || 'Incorrect. No attempts remaining.';
+            this.onSingleChoiceFailure(this.mission.failureFeedback || 'Wrong decision. Mission failed.');
+            return;
+        }
+
+        // Still has attempts left — let player try again
+        if (feedback) {
+            feedback.innerHTML = `
+                <strong style="color:var(--cyber-pink);">Incorrect.</strong>
+                ${this.puzzleData.choiceFeedback?.wrong || 'Look again at the pattern.'}
+                <br><span style="color:var(--cyber-orange);">${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining. Vault integrity reduced.</span>`;
+        }
+        // Reset radio so player must re-select
+        this.singleChoiceSelected = null;
+        document.querySelectorAll('input[name="attack-choice"]').forEach(r => { r.checked = false; });
     }
 
-    /**
-     * Handle single-choice success and shock event
-     */
+    onSingleChoiceLabelSuccess() {
+        const feedback = document.getElementById('guess-feedback');
+        this.singleChoiceStage = 'defense';
+        this.audio.playSuccess();
+        if (feedback) feedback.innerHTML = `<strong style="color:var(--cyber-green);">Correct classification.</strong><br>${this.puzzleData.choiceFeedback?.correct || 'Correct choice.'}<br><span style="color:var(--cyber-orange);">Now activate the best control to stop continued guessing.</span>`;
+        this.gameScreen.ui.showNotification('Attack identified. Select containment.', 'success');
+        this.renderSingleChoicePuzzle(this.visualizerElement);
+    }
+
+    submitSingleChoiceDefense() {
+        if (this.isComplete || this.singleChoiceStage !== 'defense') return;
+        const followUp = this.puzzleData.followUpDefenseQuestion || null;
+        if (!followUp) {
+            this.onSingleChoiceSuccess();
+            return;
+        }
+        if (!this.singleChoiceDefenseSelected) {
+            this.gameScreen.ui.showNotification('Select a containment option first.', 'warning');
+            return;
+        }
+        const correct = this.singleChoiceDefenseSelected === followUp.correctAnswer;
+        const feedback = document.getElementById('guess-feedback');
+        if (!correct) {
+            this.vaultIntegrity = Math.max(this.vaultConfig?.min || 0, this.vaultIntegrity - Number(followUp.wrongChoicePenalty || 10));
+            this.updateVaultIntegrityUI();
+            if (feedback) feedback.innerHTML = `<strong style="color:var(--cyber-pink);">Containment mismatch.</strong><br>${followUp.explanation || 'Choose the control that directly slows or stops repeated guessing.'}`;
+            this.audio.playFailure();
+            if (this.vaultIntegrity <= (this.vaultConfig?.min || 0)) {
+                this.onSingleChoiceFailure(this.vaultConfig?.breachMessage || 'Breach simulation: Vault Integrity reached 0.');
+                return;
+            }
+            this.gameScreen.ui.showNotification('That control would not contain this attack fast enough.', 'error');
+            return;
+        }
+        if (feedback) feedback.innerHTML = `<strong style="color:var(--cyber-green);">Containment selected correctly.</strong><br>${followUp.explanation || ''}`;
+        this.onSingleChoiceSuccess();
+    }
+
     onSingleChoiceSuccess() {
         this.isComplete = true;
         this.stopSingleChoiceTimers();
         this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-
-        const feedback = document.getElementById('guess-feedback');
-        if (feedback) {
-            feedback.textContent = this.puzzleData.choiceFeedback?.correct || 'Correct choice.';
-        }
-
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
         this.gameScreen.ui.showNotification('Attack blocked.', 'success');
-
-        const shock = this.puzzleData.shockEvent || null;
+        const shock = this.puzzleData.shockEvent;
         if (!shock || shock.trigger !== 'afterCorrect') {
             setTimeout(() => this.gameScreen.completePuzzle(true), 1000);
             return;
         }
-
+        const feedback = document.getElementById('guess-feedback');
         setTimeout(() => {
-            if (feedback) {
-                feedback.innerHTML = `<strong>${shock.title || 'Alert'}</strong><br>${shock.message || ''}`;
-            }
+            if (feedback) feedback.innerHTML = `<strong>${shock.title || 'Alert'}</strong><br>${shock.message || ''}`;
             this.gameScreen.ui.showNotification(shock.title || 'Alert', 'warning');
             setTimeout(() => this.gameScreen.completePuzzle(true), 1600);
         }, shock.delayMs || 1000);
     }
 
-    /**
-     * Handle single-choice failure
-     * @param {string} message
-     */
     onSingleChoiceFailure(message) {
         if (this.isComplete) return;
         this.isComplete = true;
         this.stopSingleChoiceTimers();
         this.audio.playFailure();
-        this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-        this.gameScreen.ui.showNotification(message || this.mission.failureFeedback || 'Mission failed.', 'error');
+        this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+        this.gameScreen.ui.showNotification(message || 'Mission failed.', 'error');
         setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
     }
 
-    /**
-     * Stop active intervals for single-choice mode
-     */
     stopSingleChoiceTimers() {
-        if (this.singleChoiceTimerId) {
-            clearInterval(this.singleChoiceTimerId);
-            this.singleChoiceTimerId = null;
-        }
-        if (this.singleChoiceLogTimerId) {
-            clearInterval(this.singleChoiceLogTimerId);
-            this.singleChoiceLogTimerId = null;
-        }
+        if (this.singleChoiceTimerId) { clearInterval(this.singleChoiceTimerId); this.singleChoiceTimerId = null; }
+        if (this.singleChoiceLogTimerId) { clearInterval(this.singleChoiceLogTimerId); this.singleChoiceLogTimerId = null; }
     }
 
-    /**
-     * Update timer label for single-choice mode
-     */
     updateSingleChoiceTimerUI() {
-        const timer = document.getElementById('single-timer-text');
-        if (!timer) return;
-        timer.textContent = `${Math.max(0, this.singleChoiceRemaining)}s`;
+        const el = document.getElementById('single-timer-text');
+        if (el) el.textContent = `${Math.max(0, this.singleChoiceRemaining)}s`;
     }
 
-    /**
-     * Update vault integrity progress UI
-     */
     updateVaultIntegrityUI() {
         const value = Math.max(this.vaultConfig?.min || 0, Math.min(100, this.vaultIntegrity));
         const fill = document.getElementById('vault-fill');
@@ -1877,134 +2571,1252 @@ export class PasswordCrack {
         if (text) text.textContent = `${Math.floor(value)}%`;
     }
 
-    /**
-     * Setup listeners for prediction-choice mode
-     */
+    // ─── Prediction choice (Level 3) ─────────────────────────────────────────
+
+    renderPredictionChoicePuzzle(container) {
+        this.visualizerElement = container;
+        const session = this.predictionSession || this.createPredictionSession();
+        const options = Array.isArray(session.options) ? session.options : [];
+        const allClassified = options.every(option => !!this.predictionRatings[option]);
+        const boardSummary = this.getPredictionClassificationSummary(session);
+        const choiceMarkup = options.map((option, idx) => {
+            const profile = this.getPredictionPasswordProfile(option, session);
+            const selected = this.predictionSelected === option;
+            const currentRating = this.predictionRatings[option] || '';
+            const classifyButtons = ['weak', 'medium', 'strong'].map(label => `
+                <button class="l3-rate-btn ${currentRating === label ? 'selected' : ''}" type="button" data-prediction-rate="${option}" data-rating-value="${label}">
+                    ${label.toUpperCase()}
+                </button>`).join('');
+            return `
+                <div class="l3-card ${selected ? 'selected' : ''}">
+                    <div class="l3-card__top">
+                        <span class="l3-card__label">OPTION ${String.fromCharCode(65 + idx)}</span>
+                        <label class="l3-pick">
+                            <input type="radio" name="prediction-choice" value="${option}" ${selected ? 'checked' : ''}/>
+                            BREAKS FIRST
+                        </label>
+                    </div>
+                    <div class="l3-card__value">${option}</div>
+                    <div class="l3-signal-grid">
+                        <div class="l3-signal">
+                            <span>Length</span>
+                            <strong>${profile.lengthSignal}</strong>
+                        </div>
+                        <div class="l3-signal">
+                            <span>Predictability</span>
+                            <strong>${profile.predictabilitySignal}</strong>
+                        </div>
+                        <div class="l3-signal">
+                            <span>Pattern Risk</span>
+                            <strong>${profile.commonRiskSignal}</strong>
+                        </div>
+                    </div>
+                    <div class="l3-card__note">${profile.note}</div>
+                    <div class="l3-rate-label">Classify this password first</div>
+                    <div class="l3-rate-row">${classifyButtons}</div>
+                </div>`;
+        }).join('');
+        const raceMarkup = options.map((option, idx) => `
+            <div class="race-row" style="margin:10px 0;">
+                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;">
+                    <span>${String.fromCharCode(65 + idx)}. ${option}</span>
+                    <span id="race-time-${idx}">Estimating...</span>
+                </div>
+                <div style="height:10px;background:rgba(100,116,139,0.2);border-radius:999px;overflow:hidden;">
+                    <div id="race-bar-${idx}" style="height:10px;width:0%;transition:width ${this.puzzleData?.simulationUI?.animateDurationMs || 3200}ms linear;background:var(--cyber-blue);"></div>
+                </div>
+            </div>`).join('');
+
+        container.innerHTML = `
+            ${this.renderPredictionChoiceStyles()}
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 03 - BENCHMARK LAB',
+                title: 'PASSWORD STRENGTH<br>RACE',
+                status: 'BENCHMARK LAB ACTIVE',
+                phases: [
+                    { label: 'CLASSIFY', active: !allClassified },
+                    { label: 'PREDICT', active: allClassified && !this.predictionSelected },
+                    { label: 'RACE', active: allClassified && !!this.predictionSelected }
+                ],
+                content: `
+                    <div class="l3-shell">
+                        <div class="l3-header">
+                            <div class="l3-brand">SHADOWDEF</div>
+                            <div class="l3-level">LEVEL 3 - PASSWORD STRENGTH RACE</div>
+                            <div class="l3-status">BENCHMARK LAB ACTIVE</div>
+                        </div>
+                        <div class="l3-phases">
+                            <div class="l3-phase active"><span>01</span>CLASSIFY</div>
+                            <div class="l3-phase"><span>02</span>PREDICT</div>
+                            <div class="l3-phase"><span>03</span>RACE</div>
+                        </div>
+                        <div class="l3-hint-strip">HINT: Keep the logic simple. Short and predictable breaks first. Long and less predictable holds longer.</div>
+                        <div class="l3-frame">
+                            <aside class="l3-panel l3-panel-left">
+                                <div class="l3-section-kicker">Mission Brief</div>
+                                <div class="l3-brief-box">
+                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                    <div><strong>Task:</strong> Classify each password, then predict which one breaks first.</div>
+                                </div>
+                                <div class="l3-section-kicker">Decision Timer</div>
+                                <div class="l3-metric-box">
+                                    <div class="l3-metric-box__row"><span>Time left</span><strong id="prediction-timer-text">${this.predictionRemaining}s</strong></div>
+                                    <div class="progress-bar"><div class="progress-fill" id="prediction-timer-fill" style="width:100%;"></div></div>
+                                    <div class="l3-metric-box__meta">
+                                        <span>${Object.keys(this.predictionRatings).length}/${options.length} classified</span>
+                                        <span>${this.predictionSelected ? 'Prediction selected' : 'Prediction pending'}</span>
+                                    </div>
+                                </div>
+                                <div class="l3-section-kicker">Simple Security Rules</div>
+                                <div class="l3-guide">
+                                    <div class="l3-hint">Short passwords usually break faster.</div>
+                                    <div class="l3-hint">Common words and known patterns are easy to guess.</div>
+                                    <div class="l3-hint">Longer and less predictable passwords usually last longer.</div>
+                                </div>
+                                <div class="l3-section-kicker" style="margin-top:18px;">Benchmark Preview</div>
+                                <div class="l3-metric-box">
+                                    <div class="l3-metric-box__row"><span>Current board read</span><strong>${allClassified ? 'READY' : 'PENDING'}</strong></div>
+                                    <div class="l3-metric-box__meta"><span>Read: ${boardSummary}</span></div>
+                                </div>
+                            </aside>
+                            <main class="l3-panel l3-panel-right">
+                                <div class="l3-main-head">
+                                    <div>
+                                        <div class="l3-section-kicker">Comparison Board</div>
+                                        <div class="l3-main-title">Rate each password first, then choose which one will break first in the benchmark race</div>
+                                    </div>
+                                    <div id="attempt-counter" class="l3-attempts">Decisions: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
+                                </div>
+                                <div class="l3-card-grid" id="prediction-choice-grid">${choiceMarkup}</div>
+                                <div class="l3-actions">
+                                    <button class="l3-btn l3-btn-primary" id="submit-prediction-choice" ${allClassified && this.predictionSelected ? '' : 'disabled'}>RUN BENCHMARK RACE</button>
+                                </div>
+                                <div id="prediction-race-board" class="l3-race-board" style="display:none;">
+                                    <div class="l3-section-kicker">Crack Speed Race</div>
+                                    <div id="prediction-race-rows">${raceMarkup}</div>
+                                </div>
+                                <div class="l3-feedback guess-feedback" id="guess-feedback">${allClassified ? 'Choose which password breaks first, then run the benchmark race.' : 'Classify every password as WEAK, MEDIUM, or STRONG before making your final prediction.'}</div>
+                            </main>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupPredictionChoiceEventListeners();
+        if (!this.predictionTimerId) this.startPredictionTimer();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
     setupPredictionChoiceEventListeners() {
-        const radios = Array.from(document.querySelectorAll('input[name="prediction-choice"]'));
-        radios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.predictionSelected = radio.value;
+        document.querySelectorAll('[data-prediction-rate]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const password = btn.dataset.predictionRate || '';
+                const rating = btn.dataset.ratingValue || '';
+                if (!password || !rating) return;
+                this.predictionRatings[password] = rating;
                 this.audio.playButtonClick();
+                this.renderPredictionChoicePuzzle(this.visualizerElement);
             });
         });
+        document.querySelectorAll('input[name="prediction-choice"]').forEach(r => {
+            r.addEventListener('change', () => {
+                this.predictionSelected = r.value;
+                this.audio.playButtonClick();
+                this.renderPredictionChoicePuzzle(this.visualizerElement);
+            });
+        });
+        document.getElementById('submit-prediction-choice')?.addEventListener('click', () => this.submitPredictionChoiceDecision());
+    }
 
-        const submitBtn = document.getElementById('submit-prediction-choice');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.submitPredictionChoiceDecision());
+    startPredictionTimer() {
+        this.updatePredictionTimerUI();
+        this.predictionTimerId = setInterval(() => {
+            if (this.isComplete) return;
+            this.predictionRemaining = Math.max(0, this.predictionRemaining - 1);
+            this.updatePredictionTimerUI();
+            if (this.predictionRemaining <= 0) this.onPredictionChoiceFailure('Time is up. The weaker password broke first.');
+        }, 1000);
+    }
+
+    stopPredictionTimer() {
+        if (this.predictionTimerId) { clearInterval(this.predictionTimerId); this.predictionTimerId = null; }
+    }
+
+    updatePredictionTimerUI() {
+        const timerText = document.getElementById('prediction-timer-text');
+        const timerFill = document.getElementById('prediction-timer-fill');
+        if (timerText) timerText.textContent = `${this.predictionRemaining}s`;
+        if (timerFill) {
+            const pct = Math.max(0, Math.min(100, (this.predictionRemaining / Math.max(1, this.puzzleData.timeLimit || 1)) * 100));
+            timerFill.style.width = `${pct}%`;
         }
     }
 
-    /**
-     * Setup listeners for investigation mode
-     */
+    getPredictionBreakTime(password) {
+        if (typeof this.puzzleData.simulateBreakTime === 'function') return this.puzzleData.simulateBreakTime(password, this.predictionSession);
+        const table = this.predictionSession?.breakTimeSeconds || {};
+        return table[password] || 60;
+    }
+
+    getPredictionPasswordProfile(password, session) {
+        const value = String(password || '');
+        const breakTime = this.getPredictionBreakTime(value);
+        const hasYear = /\b(19|20)\d{2}\b|20\d{2}|\d{4}/.test(value);
+        const hasNumberSuffix = /[A-Za-z]+\d+$/.test(value);
+        const hasCommonWord = /(welcome|password|company|correct|horse|battery|staple|admin|system)/i.test(value);
+        const symbolHeavy = /[^A-Za-z0-9]/.test(value);
+        const lengthSignal = value.length >= 18 ? 'LONG' : value.length >= 10 ? 'MEDIUM' : 'SHORT';
+        const predictabilitySignal = hasCommonWord || hasYear || hasNumberSuffix ? 'HIGH' : symbolHeavy && value.length >= 10 ? 'LOW' : 'MEDIUM';
+        const commonRiskSignal = breakTime <= 30 ? 'HIGH' : breakTime <= 900 ? 'MEDIUM' : 'LOW';
+        const expectedRating = breakTime <= 30 ? 'weak' : breakTime <= 1800 ? 'medium' : 'strong';
+        const note = expectedRating === 'weak'
+            ? 'This looks easy to guess because it uses a common or predictable pattern.'
+            : expectedRating === 'medium'
+                ? 'This has some protection, but it still has traits an attacker can model.'
+                : 'This lasts longer because it is less predictable and/or much longer.';
+        return { lengthSignal, predictabilitySignal, commonRiskSignal, expectedRating, note };
+    }
+
+    renderPredictionChoiceStyles() {
+        return `<style>
+            .l3-shell{background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+            .l3-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
+            .l3-brand,.l3-level,.l3-status,.l3-phase,.l3-section-kicker,.l3-btn,.l3-attempts,.l3-card__label,.l3-rate-label{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
+            .l3-brand{color:#f5a623;font-weight:700}.l3-level{color:rgba(245,166,35,.72);font-size:.85rem}.l3-status{color:#00e87a;font-size:.82rem}
+            .l3-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
+            .l3-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.l3-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+            .l3-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}
+            .l3-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+            .l3-frame{display:grid;grid-template-columns:340px 1fr;min-height:640px}
+            .l3-panel{padding:28px;background:rgba(0,0,0,.18)}.l3-panel-left{border-right:1px solid rgba(245,166,35,.12)}
+            .l3-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}
+            .l3-brief-box,.l3-metric-box,.l3-guide,.l3-card,.l3-feedback,.l3-race-board{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
+            .l3-brief-box,.l3-metric-box,.l3-feedback,.l3-race-board{padding:16px;line-height:1.7}.l3-brief-box strong{color:#f5a623}
+            .l3-metric-box__row,.l3-metric-box__meta,.l3-main-head,.l3-actions,.l3-card__top,.l3-pick{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .l3-metric-box__row strong{font-size:1.8rem;color:#eef2ff}.l3-metric-box__meta{margin-top:10px;flex-wrap:wrap;color:rgba(180,190,230,.62);font-size:.82rem}
+            .l3-guide{padding:0}.l3-hint{padding:12px 14px;border-bottom:1px solid rgba(245,166,35,.08);color:rgba(220,228,245,.84);line-height:1.65}.l3-hint:last-child{border-bottom:0}
+            .l3-main-title{font-size:1.35rem;color:#eef2ff;line-height:1.45}.l3-attempts{padding:10px 12px;border:1px solid rgba(245,166,35,.18);background:rgba(245,166,35,.06);color:rgba(245,166,35,.82);font-size:.74rem}
+            .l3-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+            .l3-card{padding:16px;transition:border-color .18s ease,box-shadow .18s ease}.l3-card.selected{border-color:#00d4ff;background:rgba(0,212,255,.06);box-shadow:0 0 0 1px rgba(0,212,255,.18) inset}
+            .l3-card__label{font-size:.72rem;color:rgba(245,166,35,.56)}.l3-pick{font-size:.76rem;color:rgba(220,228,245,.78)}
+            .l3-pick input{accent-color:#00d4ff}
+            .l3-card__value{margin:14px 0 12px;font-size:1.2rem;font-weight:700;color:#eef2ff;word-break:break-word}
+            .l3-signal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+            .l3-signal{padding:10px;border:1px solid rgba(245,166,35,.1);background:rgba(245,166,35,.04)}
+            .l3-signal span{display:block;color:rgba(180,190,230,.54);font-size:.78rem}.l3-signal strong{display:block;margin-top:6px;color:#ffcb6b;font-size:.84rem}
+            .l3-card__note{margin-top:12px;color:rgba(180,190,230,.66);line-height:1.6}
+            .l3-rate-label{margin-top:14px;color:rgba(245,166,35,.6);font-size:.7rem}
+            .l3-rate-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+            .l3-rate-btn{padding:8px 12px;background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.76);cursor:pointer;font-family:Consolas,"Courier New",monospace;letter-spacing:.16em;text-transform:uppercase}
+            .l3-rate-btn.selected{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
+            .l3-feedback{margin-top:18px;color:rgba(220,228,245,.86);min-height:74px}
+            .l3-actions{margin-top:18px;justify-content:flex-end}
+            .l3-btn{padding:13px 18px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.78);cursor:pointer}
+            .l3-btn:disabled{opacity:.45;cursor:not-allowed}
+            .l3-btn:hover:not(:disabled){border-color:rgba(245,166,35,.45);color:#ffcb6b}
+            .l3-btn-primary{background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border-color:rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em}
+            .l3-race-board{margin-top:18px}
+            @media (max-width:1080px){.l3-frame{grid-template-columns:1fr}.l3-panel-left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
+            @media (max-width:720px){.l3-header{padding:14px 18px}.l3-panel{padding:20px}.l3-card-grid,.l3-phases,.l3-signal-grid{grid-template-columns:1fr}.l3-main-head,.l3-actions,.l3-card__top{flex-direction:column;align-items:flex-start}}
+        </style>`;
+    }
+
+    submitPredictionChoiceDecision() {
+        if (this.isComplete) return;
+        const session = this.predictionSession || {};
+        const options = Array.isArray(session.options) ? session.options : [];
+        if (!options.every(option => !!this.predictionRatings[option])) {
+            this.gameScreen.ui.showNotification('Classify every password first.', 'warning');
+            return;
+        }
+        if (!this.predictionSelected) { this.gameScreen.ui.showNotification('Select one password first.', 'warning'); return; }
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+        this.stopPredictionTimer();
+
+        const times = options.map(o => this.getPredictionBreakTime(o));
+        const maxTime = Math.max(...times, 1);
+        const raceBoard = document.getElementById('prediction-race-board');
+        if (raceBoard) raceBoard.style.display = 'block';
+
+        options.forEach((option, idx) => {
+            const bar = document.getElementById(`race-bar-${idx}`);
+            const label = document.getElementById(`race-time-${idx}`);
+            const t = times[idx];
+            const crackedPct = Math.max(8, Math.min(100, ((maxTime - t) / maxTime) * 100 + 8));
+            if (bar) { bar.style.background = t === Math.min(...times) ? 'var(--cyber-pink)' : 'var(--cyber-green)'; requestAnimationFrame(() => { bar.style.width = `${crackedPct}%`; }); }
+            if (label) label.textContent = `${t}s`;
+        });
+
+        const correct = this.predictionSelected === session.correctAnswer;
+        const feedback = document.getElementById('guess-feedback');
+        const explanation = session.simpleExplanation || '';
+        const mismatches = options.filter(option => this.predictionRatings[option] !== this.getPredictionPasswordProfile(option, session).expectedRating);
+        const classificationLine = mismatches.length
+            ? `<div style="margin-top:6px;">Your strength labels missed ${mismatches.length} password${mismatches.length === 1 ? '' : 's'}. Focus on length and predictability first.</div>`
+            : `<div style="margin-top:6px;color:var(--cyber-green);">Your strength labels matched the benchmark logic.</div>`;
+        if (feedback) feedback.innerHTML = `<div><strong>${correct ? (this.mission.successFeedback || 'Good call.') : (this.mission.failureFeedback || 'Incorrect prediction.')}</strong></div><div style="margin-top:6px;">${explanation}</div>${classificationLine}`;
+
+        const shock = this.puzzleData.shockEvent;
+        const showShock = shock && shock.triggerCaseId && shock.triggerCaseId === session.caseId;
+        setTimeout(() => {
+            if (showShock && feedback) feedback.innerHTML += `<div style="margin-top:10px;"><strong>${shock.title}</strong> ${shock.message}</div>`;
+            if (correct) this.onPredictionChoiceSuccess();
+            else this.onPredictionChoiceFailure('Incorrect prediction. The weaker password broke first.');
+        }, this.puzzleData?.simulationUI?.animateDurationMs || 3200);
+    }
+
+    onPredictionChoiceSuccess() {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'success',
+                title: 'Benchmark prediction confirmed',
+                summary: this.mission.successFeedback || 'Your prediction matched the benchmark outcome.',
+                details: [
+                    'You compared length, predictability, and pattern risk before committing.',
+                    'This is the same logic attackers use when prioritizing cheap guesses.'
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Good prediction.', 'success');
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+    }
+
+    onPredictionChoiceFailure(message) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        this.stopPredictionTimer();
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'error',
+                title: 'Benchmark prediction missed',
+                summary: message || 'The weaker password broke first.',
+                details: [
+                    'Short predictable patterns are prioritized first by cracking tools.',
+                    'Symbols help less than players expect when the base word is common.'
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+        this.audio.playFailure();
+        this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+        this.gameScreen.ui.showNotification(message || 'Incorrect prediction.', 'error');
+        setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+    }
+
+    // ─── Investigation (Level 4) ──────────────────────────────────────────────
+
+    renderInvestigationPuzzle(container) {
+        const logs = this.getInvestigationLogEntries();
+        const profile = this.puzzleData.profileData || {};
+        const policy = this.puzzleData.systemPolicy || {};
+        const causeChoices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
+        const followUp = this.puzzleData.followUpDefenseQuestion || null;
+        const flaggedCount = this.investigationFlaggedEvents.size;
+        const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
+        const flagQuality = this.getInvestigationFlagQuality(logs);
+        const phaseLabel = this.investigationStage === 'defense' ? 'PHASE 2: CONTAINMENT' : 'PHASE 1: REVIEW LOGS';
+        const leadHint = this.investigationStage === 'defense'
+            ? 'Contain the confirmed breach path before the attacker re-establishes access.'
+            : 'Inspect the access trail, flag the strongest signals, and reconstruct the initial breach path.';
+        const causeMarkup = causeChoices.map(c => `
+            <label class="investigation-choice-card">
+                <input type="radio" name="investigation-cause" value="${c.id}"/>
+                <div class="investigation-choice-card__copy">
+                    <span class="investigation-choice-card__title">${c.label}</span>
+                    <span class="investigation-choice-card__desc">${c.description || c.explanation || c.summary || 'Review the evidence trail and choose the attack path that best fits the observed sequence.'}</span>
+                </div>
+            </label>`).join('');
+        const defenseMarkup = followUp ? (Array.isArray(followUp.options) ? followUp.options.map(o => `
+            <label class="investigation-choice-card">
+                <input type="radio" name="investigation-defense" value="${o.id}"/>
+                <div class="investigation-choice-card__copy">
+                    <span class="investigation-choice-card__title">${o.label}</span>
+                    <span class="investigation-choice-card__desc">${o.description || o.explanation || 'Choose the control that most directly disrupts the attack pattern visible in the logs.'}</span>
+                </div>
+            </label>`).join('') : '') : '';
+        const profileCards = this.getInvestigationProfileFields(profile).map(field => `
+            <div class="investigation-mini-card">
+                <span class="investigation-mini-card__label">${field.label}</span>
+                <span class="investigation-mini-card__value">${field.value}</span>
+            </div>`).join('');
+        const policyRows = this.getInvestigationPolicyRows(policy).map(row => `
+            <div class="investigation-policy-row">
+                <span>${row.label}</span>
+                <strong class="${row.className}">${row.value}</strong>
+            </div>`).join('');
+        const logMarkup = logs.map(log => `
+            <article class="investigation-log-entry ${this.investigationSelectedEntryId === log.id ? 'is-selected' : ''}"
+                     data-investigation-entry="${log.id}">
+                <div class="investigation-log-entry__status investigation-log-entry__status--${log.statusTone}"></div>
+                <div class="investigation-log-entry__body">
+                    <div class="investigation-log-entry__meta">
+                        <span>${log.timestamp}</span>
+                        <span>${log.code}</span>
+                    </div>
+                    <div class="investigation-log-entry__title">${log.title}</div>
+                    <div class="investigation-log-entry__subtitle">${log.subtitle}</div>
+                    <div class="investigation-log-entry__actions">
+                        <button class="investigation-action-btn ${this.investigationFlaggedEvents.has(log.id) ? 'is-flagged' : ''}"
+                                type="button"
+                                data-investigation-action="flag"
+                                data-entry-id="${log.id}">
+                            ${this.investigationFlaggedEvents.has(log.id) ? 'FLAGGED' : 'FLAG'}
+                        </button>
+                        <button class="investigation-action-btn"
+                                type="button"
+                                data-investigation-action="inspect"
+                                data-entry-id="${log.id}">
+                            INSPECT
+                        </button>
+                    </div>
+                </div>
+            </article>`).join('');
+
+        container.innerHTML = `
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 04 - FORENSIC REVIEW',
+                title: 'BREACH<br>INVESTIGATION',
+                status: this.investigationStage === 'defense' ? 'CONTAINMENT WINDOW ACTIVE' : 'FORENSIC REVIEW ACTIVE',
+                phases: [
+                    { label: 'TRACE EVENTS', active: this.investigationStage !== 'defense' },
+                    { label: 'IDENTIFY ATTACK', active: this.investigationStage === 'defense' },
+                    { label: 'SELECT DEFENSE', active: this.investigationStage === 'defense' }
+                ],
+                content: `
+                    <div class="password-puzzle investigation-shell">
+                        <section class="investigation-masthead">
+                            <div class="investigation-masthead__brand">SHADOWDEF</div>
+                            <div class="investigation-masthead__case">LEVEL 4 · BREACH INVESTIGATION</div>
+                            <div class="investigation-masthead__status">${this.investigationStage === 'defense' ? 'CONTAINMENT WINDOW ACTIVE' : 'FORENSIC REVIEW ACTIVE'}</div>
+                        </section>
+
+                        <section class="investigation-header">
+                            <div class="investigation-header__title">
+                                <div class="investigation-level-badge">LEVEL<br>4</div>
+                                <div>
+                                    <h2 class="puzzle-title investigation-title">BREACH INVESTIGATION</h2>
+                                    <div class="investigation-subtitle">${this.mission.objective || 'Reconstruct how the vault breach happened and identify the right defensive response.'}</div>
+                                    <div class="investigation-case-meta">
+                                        <span>CASE ID: VAULT-04</span>
+                                        <span>ANALYST FLAGS: ${flaggedCount}/${this.investigationFlagLimit}</span>
+                                        <span>DECISIONS LEFT: ${attemptsLeft}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="investigation-header__metrics">
+                                <div class="investigation-metric">
+                                    <span>INTEGRITY</span>
+                                    <strong id="investigation-integrity">${this.getInvestigationIntegrity()}%</strong>
+                                </div>
+                                <div class="investigation-metric">
+                                    <span>FLAGS</span>
+                                    <strong id="investigation-flag-count">${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}</strong>
+                                </div>
+                                <div class="investigation-metric">
+                                    <span>TIME</span>
+                                    <strong>${this.getInvestigationTimeDisplay()}</strong>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="investigation-hint-strip">${leadHint}</div>
+
+                        <div class="investigation-progress-rail">
+                            <div class="investigation-progress-step is-active">
+                                <span class="investigation-progress-step__num">01</span>
+                                <span class="investigation-progress-step__label">TRACE EVENTS</span>
+                            </div>
+                            <div class="investigation-progress-step ${this.investigationStage === 'defense' ? 'is-active' : ''}">
+                                <span class="investigation-progress-step__num">02</span>
+                                <span class="investigation-progress-step__label">IDENTIFY ATTACK</span>
+                            </div>
+                            <div class="investigation-progress-step ${this.investigationStage === 'defense' ? 'is-active' : ''}">
+                                <span class="investigation-progress-step__num">03</span>
+                                <span class="investigation-progress-step__label">SELECT DEFENSE</span>
+                            </div>
+                        </div>
+
+                        <section class="investigation-grid">
+                            <div class="investigation-panel investigation-panel--logs">
+                                <div class="investigation-panel__header">
+                                    <strong>ACCESS LOG - VAULT SYSTEM</strong>
+                                    <span class="investigation-phase-chip">${phaseLabel}</span>
+                                </div>
+                                <div class="investigation-board-summary">
+                                    <div class="investigation-board-stat">
+                                        <span>EVENTS</span>
+                                        <strong>${logs.length}</strong>
+                                    </div>
+                                    <div class="investigation-board-stat">
+                                        <span>FLAGGED</span>
+                                        <strong id="investigation-board-flagged">${flaggedCount}</strong>
+                                    </div>
+                                    <div class="investigation-board-stat">
+                                        <span>SELECTED</span>
+                                        <strong id="investigation-board-selected">${this.investigationSelectedEntryId || 'NONE'}</strong>
+                                    </div>
+                                    <div class="investigation-board-stat">
+                                        <span>CRITICAL FLAGS</span>
+                                        <strong>${flagQuality.criticalFlags}</strong>
+                                    </div>
+                                </div>
+                                <div class="investigation-log-list">${logMarkup}</div>
+                            </div>
+
+                            <div class="investigation-side-stack">
+                                <div class="investigation-panel">
+                                    <div class="investigation-panel__header"><strong>ACCOUNT PROFILE</strong></div>
+                                    <div class="investigation-profile">
+                                        <div class="investigation-profile__name">${profile.name || 'Unknown User'}</div>
+                                        <div class="investigation-profile__role">${profile.role || 'Role unavailable'}</div>
+                                        <div class="investigation-mini-grid">${profileCards}</div>
+                                    </div>
+                                </div>
+
+                                <div class="investigation-panel">
+                                    <div class="investigation-panel__header"><strong>SYSTEM POLICY</strong></div>
+                                    <div class="investigation-policy">${policyRows}</div>
+                                </div>
+
+                                <div class="investigation-panel">
+                                    <div class="investigation-panel__header">
+                                        <strong>SELECTED ENTRY</strong>
+                                        <span class="investigation-side-chip">${this.investigationSelectedEntryId || 'AWAITING INSPECTION'}</span>
+                                    </div>
+                                    <div class="investigation-selected-entry" id="investigation-selected-entry"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="investigation-question-panel" id="investigation-cause-block">
+                            <div class="investigation-question-panel__title">What type of attack allowed unauthorized access to the vault?</div>
+                            <div class="investigation-question-panel__sub">Use the flagged evidence, login cadence, and exposed policy gaps to identify the breach pattern.</div>
+                            <div class="investigation-choice-list">${causeMarkup}</div>
+                            <div class="investigation-question-panel__footer">
+                                <button class="btn btn-primary" id="submit-investigation-cause">SUBMIT ANALYSIS</button>
+                                <div class="investigation-question-panel__hint" id="investigation-submit-hint">Flag suspicious entries first</div>
+                            </div>
+                        </section>
+
+                        <section class="investigation-question-panel" id="investigation-defense-block" style="display:none;">
+                            ${followUp ? `
+                                <div class="investigation-question-panel__title">${followUp.prompt}</div>
+                                <div class="investigation-question-panel__sub">Select the control that most directly breaks the repeated guessing or credential reuse path you just confirmed.</div>
+                                <div class="investigation-choice-list">${defenseMarkup}</div>
+                                <div class="investigation-question-panel__footer">
+                                    <button class="btn btn-primary" id="submit-investigation-defense">SUBMIT DEFENSE</button>
+                                    <div class="investigation-question-panel__hint">Choose the control that blocks repeated guessing or credential reuse.</div>
+                                </div>` : ''}
+                        </section>
+
+                        <div class="guess-feedback investigation-feedback" id="guess-feedback">
+                            Review the evidence trail, inspect suspicious entries, and connect the login pattern to the most likely attack path.
+                        </div>
+                        <div id="attempt-counter" class="investigation-attempt-counter">
+                            Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                        </div>
+                    </div>`
+            })}`;
+        this.setupInvestigationEventListeners();
+        if (!this.investigationSelectedEntryId && logs[0]) this.investigationSelectedEntryId = logs[0].id;
+        this.renderSelectedInvestigationEntry();
+        this.updateInvestigationDashboard();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
     setupInvestigationEventListeners() {
-        const causeRadios = Array.from(document.querySelectorAll('input[name="investigation-cause"]'));
-        causeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.investigationSelectedCause = radio.value;
+        document.querySelectorAll('[data-investigation-entry]').forEach(card => {
+            card.addEventListener('click', e => {
+                if (e.target.closest('button')) return;
+                this.selectInvestigationEntry(card.dataset.investigationEntry);
+            });
+        });
+        document.querySelectorAll('button[data-investigation-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.investigationAction;
+                const entryId = btn.dataset.entryId;
+                if (!action || !entryId) return;
+                if (action === 'inspect') this.selectInvestigationEntry(entryId);
+                if (action === 'flag') this.toggleInvestigationFlag(entryId);
                 this.audio.playButtonClick();
             });
         });
-
-        const defenseRadios = Array.from(document.querySelectorAll('input[name="investigation-defense"]'));
-        defenseRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.investigationSelectedDefense = radio.value;
-                this.audio.playButtonClick();
-            });
-        });
-
-        const causeBtn = document.getElementById('submit-investigation-cause');
-        if (causeBtn) {
-            causeBtn.addEventListener('click', () => this.submitInvestigationCause());
-        }
-
-        const defenseBtn = document.getElementById('submit-investigation-defense');
-        if (defenseBtn) {
-            defenseBtn.addEventListener('click', () => this.submitInvestigationDefense());
-        }
+        document.querySelectorAll('input[name="investigation-cause"]').forEach(r => { r.addEventListener('change', () => { this.investigationSelectedCause = r.value; this.audio.playButtonClick(); }); });
+        document.querySelectorAll('input[name="investigation-defense"]').forEach(r => { r.addEventListener('change', () => { this.investigationSelectedDefense = r.value; this.audio.playButtonClick(); }); });
+        document.getElementById('submit-investigation-cause')?.addEventListener('click', () => this.submitInvestigationCause());
+        document.getElementById('submit-investigation-defense')?.addEventListener('click', () => this.submitInvestigationDefense());
     }
 
-    /**
-     * Setup listeners for inspection mode
-     */
+    submitInvestigationCause() {
+        if (this.isComplete) return;
+        if (this.investigationFlaggedEvents.size === 0) {
+            this.gameScreen.ui.showNotification('Flag at least one suspicious log entry before submitting your analysis.', 'warning');
+            return;
+        }
+        const quality = this.getInvestigationFlagQuality(this.getInvestigationLogEntries());
+        if (quality.criticalFlags === 0) {
+            this.gameScreen.ui.showNotification('You need to flag at least one critical breach indicator before concluding the cause.', 'warning');
+            return;
+        }
+        if (!this.investigationSelectedCause) { this.gameScreen.ui.showNotification('Select a cause first.', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const feedback = document.getElementById('guess-feedback');
+        if (this.investigationSelectedCause !== this.puzzleData.correctAnswer) {
+            if (feedback) feedback.innerHTML = `<div><strong>Not correct yet.</strong></div><div>${this.mission.failureFeedback || 'Review the evidence and try again.'}</div><div style="margin-top:6px;">${this.puzzleData.simpleExplanation || ''}</div>`;
+            this.audio.playFailure();
+            this.gameScreen.ui.showNotification('Incorrect. Review evidence and try again.', 'error');
+            return;
+        }
+        this.investigationStage = 'defense';
+        const reveal = this.puzzleData.revealOnCorrect || {};
+        if (feedback) feedback.innerHTML = `<div><strong>Correct cause found:</strong> Dictionary Attack</div><div>${this.puzzleData.simpleExplanation || ''}</div><div style="margin-top:6px;"><strong>Actual password:</strong> ${reveal.actualPassword || 'unknown'}</div><div>${reveal.message || ''}</div>`;
+        this.audio.playSuccess();
+        this.gameScreen.ui.showNotification('Cause identified. Continue to defense question.', 'success');
+        document.getElementById('investigation-cause-block').style.display = 'none';
+        document.getElementById('investigation-defense-block').style.display = 'block';
+        this.updateInvestigationDashboard();
+        if (!this.puzzleData.followUpDefenseQuestion) setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+    }
+
+    submitInvestigationDefense() {
+        if (this.isComplete) return;
+        const followUp = this.puzzleData.followUpDefenseQuestion;
+        if (!followUp) { this.gameScreen.completePuzzle(true); return; }
+        if (!this.investigationSelectedDefense) { this.gameScreen.ui.showNotification('Select a defense option first.', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const feedback = document.getElementById('guess-feedback');
+        if (this.investigationSelectedDefense !== followUp.correctAnswer) {
+            if (feedback) feedback.innerHTML = `<div><strong>Not the best defense.</strong></div><div>${followUp.explanation || ''}</div>`;
+            this.audio.playFailure();
+            this.gameScreen.ui.showNotification('Try again. Think about what blocks repeated guesses.', 'error');
+            return;
+        }
+        this.isComplete = true;
+        if (feedback) feedback.innerHTML = `<div><strong>Correct defense:</strong> Add lockout rule</div><div>${followUp.explanation || ''}</div><div style="margin-top:8px;">${this.puzzleData.educationalSummary || ''}</div>`;
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Investigation complete.', 'success');
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
+    }
+
+    getInvestigationLogEntries() {
+        const rawLogs = Array.isArray(this.puzzleData.evidenceLogs) ? this.puzzleData.evidenceLogs : [];
+        return rawLogs.map((entry, index) => {
+            const id = String(entry?.id || `L${String(index + 1).padStart(3, '0')}`);
+            const rawText = typeof entry === 'string' ? entry : (entry.text || entry.message || entry.summary || '');
+            const timestamp = entry?.timestamp || this.extractInvestigationTimestamp(rawText) || `02:14:${String(3 + index * 2).padStart(2, '0')}`;
+            const username = entry?.user || this.extractInvestigationUsername(rawText) || 'unknown';
+            const source = entry?.source || this.extractInvestigationSource(rawText) || 'remote-endpoint';
+            const title = entry?.title || this.extractInvestigationTitle(rawText) || rawText || 'Log event observed';
+            const subtitle = entry?.subtitle || `${username} · ${source}`;
+            const severity = String(entry?.severity || '').toLowerCase();
+            const statusTone = entry?.statusTone || (severity === 'high' || /success|export|vault_access/i.test(rawText) ? 'critical' : /warning|failed|auth_fail/i.test(rawText) ? 'warning' : 'safe');
+            return {
+                id,
+                code: id,
+                timestamp,
+                title,
+                subtitle,
+                rawText,
+                statusTone,
+                details: entry?.details || rawText || 'No additional forensic details available.'
+            };
+        });
+    }
+
+    extractInvestigationTimestamp(text) {
+        const match = String(text || '').match(/\b\d{2}:\d{2}:\d{2}\b/);
+        return match ? match[0] : '';
+    }
+
+    extractInvestigationUsername(text) {
+        const match = String(text || '').match(/\bfor\s+([a-z0-9_.-]+)|\buser[:=\s]+([a-z0-9_.-]+)/i);
+        return match ? (match[1] || match[2] || '').trim() : '';
+    }
+
+    extractInvestigationSource(text) {
+        const match = String(text || '').match(/\b(?:ip|source)[:=\s]+([a-z0-9.:_-]+)/i);
+        return match ? match[1] : '';
+    }
+
+    extractInvestigationTitle(text) {
+        const source = String(text || '').trim();
+        if (!source) return '';
+        const parts = source.split(/[-|]/).map(part => part.trim()).filter(Boolean);
+        return parts[0] || source;
+    }
+
+    getInvestigationProfileFields(profile) {
+        return [
+            { label: 'CLEARANCE', value: profile.clearance || profile.accessLevel || 'Level 3' },
+            { label: 'DEPT', value: profile.department || profile.dept || 'Finance' },
+            { label: 'KNOWN PUBLIC', value: profile.publicInfo || 'None listed' },
+            { label: 'BIRTH YEAR', value: profile.birthYear || profile.yearOfBirth || 'Unknown' },
+            { label: 'HOMETOWN', value: profile.hometown || profile.location || 'Unknown' },
+            { label: 'LAST RESET', value: profile.lastReset || profile.lastPasswordReset || 'Unknown' }
+        ];
+    }
+
+    getInvestigationPolicyRows(policy) {
+        return [
+            this.createInvestigationPolicyRow('Rate limiting', policy.rateLimiting),
+            this.createInvestigationPolicyRow('Account lockout', policy.accountLockout),
+            this.createInvestigationPolicyRow('MFA', policy.mfa || policy.multiFactorAuth),
+            this.createInvestigationPolicyRow('Min password length', policy.passwordRule || policy.minimumLength),
+            this.createInvestigationPolicyRow('Breach monitoring', policy.breachMonitoring || policy.monitoring)
+        ];
+    }
+
+    createInvestigationPolicyRow(label, value) {
+        const text = value || 'Unknown';
+        const negative = /disabled|offline|not enforced|none|8 chars|weak/i.test(text);
+        return { label, value: text, className: negative ? 'is-bad' : 'is-good' };
+    }
+
+    selectInvestigationEntry(entryId) {
+        this.investigationSelectedEntryId = entryId;
+        this.renderSelectedInvestigationEntry();
+        this.updateInvestigationDashboard();
+    }
+
+    toggleInvestigationFlag(entryId) {
+        if (this.investigationFlaggedEvents.has(entryId)) this.investigationFlaggedEvents.delete(entryId);
+        else if (this.investigationFlaggedEvents.size < this.investigationFlagLimit) this.investigationFlaggedEvents.add(entryId);
+        else this.gameScreen.ui.showNotification(`Flag limit reached (${this.investigationFlagLimit}). Review your existing suspicious entries first.`, 'warning');
+        this.investigationSelectedEntryId = entryId;
+        this.renderSelectedInvestigationEntry();
+        this.updateInvestigationDashboard();
+    }
+
+    renderSelectedInvestigationEntry() {
+        const panel = document.getElementById('investigation-selected-entry');
+        if (!panel) return;
+        const entry = this.getInvestigationLogEntries().find(item => item.id === this.investigationSelectedEntryId);
+        if (!entry) {
+            panel.innerHTML = `<div class="investigation-selected-entry__empty">Click a log entry to inspect</div>`;
+            return;
+        }
+        const flagged = this.investigationFlaggedEvents.has(entry.id);
+        panel.innerHTML = `
+            <div class="investigation-selected-entry__meta">${entry.timestamp} · ${entry.code}</div>
+            <div class="investigation-selected-entry__title">${entry.title}</div>
+            <div class="investigation-selected-entry__subtitle">${entry.subtitle}</div>
+            <div class="investigation-selected-entry__body">${entry.details}</div>
+            <div class="investigation-selected-entry__flag ${flagged ? 'is-flagged' : ''}">
+                ${flagged ? 'Suspicious entry flagged for analyst review.' : 'Entry inspected. Flag it if you believe it supports the breach path.'}
+            </div>`;
+    }
+
+    updateInvestigationDashboard() {
+        const integrity = document.getElementById('investigation-integrity');
+        if (integrity) integrity.textContent = `${this.getInvestigationIntegrity()}%`;
+        const flagCount = document.getElementById('investigation-flag-count');
+        if (flagCount) flagCount.textContent = `${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}`;
+        const boardFlagged = document.getElementById('investigation-board-flagged');
+        if (boardFlagged) boardFlagged.textContent = `${this.investigationFlaggedEvents.size}`;
+        const boardSelected = document.getElementById('investigation-board-selected');
+        if (boardSelected) boardSelected.textContent = this.investigationSelectedEntryId || 'NONE';
+        const submitHint = document.getElementById('investigation-submit-hint');
+        if (submitHint) submitHint.textContent = this.investigationFlaggedEvents.size === 0
+            ? 'Flag suspicious entries first'
+            : `${this.investigationFlaggedEvents.size} suspicious entr${this.investigationFlaggedEvents.size === 1 ? 'y' : 'ies'} flagged`;
+        document.querySelectorAll('.investigation-side-chip').forEach(chip => {
+            chip.textContent = this.investigationSelectedEntryId || 'AWAITING INSPECTION';
+        });
+        document.querySelectorAll('[data-investigation-entry]').forEach(card => {
+            card.classList.toggle('is-selected', card.dataset.investigationEntry === this.investigationSelectedEntryId);
+        });
+        document.querySelectorAll('button[data-investigation-action="flag"]').forEach(btn => {
+            const flagged = this.investigationFlaggedEvents.has(btn.dataset.entryId);
+            btn.classList.toggle('is-flagged', flagged);
+            btn.textContent = flagged ? 'FLAGGED' : 'FLAG';
+        });
+    }
+
+    getInvestigationIntegrity() {
+        return Math.max(32, 100 - this.attempts * 18);
+    }
+
+    getInvestigationTimeDisplay() {
+        const secs = Number(this.puzzleData.timeLimit || 161);
+        const minutes = Math.floor(secs / 60);
+        const remainder = secs % 60;
+        return `${minutes}:${String(remainder).padStart(2, '0')}`;
+    }
+
+    // ─── Inspection (Level 5) ─────────────────────────────────────────────────
+
+    renderInspectionPuzzle(container) {
+        this.visualizerElement = container;
+        const systems = Array.isArray(this.puzzleData.systems) ? this.puzzleData.systems : [];
+        const choices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
+        const followUp = this.puzzleData.followUpDefenseQuestion || null;
+        const requiredPerSystem = Math.max(1, Number(this.puzzleData.inspectionRequiredActionsPerSystem || 3));
+        const totalRequired = systems.length * requiredPerSystem;
+        const inspectedCount = this.inspectionViewedActions.size;
+        const progressPct = totalRequired ? Math.min(100, (inspectedCount / totalRequired) * 100) : 0;
+        const systemRiskSummary = systems.map(system => ({ system, exposure: this.getInspectionExposureScore(system) }));
+        const phaseLabel = this.inspectionStage === 'defense' ? 'PHASE 2 · HARDENING DECISION' : 'PHASE 1 · STORAGE FORENSICS';
+        const systemsMarkup = systemRiskSummary.map(({ system, exposure }) => {
+            const viewedDb = this.inspectionViewedActions.has(`${system.id}:db`);
+            const viewedBreach = this.inspectionViewedActions.has(`${system.id}:breach`);
+            const viewedCrack = this.inspectionViewedActions.has(`${system.id}:crack`);
+            const viewedCount = [viewedDb, viewedBreach, viewedCrack].filter(Boolean).length;
+            const rows = Array.isArray(system.databasePreview) ? system.databasePreview.map(row => `<div class="inspection-evidence-row">${row}</div>`).join('') : '';
+            const crackRows = Array.isArray(system.crackAnalysis) ? system.crackAnalysis.map(row => `<div class="inspection-evidence-row">${row}</div>`).join('') : '';
+            const noteRows = Array.isArray(system.auditNotes) ? system.auditNotes.map(row => `<div class="inspection-note-row">${row}</div>`).join('') : '';
+            return `
+                <article class="inspection-card inspection-card--${system.riskTier || 'elevated'}">
+                    <div class="inspection-card__top">
+                        <div>
+                            <div class="inspection-card__label">${system.storageLabel || 'Credential store'}</div>
+                            <h3>${system.name}</h3>
+                            <p>${system.summary || ''}</p>
+                        </div>
+                        <div class="inspection-card__meter">
+                            <span>Evidence ${viewedCount}/3</span>
+                            <div class="inspection-card__meter-bar"><div style="width:${(viewedCount / 3) * 100}%"></div></div>
+                        </div>
+                    </div>
+                    <div class="inspection-card__risk">
+                        <span>Exposure Score</span>
+                        <strong>${exposure.score}/100</strong>
+                        <em>${exposure.label}</em>
+                    </div>
+                    <div class="inspection-card__actions">
+                        <button class="inspection-action-btn ${viewedDb ? 'is-viewed' : ''}" data-action="view-db" data-system-id="${system.id}" type="button">DATABASE SNAPSHOT</button>
+                        <button class="inspection-action-btn ${viewedBreach ? 'is-viewed' : ''}" data-action="simulate-breach" data-system-id="${system.id}" type="button">BREACH REPLAY</button>
+                        <button class="inspection-action-btn ${viewedCrack ? 'is-viewed' : ''}" data-action="run-crack" data-system-id="${system.id}" type="button">OFFLINE CRACK LAB</button>
+                    </div>
+                    <div class="inspection-evidence-stack">
+                        <section class="inspection-evidence-panel ${viewedDb ? 'is-visible' : ''}" id="db-${system.id}">
+                            <div class="inspection-evidence-panel__title">DATABASE SNAPSHOT</div>
+                            ${rows || '<div class="inspection-evidence-row">No rows available.</div>'}
+                        </section>
+                        <section class="inspection-evidence-panel ${viewedBreach ? 'is-visible' : ''}" id="breach-${system.id}">
+                            <div class="inspection-evidence-panel__title">BREACH REPLAY</div>
+                            <div class="inspection-evidence-row">${system.breachOutcome || ''}</div>
+                            ${noteRows ? `<div class="inspection-note-list">${noteRows}</div>` : ''}
+                        </section>
+                        <section class="inspection-evidence-panel ${viewedCrack ? 'is-visible' : ''}" id="crack-${system.id}">
+                            <div class="inspection-evidence-panel__title">OFFLINE CRACK LAB</div>
+                            ${crackRows || '<div class="inspection-evidence-row">No cracking analysis available.</div>'}
+                        </section>
+                    </div>
+                </article>`;
+        }).join('');
+        const choiceMarkup = choices.map(choice => `
+            <label class="inspection-decision-card">
+                <input type="radio" name="inspection-choice" value="${choice.id}" ${this.inspectionSelectedSystem === choice.id ? 'checked' : ''}/>
+                <div class="inspection-decision-card__copy">
+                    <span class="inspection-decision-card__title">${choice.label}</span>
+                    <span class="inspection-decision-card__desc">${choice.description || 'Choose the safer credential-storage design after reviewing the evidence.'}</span>
+                </div>
+            </label>`).join('');
+        const defenseMarkup = followUp ? (Array.isArray(followUp.options) ? followUp.options.map(option => `
+            <label class="inspection-decision-card">
+                <input type="radio" name="inspection-defense" value="${option.id}" ${this.inspectionSelectedDefense === option.id ? 'checked' : ''}/>
+                <div class="inspection-decision-card__copy">
+                    <span class="inspection-decision-card__title">${option.label}</span>
+                    <span class="inspection-decision-card__desc">${option.description || ''}</span>
+                </div>
+            </label>`).join('') : '') : '';
+
+        container.innerHTML = `
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 05 - STORAGE FORENSICS',
+                title: 'PASSWORD VAULT<br>AUDIT',
+                status: this.inspectionStage === 'defense' ? 'HARDENING DECISION LIVE' : 'FORENSIC STORAGE REVIEW',
+                phases: [
+                    { label: 'INSPECT STORES', active: this.inspectionStage !== 'defense' },
+                    { label: 'SAFER CLUSTER', active: this.inspectionStage === 'defense' },
+                    { label: 'RIGHT FIX', active: this.inspectionStage === 'defense' }
+                ],
+                content: `
+                    <div class="password-puzzle inspection-shell">
+                        <section class="inspection-masthead">
+                            <div class="inspection-masthead__brand">SHADOWDEF</div>
+                            <div class="inspection-masthead__case">LEVEL 5 · PASSWORD VAULT AUDIT</div>
+                            <div class="inspection-masthead__status">${this.inspectionStage === 'defense' ? 'HARDENING DECISION LIVE' : 'FORENSIC STORAGE REVIEW'}</div>
+                        </section>
+
+                        <section class="inspection-hero">
+                            <div class="inspection-hero__copy">
+                                <div class="inspection-hero__kicker">${phaseLabel}</div>
+                                <h2 class="puzzle-title inspection-title">Which credential design survives a breach?</h2>
+                                <p>${this.mission.scenario || ''}</p>
+                                <div class="inspection-hero__meta">
+                                    <span>OBJECTIVE: ${this.mission.objective || ''}</span>
+                                    <span>TASK: ${this.mission.userTask || ''}</span>
+                                </div>
+                            </div>
+                            <div class="inspection-scorecard">
+                                <div class="inspection-scorecard__row"><span>Evidence Progress</span><strong>${inspectedCount}/${totalRequired}</strong></div>
+                                <div class="inspection-scorebar"><div class="inspection-scorebar__fill" style="width:${progressPct}%"></div></div>
+                                <div class="inspection-scorecard__row"><span>Attempts Left</span><strong>${Math.max(0, this.maxAttempts - this.attempts)}</strong></div>
+                                <div class="inspection-scorecard__row"><span>Current Phase</span><strong>${this.inspectionStage === 'defense' ? '02' : '01'}</strong></div>
+                            </div>
+                        </section>
+
+                        <div class="inspection-hint-strip">
+                            Plain text means instant credential exposure. Fast unsalted hashes are better, but still collapse under offline cracking.
+                        </div>
+
+                        <div class="inspection-progress-rail">
+                            <div class="inspection-progress-step is-active"><span>01</span><strong>INSPECT BOTH STORES</strong></div>
+                            <div class="inspection-progress-step ${this.inspectionStage === 'defense' ? 'is-active' : ''}"><span>02</span><strong>CHOOSE THE SAFER CLUSTER</strong></div>
+                            <div class="inspection-progress-step ${this.inspectionStage === 'defense' ? 'is-active' : ''}"><span>03</span><strong>SELECT THE RIGHT FIX</strong></div>
+                        </div>
+
+                        <section class="inspection-grid">
+                            <div class="inspection-main">${systemsMarkup}</div>
+                            <aside class="inspection-sidebar">
+                                <div class="inspection-side-panel">
+                                    <div class="inspection-side-panel__label">Analyst Brief</div>
+                                    <div class="inspection-side-panel__body">
+                                        <div>Review database rows, breach fallout, and offline cracking results for both clusters.</div>
+                                        <div>The winner is the safer design, not necessarily the final ideal implementation.</div>
+                                    </div>
+                                </div>
+                                <div class="inspection-side-panel">
+                                    <div class="inspection-side-panel__label">Threat Model</div>
+                                    <div class="inspection-side-list">
+                                        <div>Plain text: attacker reads passwords immediately.</div>
+                                        <div>Fast hash: attacker must crack offline, but cheap guesses still work fast.</div>
+                                        <div>Modern storage: slow salted hashing plus breached-password blocking.</div>
+                                    </div>
+                                </div>
+                                <div class="inspection-side-panel">
+                                    <div class="inspection-side-panel__label">Exposure Ranking</div>
+                                    <div class="inspection-side-list">
+                                        ${systemRiskSummary.map(item => `<div>${item.system.name}: ${item.exposure.score}/100 - ${item.exposure.label}</div>`).join('')}
+                                    </div>
+                                </div>
+                            </aside>
+                        </section>
+
+                        <section class="inspection-question-panel" id="inspection-choice-block" ${this.inspectionStage === 'defense' ? 'style="display:none;"' : ''}>
+                            <div class="inspection-question-panel__title">After reviewing all evidence, which cluster stores passwords more safely?</div>
+                            <div class="inspection-question-panel__sub">You must inspect every evidence action across both clusters before submitting your decision.</div>
+                            <div class="inspection-decision-list">${choiceMarkup}</div>
+                            <div class="inspection-question-panel__footer">
+                                <button class="btn btn-primary" id="submit-inspection-choice">LOCK AUDIT DECISION</button>
+                                <div class="inspection-question-panel__hint">${inspectedCount < totalRequired ? `Inspect ${totalRequired - inspectedCount} more evidence item${totalRequired - inspectedCount === 1 ? '' : 's'} first` : 'Evidence complete. Choose the safer cluster.'}</div>
+                            </div>
+                        </section>
+
+                        <section class="inspection-question-panel" id="inspection-defense-block" ${this.inspectionStage === 'defense' ? '' : 'style="display:none;"'}>
+                            ${followUp ? `
+                                <div class="inspection-question-panel__title">${followUp.prompt}</div>
+                                <div class="inspection-question-panel__sub">Pick the control that best reduces offline cracking risk after the database is stolen.</div>
+                                <div class="inspection-decision-list">${defenseMarkup}</div>
+                                <div class="inspection-question-panel__footer">
+                                    <button class="btn btn-primary" id="submit-inspection-defense">SUBMIT HARDENING PLAN</button>
+                                    <div class="inspection-question-panel__hint">Think about attacker cost after breach, not just policy appearance.</div>
+                                </div>` : ''}
+                        </section>
+
+                        <div class="guess-feedback inspection-feedback" id="guess-feedback">${this.inspectionFeedbackHtml || 'Inspect every evidence action across both clusters, then decide which design is safer and what must change next.'}</div>
+                        <div id="attempt-counter" class="inspection-attempt-counter">
+                            Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                        </div>
+                    </div>`
+            })}`;
+        this.setupInspectionEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
     setupInspectionEventListeners() {
-        const actionButtons = Array.from(document.querySelectorAll('button[data-action]'));
-        actionButtons.forEach(btn => {
+        document.querySelectorAll('button[data-action]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
                 const systemId = btn.dataset.systemId;
                 if (!action || !systemId) return;
                 if (action === 'view-db') this.viewInspectionDatabase(systemId);
                 if (action === 'simulate-breach') this.simulateInspectionBreach(systemId);
+                if (action === 'run-crack') this.runInspectionCrackAnalysis(systemId);
                 this.audio.playButtonClick();
             });
         });
-
-        const radios = Array.from(document.querySelectorAll('input[name="inspection-choice"]'));
-        radios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.inspectionSelectedSystem = radio.value;
-                this.audio.playButtonClick();
-            });
-        });
-
-        const submitBtn = document.getElementById('submit-inspection-choice');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.submitInspectionChoice());
-        }
+        document.querySelectorAll('input[name="inspection-choice"]').forEach(r => { r.addEventListener('change', () => { this.inspectionSelectedSystem = r.value; this.audio.playButtonClick(); }); });
+        document.querySelectorAll('input[name="inspection-defense"]').forEach(r => { r.addEventListener('change', () => { this.inspectionSelectedDefense = r.value; this.audio.playButtonClick(); }); });
+        document.getElementById('submit-inspection-choice')?.addEventListener('click', () => this.submitInspectionChoice());
+        document.getElementById('submit-inspection-defense')?.addEventListener('click', () => this.submitInspectionDefense());
     }
 
-    /**
-     * Setup listeners for strategy builder mode
-     */
-    setupStrategyBuilderEventListeners() {
-        const defenseButtons = Array.from(document.querySelectorAll('button[data-defense-id]'));
-        defenseButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const defenseId = btn.dataset.defenseId;
-                if (!defenseId) return;
-                this.toggleStrategyDefense(defenseId, btn);
-            });
-        });
-
-        const runBtn = document.getElementById('run-strategy-simulation');
-        if (runBtn) {
-            runBtn.addEventListener('click', () => this.submitStrategyBuilderDecision());
-        }
-
-        const clearBtn = document.getElementById('clear-strategy-selection');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => this.clearStrategySelection());
-        }
+    viewInspectionDatabase(systemId) {
+        const system = (this.puzzleData.systems || []).find(s => s.id === systemId);
+        if (!system) return;
+        const panel = document.getElementById(`db-${systemId}`);
+        if (!panel) return;
+        this.inspectionViewedActions.add(`${systemId}:db`);
+        panel.classList.add('is-visible');
+        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
     }
 
-    /**
-     * Setup listeners for live defense simulation
-     */
+    simulateInspectionBreach(systemId) {
+        const system = (this.puzzleData.systems || []).find(s => s.id === systemId);
+        if (!system) return;
+        const panel = document.getElementById(`breach-${systemId}`);
+        if (!panel) return;
+        this.inspectionViewedActions.add(`${systemId}:breach`);
+        panel.classList.add('is-visible');
+        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+    }
+
+    runInspectionCrackAnalysis(systemId) {
+        const system = (this.puzzleData.systems || []).find(s => s.id === systemId);
+        if (!system) return;
+        const panel = document.getElementById(`crack-${systemId}`);
+        if (!panel) return;
+        this.inspectionViewedActions.add(`${systemId}:crack`);
+        panel.classList.add('is-visible');
+        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+    }
+
+    submitInspectionChoice() {
+        if (this.isComplete) return;
+        const systems = Array.isArray(this.puzzleData.systems) ? this.puzzleData.systems : [];
+        const requiredPerSystem = Math.max(1, Number(this.puzzleData.inspectionRequiredActionsPerSystem || 3));
+        const totalRequired = systems.length * requiredPerSystem;
+        if (this.inspectionViewedActions.size < totalRequired) {
+            this.gameScreen.ui.showNotification('Inspect all evidence actions before locking the audit decision.', 'warning');
+            return;
+        }
+        if (!this.inspectionSelectedSystem) { this.gameScreen.ui.showNotification('Choose a system first.', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const feedback = document.getElementById('guess-feedback');
+        if (this.inspectionSelectedSystem !== this.puzzleData.correctAnswer) {
+            this.inspectionFeedbackHtml = `<div><strong>Not correct yet.</strong></div><div>${this.mission.failureFeedback || ''}</div><div style="margin-top:6px;">Plain text is always the worst breach outcome because the attacker receives working passwords immediately.</div>`;
+            if (feedback) feedback.innerHTML = this.inspectionFeedbackHtml;
+            this.audio.playFailure();
+            if (this.attempts >= this.maxAttempts) {
+                this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Audit failed.', 'error');
+                this.isComplete = true;
+                setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+                return;
+            }
+            this.gameScreen.ui.showNotification('Incorrect choice. Review and try again.', 'error');
+            return;
+        }
+        this.inspectionStage = 'defense';
+        const selectedChoice = (this.puzzleData.choices || []).find(c => c.id === this.puzzleData.correctAnswer);
+        this.inspectionFeedbackHtml = `<div><strong>Correct: ${selectedChoice?.label || 'Cluster B'} is safer.</strong></div><div>${this.puzzleData.simpleExplanation || ''}</div><div style="margin-top:8px;">Now finish the audit: choose the best hardening control for the winning cluster.</div>`;
+        if (feedback) feedback.innerHTML = this.inspectionFeedbackHtml;
+        this.audio.playSuccess();
+        this.gameScreen.ui.showNotification('Safer cluster identified. Final hardening decision unlocked.', 'success');
+        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+    }
+
+    submitInspectionDefense() {
+        if (this.isComplete) return;
+        const followUp = this.puzzleData.followUpDefenseQuestion;
+        if (!followUp) { this.gameScreen.completePuzzle(true); return; }
+        if (!this.inspectionSelectedDefense) { this.gameScreen.ui.showNotification('Select a hardening option first.', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const feedback = document.getElementById('guess-feedback');
+        if (this.inspectionSelectedDefense !== followUp.correctAnswer) {
+            this.inspectionFeedbackHtml = `<div><strong>Not the best remediation.</strong></div><div>${followUp.explanation || ''}</div><div style="margin-top:8px;">Focus on what makes offline cracking expensive after a breach.</div>`;
+            if (feedback) feedback.innerHTML = this.inspectionFeedbackHtml;
+            this.audio.playFailure();
+            if (this.attempts >= this.maxAttempts) {
+                this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Audit failed.', 'error');
+                this.isComplete = true;
+                setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+                return;
+            }
+            this.gameScreen.ui.showNotification('That hardening plan is incomplete. Reassess attacker cost after breach.', 'error');
+            return;
+        }
+        this.isComplete = true;
+        this.inspectionFeedbackHtml = `<div><strong>Audit complete.</strong></div><div>${followUp.explanation || ''}</div><div style="margin-top:10px;">${this.puzzleData.educationalSummary || ''}</div>`;
+        if (feedback) feedback.innerHTML = this.inspectionFeedbackHtml;
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Correct choice.', 'success');
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1500);
+    }
+
+    // ─── LEVEL 7: live defense with tutorial overlay + spawn ramp ────────────
+
+    renderLiveDefenseSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const attackTypes = Array.isArray(this.puzzleData.attackTypes) ? this.puzzleData.attackTypes : [];
+        const liveCoveragePct = defenses.length ? Math.round((this.liveSuccessfulBlocks / Math.max(1, this.liveSuccessfulBlocks + this.liveMissedWaves)) * 100) : 0;
+        const defenseMarkup = defenses.map(d => `
+            <button class="ld-card" data-live-defense="${d.name}" type="button">
+                <div class="ld-card__top">
+                    <span class="ld-card__name">${d.name}</span>
+                    <span class="ld-card__cost">${d.energyCost} EN</span>
+                </div>
+                <div class="ld-card__meta">Cooldown ${d.cooldown}s</div>
+                <div class="ld-card__tags">${(Array.isArray(d.protectsAgainst) ? d.protectsAgainst : []).map(type => `<span>${type}</span>`).join('')}</div>
+                <div class="ld-card__status" id="live-cd-${this.sanitizeId(d.name)}">READY</div>
+            </button>`).join('');
+        const attackIntelMarkup = attackTypes.map(attack => `
+            <div class="ld-intel-row">
+                <div>
+                    <strong>${attack.type}</strong>
+                    <div>${attack.vector || 'Credential attack wave detected.'}</div>
+                </div>
+                <span class="ld-intel-row__damage">-${attack.damage}</span>
+            </div>`).join('');
+
+        container.innerHTML = `
+            <style>
+                .ld-shell{background:linear-gradient(180deg,#070b12 0%,#05080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+                .ld-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
+                .ld-brand,.ld-level,.ld-status,.ld-phase,.ld-kicker,.ld-card__status,.ld-card__cost,.ld-attempts,.ld-intel-row__damage{font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
+                .ld-brand{color:#f5a623;font-weight:700}.ld-level{color:rgba(245,166,35,.72);font-size:.85rem}.ld-status{color:#00e87a;font-size:.82rem}
+                .ld-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
+                .ld-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.ld-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+                .ld-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}
+                .ld-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+                .ld-grid{display:grid;grid-template-columns:340px 1fr;min-height:640px}
+                .ld-panel{padding:28px;background:rgba(0,0,0,.18)}
+                .ld-panel--left{border-right:1px solid rgba(245,166,35,.12)}
+                .ld-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}
+                .ld-brief,.ld-statbox,.ld-intel,.ld-current,.ld-log,.ld-card{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
+                .ld-brief,.ld-statbox,.ld-current,.ld-log{padding:16px;line-height:1.7}
+                .ld-brief strong{color:#f5a623}
+                .ld-statbox{display:grid;gap:12px}
+                .ld-statrow,.ld-mainhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+                .ld-bar{height:6px;background:rgba(255,64,96,.12);overflow:hidden}.ld-bar > div{height:100%;background:linear-gradient(90deg,#f5a623,#00d4ff)}
+                .ld-mainhead{margin-bottom:18px}.ld-title{font-size:1.4rem;color:#eef2ff;line-height:1.4}
+                .ld-attempts{padding:10px 12px;border:1px solid rgba(245,166,35,.18);background:rgba(245,166,35,.06);color:rgba(245,166,35,.82);font-size:.74rem}
+                .ld-current{min-height:120px}.ld-current strong{color:#ffcb6b}.ld-current__label{color:rgba(245,166,35,.64);font-family:Consolas,"Courier New",monospace;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
+                .ld-defense-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+                .ld-card{padding:16px;text-align:left;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;color:#eef2ff}
+                .ld-card:hover{transform:translateY(-2px);border-color:rgba(245,166,35,.36);box-shadow:0 14px 30px rgba(0,0,0,.18)}
+                .ld-card:disabled{opacity:.45;cursor:not-allowed;transform:none}
+                .ld-card__top{display:flex;justify-content:space-between;align-items:center;gap:8px}.ld-card__name{font-weight:700;font-size:1rem}.ld-card__cost{color:#ffcb6b;font-size:.7rem}
+                .ld-card__meta{margin-top:8px;color:rgba(180,190,230,.66);font-size:.86rem}.ld-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+                .ld-card__tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(0,212,255,.18);background:rgba(0,212,255,.06);color:#8beeff;font-size:.72rem}
+                .ld-card__status{margin-top:12px;color:#00e87a;font-size:.7rem}
+                .ld-log{margin-top:18px;max-height:190px;overflow:auto;text-align:left;color:rgba(220,228,245,.86)}
+                .ld-intel{padding:16px}.ld-intel-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(245,166,35,.08);color:rgba(220,228,245,.82)}
+                .ld-intel-row:last-child{border-bottom:0}.ld-intel-row strong{display:block;color:#eef2ff;margin-bottom:4px}.ld-intel-row div{color:rgba(180,190,230,.62);font-size:.84rem;line-height:1.45}.ld-intel-row__damage{color:#ff7e92;font-size:.76rem}
+                @media (max-width:1080px){.ld-grid{grid-template-columns:1fr}.ld-panel--left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
+                @media (max-width:720px){.ld-header{padding:14px 18px}.ld-panel{padding:20px}.ld-defense-grid,.ld-phases{grid-template-columns:1fr}.ld-mainhead{flex-direction:column;align-items:flex-start}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 07 - BLUE TEAM OPS',
+                title: 'LIVE DEFENSE<br>SIMULATION',
+                status: 'BLUE TEAM ACTIVE',
+                phases: [
+                    { label: 'IDENTIFY WAVE', active: true },
+                    { label: 'DEPLOY CONTROL', active: this.liveSimulationElapsed > 0 },
+                    { label: 'MAINTAIN COVERAGE', active: this.liveSimulationElapsed > 10 }
+                ],
+                content: `
+                    <div class="ld-shell">
+                        <div class="ld-header">
+                            <div class="ld-brand">SHADOWDEF</div>
+                            <div class="ld-level">LEVEL 7 - LIVE DEFENSE SIMULATION</div>
+                            <div class="ld-status">BLUE TEAM ACTIVE</div>
+                        </div>
+                        <div class="ld-phases">
+                            <div class="ld-phase active"><span>01</span>IDENTIFY WAVE</div>
+                            <div class="ld-phase"><span>02</span>DEPLOY CONTROL</div>
+                            <div class="ld-phase"><span>03</span>MAINTAIN COVERAGE</div>
+                        </div>
+                        <div class="ld-hint-strip">HINT: Brute force, credential stuffing, offline cracking, and phishing each require different controls. No single tool wins every wave.</div>
+                        <div class="ld-grid">
+                            <aside class="ld-panel ld-panel--left">
+                                <div class="ld-kicker">Mission Brief</div>
+                                <div class="ld-brief">
+                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                    <div><strong>Task:</strong> ${this.mission.userTask || ''}</div>
+                                </div>
+                                <div class="ld-kicker">Defense Telemetry</div>
+                                <div class="ld-statbox">
+                                    <div class="ld-statrow"><span>Vault Health</span><strong id="live-vault-text">${Math.floor(this.liveVaultHealth)}%</strong></div>
+                                    <div class="ld-bar"><div id="live-vault-fill" style="width:${this.liveVaultHealth}%;"></div></div>
+                                    <div class="ld-statrow"><span>Player Energy</span><strong id="live-energy-text">${Math.floor(this.liveEnergy)}%</strong></div>
+                                    <div class="ld-bar"><div id="live-energy-fill" style="width:${this.liveEnergy}%;"></div></div>
+                                    <div class="ld-statrow"><span>Time Left</span><strong id="live-time-text">${Math.floor(this.liveRemainingTime)}s</strong></div>
+                                    <div class="ld-statrow"><span>Coverage</span><strong>${liveCoveragePct}%</strong></div>
+                                    <div class="ld-statrow"><span>Blocked / Missed</span><strong>${this.liveSuccessfulBlocks} / ${this.liveMissedWaves}</strong></div>
+                                </div>
+                                <div class="ld-kicker">Attack Intel</div>
+                                <div class="ld-intel">${attackIntelMarkup}</div>
+                            </aside>
+                            <main class="ld-panel">
+                                <div class="ld-mainhead">
+                                    <div>
+                                        <div class="ld-kicker">Active Command Board</div>
+                                        <div class="ld-title">Read the incoming wave and deploy the control that breaks that attack path</div>
+                                    </div>
+                                    <div class="ld-attempts" id="attempt-counter">Live defense active</div>
+                                </div>
+                                <div class="ld-current" id="live-current-attack">
+                                    <div class="ld-current__label">Incoming Attack</div>
+                                    Waiting for first wave...
+                                </div>
+                                <div class="ld-kicker" style="margin-top:18px;">Available Controls</div>
+                                <div class="ld-defense-grid" id="live-defense-grid">${defenseMarkup}</div>
+                                <div class="ld-log guess-feedback" id="guess-feedback">Simulation starting. Prepare your defenses.</div>
+                            </main>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupLiveDefenseEventListeners();
+        this.startLiveDefenseSimulation();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
     setupLiveDefenseEventListeners() {
-        const defenseButtons = Array.from(document.querySelectorAll('button[data-live-defense]'));
-        defenseButtons.forEach(btn => {
+        document.querySelectorAll('button[data-live-defense]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const defenseName = btn.dataset.liveDefense;
-                if (!defenseName) return;
-                this.activateLiveDefense(defenseName);
+                const name = btn.dataset.liveDefense;
+                if (name) this.activateLiveDefense(name);
             });
         });
     }
 
-    /**
-     * Start live simulation loops
-     */
+    // FIX L7: tutorial overlay + ramp-up spawn rate
     startLiveDefenseSimulation() {
         const simConfig = this.puzzleData.simulationConfig || {};
         const regen = simConfig.energyRegenRate || {};
         const regenAmount = Number(regen.amount || 5);
         const regenEvery = Math.max(1, Number(regen.everySeconds || 3));
+        const overlay = simConfig.tutorialOverlay;
+        const rampAfter = Number(simConfig.attackSpawnRate?.rampUpAfterSeconds || 0);
 
+        this.liveSimulationElapsed = 0;
+        this.liveRampActive = false;
         this.updateLiveSimulationUI();
-        this.appendLiveLog('Live simulation started. Incoming waves expected.');
+
+        // Show tutorial overlay if configured
+        if (overlay && overlay.enabled) {
+            const panel = document.getElementById('live-current-attack');
+            if (panel) {
+                panel.innerHTML = `<span style="color:var(--cyber-orange);">⚠ ${overlay.message}</span>`;
+            }
+            this.appendLiveLog(overlay.message || 'Simulation starting — gentle waves for first few seconds.');
+        } else {
+            this.appendLiveLog('Live simulation started. Incoming waves expected.');
+        }
 
         this.liveEnergyTimerId = setInterval(() => {
             if (this.isComplete) return;
@@ -2014,10 +3826,8 @@ export class PasswordCrack {
 
         this.liveCooldownTimerId = setInterval(() => {
             if (this.isComplete) return;
-            const names = Object.keys(this.liveDefenseCooldowns);
-            names.forEach(name => {
-                const next = Math.max(0, Number(this.liveDefenseCooldowns[name] || 0) - 1);
-                this.liveDefenseCooldowns[name] = next;
+            Object.keys(this.liveDefenseCooldowns).forEach(name => {
+                this.liveDefenseCooldowns[name] = Math.max(0, Number(this.liveDefenseCooldowns[name] || 0) - 1);
             });
             this.updateLiveDefenseButtons();
         }, 1000);
@@ -2025,52 +3835,33 @@ export class PasswordCrack {
         this.liveDurationTimerId = setInterval(() => {
             if (this.isComplete) return;
             this.liveRemainingTime = Math.max(0, this.liveRemainingTime - 1);
-            this.updateLiveSimulationUI();
-            if (this.liveRemainingTime <= 0) {
-                this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
+            this.liveSimulationElapsed++;
+            // Switch to ramped spawn rate after threshold
+            if (rampAfter > 0 && this.liveSimulationElapsed === rampAfter && !this.liveRampActive) {
+                this.liveRampActive = true;
+                this.appendLiveLog('Attack pressure increasing — full wave mode active.');
             }
+            this.updateLiveSimulationUI();
+            if (this.liveRemainingTime <= 0) this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
         }, 1000);
 
         this.scheduleNextLiveAttack();
     }
 
-    /**
-     * Stop all live simulation timers
-     */
-    stopLiveDefenseSimulation() {
-        if (this.liveAttackTimeoutId) {
-            clearTimeout(this.liveAttackTimeoutId);
-            this.liveAttackTimeoutId = null;
-        }
-        if (this.liveSpawnTimeoutId) {
-            clearTimeout(this.liveSpawnTimeoutId);
-            this.liveSpawnTimeoutId = null;
-        }
-        if (this.liveEnergyTimerId) {
-            clearInterval(this.liveEnergyTimerId);
-            this.liveEnergyTimerId = null;
-        }
-        if (this.liveDurationTimerId) {
-            clearInterval(this.liveDurationTimerId);
-            this.liveDurationTimerId = null;
-        }
-        if (this.liveCooldownTimerId) {
-            clearInterval(this.liveCooldownTimerId);
-            this.liveCooldownTimerId = null;
-        }
-    }
-
-    /**
-     * Spawn attack on randomized interval
-     */
+    // FIX L7: use ramped spawn rate when active
     scheduleNextLiveAttack() {
         if (this.isComplete) return;
         const simConfig = this.puzzleData.simulationConfig || {};
         const spawn = simConfig.attackSpawnRate || {};
-        const minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
-        const maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
-        const delayMs = Math.floor((minSeconds + (Math.random() * (maxSeconds - minSeconds))) * 1000);
-
+        let minSeconds, maxSeconds;
+        if (this.liveRampActive) {
+            minSeconds = Math.max(1, Number(spawn.rampedMinSeconds || spawn.minSeconds || 2));
+            maxSeconds = Math.max(minSeconds, Number(spawn.rampedMaxSeconds || spawn.maxSeconds || 4));
+        } else {
+            minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
+            maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
+        }
+        const delayMs = Math.floor((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
         this.liveSpawnTimeoutId = setTimeout(() => {
             if (this.isComplete) return;
             this.spawnLiveAttack();
@@ -2078,106 +3869,75 @@ export class PasswordCrack {
         }, delayMs);
     }
 
-    /**
-     * Create one incoming attack instance
-     */
     spawnLiveAttack() {
-        if (this.liveActiveAttack) {
-            this.resolveLiveAttackMissed(this.liveActiveAttack);
-        }
+        if (this.liveActiveAttack) this.resolveLiveAttackMissed(this.liveActiveAttack);
         const attacks = Array.isArray(this.puzzleData.attackTypes) ? this.puzzleData.attackTypes : [];
         if (!attacks.length) return;
         const attack = attacks[Math.floor(Math.random() * attacks.length)];
         this.liveActiveAttack = attack;
         const panel = document.getElementById('live-current-attack');
-        if (panel) {
-            panel.innerHTML = `<strong>${attack.type}</strong> incoming. Potential damage: ${attack.damage}.`;
-        }
+        if (panel) panel.innerHTML = `<div class="ld-current__label">Incoming Attack</div><strong>${attack.type}</strong> incoming. Potential damage: ${attack.damage}.<div style="margin-top:8px;color:rgba(180,190,230,.7);line-height:1.55;">${attack.vector || 'Credential attack wave detected.'}</div>`;
         this.appendLiveLog(`Wave detected: ${attack.type}`);
-
         this.liveAttackTimeoutId = setTimeout(() => {
-            if (this.isComplete) return;
-            if (!this.liveActiveAttack) return;
+            if (this.isComplete || !this.liveActiveAttack) return;
             this.resolveLiveAttackMissed(this.liveActiveAttack);
             this.liveActiveAttack = null;
             this.updateLiveSimulationUI();
         }, 2200);
     }
 
-    /**
-     * Activate chosen defense
-     * @param {string} defenseName
-     */
     activateLiveDefense(defenseName) {
         if (this.isComplete) return;
         const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const defense = defenses.find(item => item.name === defenseName);
+        const defense = defenses.find(d => d.name === defenseName);
         if (!defense) return;
-
         const cooldownLeft = Number(this.liveDefenseCooldowns[defenseName] || 0);
-        if (cooldownLeft > 0) {
-            this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldownLeft}s).`, 'warning');
-            return;
-        }
-
+        if (cooldownLeft > 0) { this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldownLeft}s).`, 'warning'); return; }
         const cost = Number(defense.energyCost || 0);
-        if (this.liveEnergy < cost) {
-            this.gameScreen.ui.showNotification('Not enough energy for that defense.', 'warning');
-            return;
-        }
-
+        if (this.liveEnergy < cost) { this.gameScreen.ui.showNotification('Not enough energy.', 'warning'); return; }
         this.liveEnergy = Math.max(0, this.liveEnergy - cost);
         this.liveDefenseCooldowns[defenseName] = Number(defense.cooldown || 0);
         this.updateLiveSimulationUI();
         this.updateLiveDefenseButtons();
         this.audio.playButtonClick();
         this.appendLiveLog(`Defense activated: ${defenseName}`);
-
         if (!this.liveActiveAttack) return;
-
         const attack = this.liveActiveAttack;
         const matched = Array.isArray(defense.protectsAgainst) && defense.protectsAgainst.includes(attack.type);
         const canCounter = Array.isArray(attack.counteredBy) && attack.counteredBy.includes(defense.name);
-
         if (matched || canCounter) {
-            if (this.liveAttackTimeoutId) {
-                clearTimeout(this.liveAttackTimeoutId);
-                this.liveAttackTimeoutId = null;
-            }
+            if (this.liveAttackTimeoutId) { clearTimeout(this.liveAttackTimeoutId); this.liveAttackTimeoutId = null; }
             this.liveActiveAttack = null;
             const panel = document.getElementById('live-current-attack');
-            if (panel) {
-                panel.innerHTML = `${attack.type} blocked by ${defense.name}.`;
-            }
+            if (panel) panel.innerHTML = `<div class="ld-current__label">Containment Result</div>${attack.type} blocked by <strong>${defense.name}</strong>.`;
             this.appendLiveLog(`Blocked: ${attack.type} using ${defense.name}`);
+            this.liveSuccessfulBlocks++;
             this.audio.playSuccess();
         } else {
             this.appendLiveLog(`${defense.name} did not stop ${attack.type}.`);
         }
     }
 
-    /**
-     * Resolve missed attack damage
-     * @param {{type:string, damage:number}} attack
-     */
     resolveLiveAttackMissed(attack) {
         const damage = Number(attack?.damage || 0);
         this.liveVaultHealth = Math.max(0, this.liveVaultHealth - damage);
+        this.liveMissedWaves++;
         this.appendLiveLog(`Impact: ${attack.type} hit the vault (-${damage} health).`);
         const panel = document.getElementById('live-current-attack');
-        if (panel) {
-            panel.innerHTML = `${attack.type} was successful. Vault damaged by ${damage}.`;
-        }
+        if (panel) panel.innerHTML = `<div class="ld-current__label">Containment Result</div>${attack.type} was successful. Vault damaged by ${damage}.`;
         this.audio.playFailure();
         this.updateLiveSimulationUI();
-        if (this.liveVaultHealth <= 0) {
-            this.finishLiveDefenseSimulation(false);
-        }
+        if (this.liveVaultHealth <= 0) this.finishLiveDefenseSimulation(false);
     }
 
-    /**
-     * Update HUD values for live simulation
-     */
+    stopLiveDefenseSimulation() {
+        if (this.liveAttackTimeoutId) { clearTimeout(this.liveAttackTimeoutId); this.liveAttackTimeoutId = null; }
+        if (this.liveSpawnTimeoutId) { clearTimeout(this.liveSpawnTimeoutId); this.liveSpawnTimeoutId = null; }
+        if (this.liveEnergyTimerId) { clearInterval(this.liveEnergyTimerId); this.liveEnergyTimerId = null; }
+        if (this.liveDurationTimerId) { clearInterval(this.liveDurationTimerId); this.liveDurationTimerId = null; }
+        if (this.liveCooldownTimerId) { clearInterval(this.liveCooldownTimerId); this.liveCooldownTimerId = null; }
+    }
+
     updateLiveSimulationUI() {
         const vault = Math.max(0, Math.min(100, this.liveVaultHealth));
         const energy = Math.max(0, Math.min(100, this.liveEnergy));
@@ -2194,32 +3954,20 @@ export class PasswordCrack {
         this.updateLiveDefenseButtons();
     }
 
-    /**
-     * Update defense button disabled/cooldown text
-     */
     updateLiveDefenseButtons() {
-        const buttons = Array.from(document.querySelectorAll('button[data-live-defense]'));
         const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        buttons.forEach(btn => {
-            const defenseName = btn.dataset.liveDefense;
-            const defense = defenses.find(item => item.name === defenseName);
+        document.querySelectorAll('button[data-live-defense]').forEach(btn => {
+            const name = btn.dataset.liveDefense;
+            const defense = defenses.find(d => d.name === name);
             if (!defense) return;
-            const cooldown = Number(this.liveDefenseCooldowns[defenseName] || 0);
+            const cooldown = Number(this.liveDefenseCooldowns[name] || 0);
             const affordable = this.liveEnergy >= Number(defense.energyCost || 0);
             btn.disabled = this.isComplete || cooldown > 0 || !affordable;
-            const cd = document.getElementById(`live-cd-${this.sanitizeId(defenseName)}`);
-            if (cd) {
-                if (cooldown > 0) cd.textContent = `COOLDOWN: ${cooldown}s`;
-                else if (!affordable) cd.textContent = 'LOW ENERGY';
-                else cd.textContent = 'READY';
-            }
+            const cd = document.getElementById(`live-cd-${this.sanitizeId(name)}`);
+            if (cd) cd.textContent = cooldown > 0 ? `COOLDOWN: ${cooldown}s` : !affordable ? 'LOW ENERGY' : 'READY';
         });
     }
 
-    /**
-     * Append event to live feed
-     * @param {string} message
-     */
     appendLiveLog(message) {
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
@@ -2229,290 +3977,565 @@ export class PasswordCrack {
         feedback.scrollTop = feedback.scrollHeight;
     }
 
-    /**
-     * End simulation and finalize mission
-     * @param {boolean} success
-     */
     finishLiveDefenseSimulation(success) {
         if (this.isComplete) return;
         this.isComplete = true;
         this.stopLiveDefenseSimulation();
-        const summary = this.puzzleData.educationalSummary || 'Security works best when multiple defenses protect the system. No single tool can stop every attack.';
+        const summary = this.puzzleData.educationalSummary || '';
         const feedback = document.getElementById('guess-feedback');
+        const coveragePct = Math.round((this.liveSuccessfulBlocks / Math.max(1, this.liveSuccessfulBlocks + this.liveMissedWaves)) * 100);
         if (feedback) {
-            feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: success ? 'success' : 'error',
+                title: success ? 'Blue team held the vault line' : 'Blue team coverage collapsed',
+                summary,
+                details: [
+                    `Blocked waves: ${this.liveSuccessfulBlocks}`,
+                    `Missed waves: ${this.liveMissedWaves}`,
+                    `Coverage rate: ${coveragePct}%`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
         }
         if (success) {
             this.audio.playSuccess();
-            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+            this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
             this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Defense simulation completed.', 'success');
             setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
         } else {
             this.audio.playFailure();
-            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
+            this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
             this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Vault health reached zero.', 'error');
             setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
         }
     }
 
-    /**
-     * Setup listeners for multi-stage boss simulation
-     */
-    setupMultiStageDefenseEventListeners() {
-        const defenseButtons = Array.from(document.querySelectorAll('button[data-multi-defense]'));
-        defenseButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const defenseName = btn.dataset.multiDefense;
-                if (!defenseName) return;
-                this.activateMultiDefense(defenseName);
-            });
-        });
+    // ─── Threat Hunt (Level 8) ────────────────────────────────────────────────
+
+    renderThreatHuntSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const panels = Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
+        const flatEntries = panels.flatMap(panel => (panel.entries || []).map(entry => ({ ...entry, panelTitle: panel.title, panelId: panel.id })));
+        if (!this.threatSelectedEventId && flatEntries[0]) this.threatSelectedEventId = flatEntries[0].id;
+        const selectedEvent = flatEntries.find(entry => entry.id === this.threatSelectedEventId) || flatEntries[0] || null;
+        const selectedChain = selectedEvent ? this.getThreatChainEntryByEventId(selectedEvent.id) : null;
+        const threatSummary = this.getThreatOperationsSummary();
+        const logsHtml = this.threatActivityLog.length
+            ? this.threatActivityLog.map(item => `<div>• ${item}</div>`).join('')
+            : 'Threat hunt initialized. Review evidence and act carefully.';
+        const actionButtons = (this.puzzleData.playerActions || []).map(action => `
+            <button class="th-card-action" data-threat-action="${action.id}" data-event-id="${selectedEvent?.id || ''}" type="button" ${selectedEvent ? '' : 'disabled'}>
+                ${action.label}
+            </button>`).join('');
+        const panelMarkup = panels.map(panel => {
+            const rows = (panel.entries || []).map(entry => {
+                const selected = this.threatSelectedEventId === entry.id;
+                const marked = this.threatMarkedEvents.has(entry.id);
+                const investigated = this.threatInvestigatedEvents.has(entry.id);
+                const chain = this.getThreatChainEntryByEventId(entry.id);
+                return `
+                    <button class="th-event ${selected ? 'selected' : ''}" data-threat-event="${entry.id}" type="button">
+                        <div class="th-event__top">
+                            <span>${entry.id}</span>
+                            <span class="th-event__status ${entry.status === 'anomalous' ? 'anomalous' : 'normal'}">${entry.status}</span>
+                        </div>
+                        <div class="th-event__title">${entry.action}</div>
+                        <div class="th-event__meta">${entry.timestamp} · ${entry.user} · ${entry.locationOrIP}</div>
+                        <div class="th-event__flags">
+                            ${marked ? '<span>MARKED</span>' : ''}
+                            ${investigated ? '<span>INVESTIGATED</span>' : ''}
+                            ${this.threatContainedMajor.has(chain?.key) ? '<span>CONTAINED</span>' : ''}
+                        </div>
+                    </button>`;
+            }).join('');
+            return `
+                <div class="th-panel">
+                    <div class="th-panel__head">
+                        <strong>${panel.title}</strong>
+                        <span>${(panel.entries || []).length} EVENTS</span>
+                    </div>
+                    <div class="th-panel__body">${rows}</div>
+                </div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <style>
+                .th-shell{background:linear-gradient(180deg,#070b12 0%,#05080f 100%);color:#eef2ff;border:1px solid rgba(95,116,170,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+                .th-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(95,116,170,.25);gap:16px;flex-wrap:wrap}
+                .th-brand,.th-level,.th-status,.th-kicker,.th-event__status,.th-panel__head span,.th-card-action{font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
+                .th-brand{color:#7fd5ff;font-weight:700}.th-level{color:rgba(127,213,255,.72);font-size:.85rem}.th-status{color:#00e87a;font-size:.82rem}
+                .th-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+                .th-grid{display:grid;grid-template-columns:1.2fr 360px;gap:0;min-height:700px}
+                .th-main,.th-side{padding:24px;background:rgba(0,0,0,.18)}.th-main{border-right:1px solid rgba(95,116,170,.12)}
+                .th-kicker{font-size:.74rem;color:rgba(127,213,255,.64);margin-bottom:12px}
+                .th-overview,.th-sidebox,.th-panel,.th-selected,.th-log{background:rgba(0,0,0,.34);border:1px solid rgba(95,116,170,.12)}
+                .th-overview,.th-sidebox,.th-selected,.th-log{padding:16px}
+                .th-overview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.th-metric{display:grid;gap:8px;padding:12px;border:1px solid rgba(95,116,170,.1);background:rgba(255,255,255,.02)}
+                .th-metric span{color:rgba(180,190,230,.62);font-size:.78rem}.th-metric strong{color:#eef2ff;font-family:Consolas,"Courier New",monospace;font-size:1.3rem}
+                .th-bar{height:6px;background:rgba(255,64,96,.12);overflow:hidden}.th-bar > div{height:100%;background:linear-gradient(90deg,#ff4060,#7fd5ff)}
+                .th-panels{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+                .th-panel__head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(95,116,170,.1)}
+                .th-panel__head strong{color:#eef2ff}.th-panel__head span{color:rgba(127,213,255,.62);font-size:.68rem}
+                .th-panel__body{padding:14px;display:grid;gap:10px}
+                .th-event{padding:14px;border:1px solid rgba(95,116,170,.12);background:rgba(255,255,255,.02);text-align:left;color:#eef2ff;cursor:pointer;transition:.18s ease}
+                .th-event:hover{border-color:rgba(127,213,255,.36);transform:translateY(-1px)}.th-event.selected{border-color:#7fd5ff;background:rgba(0,212,255,.08)}
+                .th-event__top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:Consolas,"Courier New",monospace;color:rgba(127,213,255,.68);font-size:.76rem}
+                .th-event__status.normal{color:#00e87a}.th-event__status.anomalous{color:#ffcb6b}.th-event__title{margin-top:10px;font-weight:700;line-height:1.45}.th-event__meta{margin-top:6px;color:rgba(180,190,230,.62);font-size:.82rem;line-height:1.5}
+                .th-event__flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.th-event__flags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(255,64,96,.22);background:rgba(255,64,96,.08);color:#ff7e92;font-size:.7rem}
+                .th-selected__title{font-size:1.15rem;color:#eef2ff}.th-selected__meta{margin-top:8px;color:rgba(180,190,230,.62);line-height:1.6}.th-selected__chain{margin-top:14px;padding:12px;border:1px solid rgba(0,212,255,.16);background:rgba(0,212,255,.06);color:#bceeff}
+                .th-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.th-card-action{padding:12px;border:1px solid rgba(95,116,170,.16);background:rgba(255,255,255,.02);color:#eef2ff;cursor:pointer}
+                .th-card-action:hover{border-color:rgba(127,213,255,.36);background:rgba(127,213,255,.08)}.th-log{margin-top:16px;max-height:220px;overflow:auto;text-align:left;color:rgba(220,228,245,.86)}
+                .th-finalize{margin-top:16px;width:100%}
+                @media (max-width:1080px){.th-grid{grid-template-columns:1fr}.th-main{border-right:0;border-bottom:1px solid rgba(95,116,170,.12)}.th-panels,.th-overview-grid{grid-template-columns:1fr}}
+                @media (max-width:720px){.th-header{padding:14px 18px}.th-main,.th-side{padding:18px}.th-action-grid{grid-template-columns:1fr}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 08 - SOC CASEWORK',
+                title: 'ENTERPRISE THREAT<br>HUNT',
+                status: 'SOC CASE ACTIVE',
+                phases: [
+                    { label: 'RECONSTRUCT', active: true },
+                    { label: 'MARK CHAIN', active: this.threatMarkedEvents.size > 0 },
+                    { label: 'CONTAIN', active: this.attempts > 0 }
+                ],
+                content: `
+                    <div class="th-shell">
+                        <div class="th-header">
+                            <div class="th-brand">SHADOWDEF</div>
+                            <div class="th-level">LEVEL 8 - ENTERPRISE THREAT HUNT</div>
+                            <div class="th-status">SOC CASE ACTIVE</div>
+                        </div>
+                        <div class="th-hint-strip">HINT: Validate behavior across multiple logs before containing. Quiet intrusions look normal until the chain is reconstructed.</div>
+                        <div class="th-grid">
+                            <main class="th-main">
+                                <div class="th-kicker">Case Overview</div>
+                                <div class="th-overview">
+                                    <div class="th-overview-grid">
+                                        <div class="th-metric"><span>Vault Health</span><strong id="threat-vault-text">${Math.floor(this.threatVaultHealth)}%</strong><div class="th-bar"><div id="threat-vault-fill" style="width:${this.threatVaultHealth}%;"></div></div></div>
+                                        <div class="th-metric"><span>System Integrity</span><strong id="threat-integrity-text">${Math.floor(this.threatSystemIntegrity)}%</strong><div class="th-bar"><div id="threat-integrity-fill" style="width:${this.threatSystemIntegrity}%;"></div></div></div>
+                                        <div class="th-metric"><span>False Positives</span><strong id="threat-fp-text">${this.threatFalsePositiveCount}</strong></div>
+                                        <div class="th-metric"><span>Attacker Progress</span><strong id="threat-progress-text">${this.threatAttackerProgress}</strong></div>
+                                    </div>
+                                    <div class="th-overview-grid" style="margin-top:12px;">
+                                        <div class="th-metric"><span>Detected Links</span><strong>${threatSummary.detected}</strong></div>
+                                        <div class="th-metric"><span>Contained Links</span><strong>${threatSummary.contained}</strong></div>
+                                        <div class="th-metric"><span>Investigations</span><strong>${threatSummary.investigated}</strong></div>
+                                        <div class="th-metric"><span>Marked Events</span><strong>${this.threatMarkedEvents.size}</strong></div>
+                                    </div>
+                                </div>
+                                <div class="th-kicker" style="margin-top:18px;">Evidence Panels</div>
+                                <div class="th-panels">${panelMarkup}</div>
+                            </main>
+                            <aside class="th-side">
+                                <div class="th-kicker">Selected Evidence</div>
+                                <div class="th-selected">
+                                    ${selectedEvent ? `
+                                        <div class="th-selected__title">${selectedEvent.action}</div>
+                                        <div class="th-selected__meta">${selectedEvent.id} · ${selectedEvent.panelTitle}<br>${selectedEvent.timestamp} · ${selectedEvent.user} · ${selectedEvent.locationOrIP}</div>
+                                        <div class="th-selected__chain">${selectedChain ? `<strong>${selectedChain.label}</strong><br>${selectedChain.explanation}` : 'No confirmed chain link yet. Investigate before you contain.'}</div>
+                                        <div class="th-selected__meta" style="margin-top:12px;">Analyst read: ${selectedEvent.status === 'anomalous' ? 'Anomalous behavior with context to validate.' : 'Looks routine unless linked to a broader chain.'}</div>
+                                        <div class="th-action-grid">${actionButtons}</div>
+                                    ` : 'No evidence selected.'}
+                                </div>
+                                <div class="th-kicker" style="margin-top:16px;">Analyst Log</div>
+                                <div class="th-log guess-feedback" id="guess-feedback">${logsHtml}</div>
+                                <button class="btn btn-primary th-finalize" id="threat-finalize">FINALIZE HUNT</button>
+                                <div id="attempt-counter" style="text-align:center;margin-top:16px;color:var(--text-secondary);">
+                                    Investigation actions: <span style="color:var(--cyber-blue);">${this.attempts}</span>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupThreatHuntEventListeners();
+        this.updateThreatHuntUI();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
     }
 
-    /**
-     * Setup listeners for live patch simulation
-     */
-    setupLivePatchEventListeners() {
-        const buttons = Array.from(document.querySelectorAll('button[data-patch-action]'));
-        buttons.forEach(btn => {
+    setupThreatHuntEventListeners() {
+        document.querySelectorAll('[data-threat-event]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const actionId = btn.dataset.patchAction;
-                if (!actionId) return;
-                this.handlePatchAction(actionId);
-            });
-        });
-    }
-
-    /**
-     * Setup listeners for enterprise architecture simulation
-     */
-    setupEnterpriseArchitectureEventListeners() {
-        const map = [
-            "minimum_length",
-            "allow_passphrases",
-            "require_complexity",
-            "block_common_passwords",
-            "password_storage",
-            "authentication_controls",
-            "login_protection",
-            "monitoring_response"
-        ];
-        map.forEach(key => {
-            const el = document.getElementById(`ea-${key}`);
-            if (!el) return;
-            el.addEventListener('change', () => {
-                this.enterpriseConfig[key] = el.value;
+                this.threatSelectedEventId = btn.dataset.threatEvent;
                 this.audio.playButtonClick();
+                if (this.visualizerElement) this.renderThreatHuntSimulationPuzzle(this.visualizerElement);
             });
         });
-
-        const btn = document.getElementById('ea-run-assessment');
-        if (btn) {
-            btn.addEventListener('click', () => this.runEnterpriseArchitectureAssessment());
-        }
+        document.querySelectorAll('button[data-threat-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.threatAction;
+                const eventId = btn.dataset.eventId;
+                if (actionId && eventId) this.handleThreatAction(actionId, eventId);
+            });
+        });
+        document.getElementById('threat-finalize')?.addEventListener('click', () => this.finalizeThreatHunt());
     }
 
-    /**
-     * Run full final certification evaluation
-     */
-    runEnterpriseArchitectureAssessment() {
+    handleThreatAction(actionId, eventId) {
         if (this.isComplete) return;
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const attacks = Array.isArray(this.puzzleData.attackSimulationMatrix) ? this.puzzleData.attackSimulationMatrix : [];
-        this.enterpriseAttackResults = attacks.map(a => this.evaluateEnterpriseAttack(a));
-        this.enterpriseScores = this.calculateEnterpriseScores(this.enterpriseAttackResults);
-        this.enterpriseRating = this.calculateEnterpriseRatingFromScore(this.enterpriseScores.finalWeightedScore);
-        this.enterpriseBadgeUnlocked = this.isEnterpriseBadgeUnlocked(this.enterpriseRating, this.enterpriseScores.finalWeightedScore);
-
-        this.renderEnterpriseAssessmentFeedback();
-        this.isComplete = true;
-        this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-        setTimeout(() => this.gameScreen.completePuzzle(true), 1500);
-    }
-
-    /**
-     * Evaluate one attack result from current config
-     * @param {Object} attack
-     * @returns {{attackId:string,attackName:string,outcome:string}}
-     */
-    evaluateEnterpriseAttack(attack) {
-        const cfg = this.enterpriseConfig;
-        const chosen = [
-            cfg.password_storage,
-            cfg.authentication_controls,
-            cfg.login_protection,
-            cfg.monitoring_response,
-            cfg.minimum_length,
-            cfg.allow_passphrases,
-            cfg.require_complexity,
-            cfg.block_common_passwords
-        ];
-        const strong = (attack.strongCounters || []).filter(c => chosen.includes(c)).length;
-        const partial = (attack.partialCounters || []).filter(c => chosen.includes(c)).length;
-        let outcome = "Successful";
-        if (strong >= 2) outcome = "Blocked";
-        else if (strong >= 1 || partial >= 1) outcome = "Partially Mitigated";
-        return {
-            attackId: attack.attackId,
-            attackName: attack.attackName,
-            outcome
-        };
-    }
-
-    /**
-     * Compute weighted score dashboard
-     * @param {Array} results
-     * @returns {Object}
-     */
-    calculateEnterpriseScores(results) {
-        const algo = this.puzzleData.scoringAlgorithm || {};
-        const points = algo.attackOutcomePoints || {};
-        const scoreMap = {
-            "Blocked": Number(points.blocked || 100),
-            "Partially Mitigated": Number(points.partially_mitigated || 65),
-            "Successful": Number(points.successful || 25)
-        };
-        const avgAttack = results.length
-            ? Math.round(results.reduce((s, r) => s + (scoreMap[r.outcome] || 0), 0) / results.length)
-            : 0;
-
-        const cfg = this.enterpriseConfig;
-        const vaultSecurityScore = Math.max(0, Math.min(100, avgAttack + (cfg.password_storage === 'hash_salt_iteration' ? 8 : cfg.password_storage === 'hash_salt' ? 5 : 0)));
-        const breachResistanceScore = Math.max(0, Math.min(100, avgAttack + (cfg.authentication_controls === 'hardware_key_mfa' ? 10 : cfg.authentication_controls === 'app_mfa' ? 6 : 0)));
-        const userExperienceScore = Math.max(0, Math.min(100, 75 - (cfg.login_protection === 'adaptive_risk_login' ? 4 : 0) - (cfg.authentication_controls === 'hardware_key_mfa' ? 8 : 0) + (cfg.allow_passphrases === 'yes' ? 6 : -3)));
-        const operationalStabilityScore = Math.max(0, Math.min(100, 78 - (cfg.monitoring_response === 'realtime_anomaly' ? 8 : cfg.monitoring_response === 'breach_alerts' ? 4 : 0) - (cfg.login_protection === 'adaptive_risk_login' ? 5 : 0)));
-        const incidentResponseMaturity = Math.max(0, Math.min(100, (cfg.monitoring_response === 'realtime_anomaly' ? 90 : cfg.monitoring_response === 'breach_alerts' ? 78 : cfg.monitoring_response === 'basic_logging' ? 60 : 35)));
-
-        const w = algo.weightedCategories || {};
-        const weighted =
-            vaultSecurityScore * Number(w.vaultSecurityScore?.weight || 0.3) +
-            breachResistanceScore * Number(w.breachResistanceScore?.weight || 0.25) +
-            userExperienceScore * Number(w.userExperienceScore?.weight || 0.15) +
-            operationalStabilityScore * Number(w.operationalStabilityScore?.weight || 0.15) +
-            incidentResponseMaturity * Number(w.incidentResponseMaturity?.weight || 0.15);
-
-        return {
-            vaultSecurityScore: Math.round(vaultSecurityScore),
-            breachResistanceScore: Math.round(breachResistanceScore),
-            userExperienceScore: Math.round(userExperienceScore),
-            operationalStabilityScore: Math.round(operationalStabilityScore),
-            incidentResponseMaturity: Math.round(incidentResponseMaturity),
-            finalWeightedScore: Math.round(weighted)
-        };
-    }
-
-    /**
-     * Resolve final rating from score
-     * @param {number} score
-     * @returns {string}
-     */
-    calculateEnterpriseRatingFromScore(score) {
-        const rules = this.puzzleData.scoringAlgorithm?.ratingRules || [];
-        for (const rule of rules) {
-            if (score >= Number(rule.minScore || 0)) return rule.rating;
+        const actionKey = `${eventId}:${actionId}`;
+        if (this.threatActionHistory.has(actionKey)) {
+            this.gameScreen.ui.showNotification('That action was already used on this event.', 'warning');
+            return;
         }
-        return 'C';
+        this.threatActionHistory.add(actionKey);
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const chainEntry = this.getThreatChainEntryByEventId(eventId);
+        const isMalicious = !!chainEntry;
+        const rules = this.puzzleData.progressionLogic || {};
+        const progressRules = rules.attackerProgressRules || {};
+        const falseRules = rules.falsePositiveRules || {};
+        const containment = rules.containmentEffects || {};
+
+        const addFalsePositive = (drop = Number(falseRules.systemIntegrityDropPerFalsePositive || 8)) => {
+            this.threatFalsePositiveCount += Number(falseRules.incorrectFlagIncrease || 1);
+            this.threatSystemIntegrity = Math.max(0, this.threatSystemIntegrity - drop);
+            this.appendThreatLog(rules.operationalFeedback?.falseAlert || 'False alert logged.');
+        };
+        const addAttackerProgress = () => { this.threatAttackerProgress += Number(progressRules.missedMaliciousEventIncrease || 1); };
+        const markDetected = () => {
+            if (!chainEntry) return;
+            this.threatDetectedMajor.add(chainEntry.key);
+            this.threatAttackerProgress = Math.max(0, this.threatAttackerProgress - Number(progressRules.correctMajorDetectionDecrease || 1));
+        };
+
+        if (actionId === 'mark_suspicious') { this.threatMarkedEvents.add(eventId); if (isMalicious) { markDetected(); this.appendThreatLog('Suspicious activity flagged.'); } else addFalsePositive(); }
+        if (actionId === 'investigate') { this.threatInvestigatedEvents.add(eventId); if (isMalicious) { markDetected(); this.appendThreatLog(this.getThreatInvestigationMessage(chainEntry)); } else this.appendThreatLog(`Investigation complete for ${eventId}. No malicious chain evidence found.`); }
+        if (actionId === 'isolate_account') { const canStop = isMalicious && (containment.isolateAccountStops || []).includes(chainEntry.key); if (canStop) { markDetected(); this.threatContainedMajor.add(chainEntry.key); this.appendThreatLog(`Containment applied: account isolation stopped ${chainEntry.label}.`); } else addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10)); }
+        if (actionId === 'block_ip') { const canStop = isMalicious && (containment.blockIPStops || []).includes(chainEntry.key); if (canStop) { markDetected(); this.threatContainedMajor.add(chainEntry.key); this.appendThreatLog(rules.operationalFeedback?.exportAlert || 'Data export attempt blocked.'); } else addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10)); }
+        if (actionId === 'ignore') { if (isMalicious) { addAttackerProgress(); this.appendThreatLog(`Ignored malicious signal (${eventId}). Attacker progression increased.`); } else this.appendThreatLog(`Ignored ${eventId}. No immediate risk confirmed.`); }
+
+        this.applyThreatPassiveRisk();
+        this.evaluateThreatCriticalEscalation();
+        this.updateThreatHuntUI();
+        if (!this.isComplete && this.visualizerElement) this.renderThreatHuntSimulationPuzzle(this.visualizerElement);
+        this.evaluateThreatFailState();
     }
 
-    /**
-     * Badge unlock check
-     * @param {string} rating
-     * @param {number} score
-     * @returns {boolean}
-     */
-    isEnterpriseBadgeUnlocked(rating, score) {
-        const logic = this.puzzleData.certificationBadgeLogic?.unlockCondition || {};
-        const minRating = logic.minimumRating || 'A';
-        const minScore = Number(logic.minimumScore || 80);
-        const order = { "C": 1, "B": 2, "A": 3, "A+": 4 };
-        return (order[rating] || 0) >= (order[minRating] || 0) && score >= minScore;
+    getThreatChainEntryByEventId(eventId) {
+        const chain = Array.isArray(this.puzzleData.hiddenAttackChain) ? this.puzzleData.hiddenAttackChain : [];
+        return chain.find(s => Array.isArray(s.linkedEvidence) && s.linkedEvidence.includes(eventId)) || null;
     }
 
-    /**
-     * Print structured certification report
-     */
-    renderEnterpriseAssessmentFeedback() {
+    getThreatInvestigationMessage(chainEntry) {
+        if (!chainEntry) return 'Investigation did not confirm malicious behavior.';
+        return `Investigate result: ${chainEntry.label}. ${chainEntry.explanation}`;
+    }
+
+    applyThreatPassiveRisk() {
+        const passive = this.puzzleData.progressionLogic?.passiveRisk || {};
+        if (!passive.enabledWhenUndetected) return;
+        const cycle = Math.max(1, Number(passive.cycleTurns || 2));
+        if (this.attempts % cycle !== 0 || this.threatAttackerProgress <= 0) return;
+        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(passive.vaultHealthDropPerCycle || 4));
+    }
+
+    evaluateThreatCriticalEscalation() {
+        const progressRules = this.puzzleData.progressionLogic?.attackerProgressRules || {};
+        const critical = Number(progressRules.criticalThreshold || 5);
+        if (this.threatAttackerProgress < critical) return;
+        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(progressRules.rapidVaultDrainOnCritical || 12));
+        this.appendThreatLog(this.puzzleData.progressionLogic?.operationalFeedback?.criticalEscalation || 'Warning: attacker progression critical.');
+    }
+
+    updateThreatHuntUI() {
+        const vault = Math.max(0, Math.min(100, this.threatVaultHealth));
+        const integrity = Math.max(0, Math.min(100, this.threatSystemIntegrity));
+        const vaultText = document.getElementById('threat-vault-text'); if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
+        const vaultFill = document.getElementById('threat-vault-fill'); if (vaultFill) vaultFill.style.width = `${vault}%`;
+        const intText = document.getElementById('threat-integrity-text'); if (intText) intText.textContent = `${Math.floor(integrity)}%`;
+        const intFill = document.getElementById('threat-integrity-fill'); if (intFill) intFill.style.width = `${integrity}%`;
+        const fpText = document.getElementById('threat-fp-text'); if (fpText) fpText.textContent = `${this.threatFalsePositiveCount}`;
+        const progText = document.getElementById('threat-progress-text'); if (progText) progText.textContent = `${this.threatAttackerProgress}`;
+    }
+
+    appendThreatLog(message) {
+        this.threatActivityLog.push(message);
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
-        const fg = this.puzzleData.feedbackGenerator || {};
-        const mitigatedCount = this.enterpriseAttackResults.filter(r => r.outcome !== 'Successful').length;
-        const totalThreats = this.enterpriseAttackResults.length;
-
-        const areaPairs = [
-            ["Vault Security", this.enterpriseScores.vaultSecurityScore],
-            ["Breach Resistance", this.enterpriseScores.breachResistanceScore],
-            ["User Experience", this.enterpriseScores.userExperienceScore],
-            ["Operational Stability", this.enterpriseScores.operationalStabilityScore],
-            ["Incident Response Maturity", this.enterpriseScores.incidentResponseMaturity]
-        ];
-        areaPairs.sort((a, b) => b[1] - a[1]);
-        const strongestArea = areaPairs[0][0];
-        const weakestArea = areaPairs[areaPairs.length - 1][0];
-        const recommendation = weakestArea === "Incident Response Maturity"
-            ? "Improve continuous monitoring to detect early attack signals."
-            : weakestArea === "User Experience"
-                ? "Reduce unnecessary friction while keeping strong controls."
-                : "Strengthen layered controls in weaker architecture areas.";
-
-        const summary = (fg.summaryTemplate || "You successfully mitigated [mitigatedCount] of [totalThreats] simulated threats.")
-            .replace("[mitigatedCount]", String(mitigatedCount))
-            .replace("[totalThreats]", String(totalThreats));
-
-        const resultLines = this.enterpriseAttackResults.map(r => `<div>• ${r.attackName}: <strong>${r.outcome}</strong></div>`).join('');
-        const badgeLine = this.enterpriseBadgeUnlocked
-            ? `<div><strong>Badge Unlocked:</strong> ${this.puzzleData.certificationBadgeLogic?.badgeName || 'Certified Security Architect'}</div>`
-            : `<div>${this.puzzleData.certificationBadgeLogic?.lockedMessage || ''}</div>`;
-
-        feedback.innerHTML = `
-            <div><strong>Phase 2: Controlled Attack Evaluation</strong></div>
-            ${resultLines}
-            <div style="margin-top:10px;"><strong>Phase 3: Performance Metrics</strong></div>
-            <div>Vault Security Score: ${this.enterpriseScores.vaultSecurityScore}</div>
-            <div>Breach Resistance Score: ${this.enterpriseScores.breachResistanceScore}</div>
-            <div>User Experience Score: ${this.enterpriseScores.userExperienceScore}</div>
-            <div>Operational Stability Score: ${this.enterpriseScores.operationalStabilityScore}</div>
-            <div>Incident Response Maturity: ${this.enterpriseScores.incidentResponseMaturity}</div>
-            <div style="margin-top:8px;"><strong>Final Rating:</strong> ${this.enterpriseRating} (${this.puzzleData.ratingBands?.[this.enterpriseRating] || ''})</div>
-            <div><strong>Final Score:</strong> ${this.enterpriseScores.finalWeightedScore}/100</div>
-            <div style="margin-top:8px;">${summary}</div>
-            <div>${(fg.strongestAreaTemplate || "Strongest area: [strongestArea].").replace("[strongestArea]", strongestArea)}</div>
-            <div>${(fg.weakestAreaTemplate || "Weakest area: [weakestArea].").replace("[weakestArea]", weakestArea)}</div>
-            <div>${(fg.recommendationTemplate || "Recommended improvement: [recommendation].").replace("[recommendation]", recommendation)}</div>
-            <div style="margin-top:8px;">${fg.humilityMessage || ''}</div>
-            <div style="margin-top:8px;">${badgeLine}</div>
-        `;
+        const line = document.createElement('div'); line.textContent = `• ${message}`;
+        feedback.appendChild(line); feedback.scrollTop = feedback.scrollHeight;
     }
 
-    /**
-     * Handle one patch lab action
-     * @param {string} actionId
-     */
+    evaluateThreatFailState() {
+        const fail = this.puzzleData.failCondition?.any || [];
+        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
+        const failed = fail.some(rule => {
+            const v = this.getThreatMetric(rule.metric, maxEscalation);
+            if (rule.operator === '<=') return v <= Number(rule.value);
+            if (rule.operator === '<') return v < Number(rule.value);
+            if (rule.operator === '>=') return v >= Number(rule.value);
+            return false;
+        });
+        if (failed) this.finishThreatHunt(false);
+    }
+
+    finalizeThreatHunt() {
+        if (this.isComplete) return;
+        this.evaluateThreatFailState();
+        if (this.isComplete) return;
+        const win = this.puzzleData.winCondition || {};
+        const minContained = Number(win.majorMaliciousEventsContainedMin || 3);
+        const vaultMin = Number(win.vaultHealthAbovePercent || 30);
+        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
+        this.finishThreatHunt(
+            this.threatContainedMajor.size >= minContained &&
+            this.threatVaultHealth > vaultMin &&
+            this.threatAttackerProgress < maxEscalation
+        );
+    }
+
+    finishThreatHunt(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        const summary = this.puzzleData.educationalSummary || {};
+        const feedback = document.getElementById('guess-feedback');
+        const ops = this.getThreatOperationsSummary();
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: success ? 'success' : 'error',
+                title: summary.reveal || (success ? 'Intrusion path contained' : 'Intrusion path escaped containment'),
+                summary: summary.message || '',
+                details: [
+                    `Detected malicious links: ${ops.detected}`,
+                    `Contained malicious links: ${ops.contained}`,
+                    `False positives: ${this.threatFalsePositiveCount}`,
+                    `Attacker progress: ${this.threatAttackerProgress}`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+        if (success) {
+            this.audio.playSuccess(); this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Threat hunt complete.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+        } else {
+            this.audio.playFailure(); this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Threat hunt failed.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+        }
+    }
+
+    getThreatMetric(metric, maxEscalation) {
+        if (metric === 'vaultHealth') return this.threatVaultHealth;
+        if (metric === 'systemIntegrity') return this.threatSystemIntegrity;
+        if (metric === 'attackerProgress') return this.threatAttackerProgress;
+        if (metric === 'maxEscalation') return maxEscalation;
+        return 0;
+    }
+
+    // ─── LEVEL 9: patch simulation with tiered win condition ─────────────────
+
+    renderLivePatchSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const modules = Array.isArray(this.puzzleData.architectureModules) ? this.puzzleData.architectureModules : [];
+        const vulnerabilities = Array.isArray(this.puzzleData.vulnerabilities) ? this.puzzleData.vulnerabilities : [];
+        const moduleMarkup = modules.sort((a, b) => Number(a.flowOrder || 0) - Number(b.flowOrder || 0)).map(module => `
+            <div class="patch-module ${module.editable ? 'editable' : ''}">
+                <div class="patch-module__name">${module.name}</div>
+                <div class="patch-module__note">${module.notes || ''}</div>
+                <div class="patch-module__state">${module.state || 'active'}</div>
+            </div>`).join('');
+        const vulnMarkup = vulnerabilities.map(vulnerability => {
+            const closed = this.patchClosedVulns.has(vulnerability.id);
+            const hidden = vulnerability.status === 'hidden';
+            const revealedOpen = !hidden && !closed;
+            const stateLabel = hidden ? 'HIDDEN' : closed ? 'CLOSED' : 'OPEN';
+            const stateClass = hidden ? 'hidden' : closed ? 'closed' : 'open';
+            return `
+                <div class="patch-vuln ${stateClass}">
+                    <div class="patch-vuln__top">
+                        <span>${vulnerability.name}</span>
+                        <span>${stateLabel}</span>
+                    </div>
+                    <div class="patch-vuln__meta">${vulnerability.moduleId} · ${String(vulnerability.severity || '').toUpperCase()}</div>
+                    <div class="patch-vuln__desc">${hidden ? 'Unknown secondary path not yet exposed.' : (revealedOpen ? 'Still exploitable and requires remediation.' : 'Closed in the current deployment state.')}</div>
+                </div>`;
+        }).join('');
+        const stagedNames = Array.from(this.patchStagedActions).map(id => (this.puzzleData.patchOptions || []).find(option => option.id === id)?.action).filter(Boolean);
+        const stagingPreview = this.getPatchStagingPreview();
+        const patchActions = (Array.isArray(this.puzzleData.patchOptions) ? this.puzzleData.patchOptions : []).map(option => {
+            const staged = this.patchStagedActions.has(option.id);
+            const applied = this.patchAppliedActions.has(option.id);
+            const special = option.id === 'patch_deploy' || option.id === 'patch_simulate_exploit';
+            const cls = special ? 'special' : staged ? 'staged' : applied ? 'applied' : '';
+            return `
+                <button class="patch-action-card ${cls}" data-patch-action="${option.id}" type="button">
+                    <div class="patch-action-card__title">${option.uiLabel || option.action}</div>
+                    <div class="patch-action-card__meta">${special ? (option.id === 'patch_deploy' ? 'Deploy staged changes to production' : 'Re-test current exploit chain') : (applied ? 'Already deployed' : staged ? 'Queued for deploy' : 'Stage this remediation')}</div>
+                </button>`;
+        }).join('');
+        const logHtml = this.patchActivityLog.length
+            ? this.patchActivityLog.map(item => `<div>• ${item}</div>`).join('')
+            : `Live patch lab online. Stage remediations, deploy them, then run exploit simulation to validate the zero-day chain.`;
+
+        container.innerHTML = `
+            <style>
+                .patch-shell{background:linear-gradient(180deg,#070b12 0%,#05080f 100%);color:#eef2ff;border:1px solid rgba(255,64,96,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+                .patch-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(255,64,96,.25);gap:16px;flex-wrap:wrap}
+                .patch-brand,.patch-level,.patch-status,.patch-kicker,.patch-action-card__meta,.patch-attempts{font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
+                .patch-brand{color:#ff4060;font-weight:700}.patch-level{color:rgba(255,64,96,.72);font-size:.85rem}.patch-status{color:#00e87a;font-size:.82rem}
+                .patch-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(255,64,96,.12)}
+                .patch-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.patch-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+                .patch-phase.active{color:#ff4060;background:rgba(255,64,96,.05);border-bottom-color:#ff4060}
+                .patch-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+                .patch-grid{display:grid;grid-template-columns:1.2fr 340px;gap:0;min-height:700px}.patch-main,.patch-side{padding:24px;background:rgba(0,0,0,.18)}.patch-main{border-right:1px solid rgba(255,64,96,.12)}
+                .patch-kicker{font-size:.74rem;color:rgba(255,64,96,.64);margin-bottom:12px}
+                .patch-overview,.patch-sidebox,.patch-action-board,.patch-log,.patch-module,.patch-vuln{background:rgba(0,0,0,.34);border:1px solid rgba(255,64,96,.12)}
+                .patch-overview,.patch-sidebox,.patch-action-board,.patch-log{padding:16px}
+                .patch-overview strong{color:#ff7e92}
+                .patch-overview-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.patch-metric{display:grid;gap:8px;padding:12px;border:1px solid rgba(255,64,96,.1);background:rgba(255,255,255,.02)}
+                .patch-metric span{color:rgba(180,190,230,.62);font-size:.78rem}.patch-metric strong{color:#eef2ff;font-family:Consolas,"Courier New",monospace;font-size:1.3rem}
+                .patch-bar{height:6px;background:rgba(255,64,96,.12);overflow:hidden}.patch-bar > div{height:100%;background:linear-gradient(90deg,#ff4060,#00d4ff)}
+                .patch-section{margin-top:18px}.patch-module-grid,.patch-vuln-grid,.patch-action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+                .patch-module,.patch-vuln{padding:14px}.patch-module.editable{border-color:rgba(0,212,255,.18)}.patch-module__name,.patch-vuln__top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#eef2ff;font-weight:700}
+                .patch-module__note,.patch-vuln__desc{margin-top:8px;color:rgba(180,190,230,.64);line-height:1.55;font-size:.84rem}.patch-module__state,.patch-vuln__meta{margin-top:10px;color:#8beeff;font-family:Consolas,"Courier New",monospace;font-size:.72rem}
+                .patch-vuln.open{border-color:rgba(255,64,96,.24)}.patch-vuln.closed{border-color:rgba(0,232,122,.24)}.patch-vuln.hidden{border-color:rgba(180,190,230,.18)}
+                .patch-action-card{padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);text-align:left;color:#eef2ff;cursor:pointer;transition:.18s ease}
+                .patch-action-card:hover{border-color:rgba(255,64,96,.34);transform:translateY(-1px)}.patch-action-card.special{border-color:rgba(0,212,255,.24)}.patch-action-card.staged{border-color:rgba(255,176,0,.34);background:rgba(255,176,0,.08)}.patch-action-card.applied{border-color:rgba(0,232,122,.28);background:rgba(0,232,122,.08)}
+                .patch-action-card__title{font-weight:700;line-height:1.45}.patch-action-card__meta{margin-top:8px;color:rgba(180,190,230,.58);font-size:.68rem;line-height:1.55}
+                .patch-sidebox{display:grid;gap:14px}.patch-stage-list{display:grid;gap:8px}.patch-stage-list div{padding:10px 12px;border:1px solid rgba(255,176,0,.16);background:rgba(255,176,0,.06);color:#ffcb6b}
+                .patch-log{margin-top:16px;max-height:220px;overflow:auto;text-align:left;color:rgba(220,228,245,.86)}.patch-attempts{text-align:center;margin-top:16px;color:var(--text-secondary)}
+                @media (max-width:1080px){.patch-grid{grid-template-columns:1fr}.patch-main{border-right:0;border-bottom:1px solid rgba(255,64,96,.12)}.patch-module-grid,.patch-vuln-grid,.patch-action-grid,.patch-overview-grid{grid-template-columns:1fr}}
+                @media (max-width:720px){.patch-header{padding:14px 18px}.patch-main,.patch-side{padding:18px}.patch-phases{grid-template-columns:1fr}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 09 - ENGINEERING CRISIS',
+                title: 'ZERO-DAY LIVE<br>PATCH LAB',
+                status: 'ENGINEERING CRISIS ROOM',
+                phases: [
+                    { label: 'STAGE FIXES', active: this.patchStagedActions.size === 0 },
+                    { label: 'DEPLOY PATCH', active: this.patchStagedActions.size > 0 },
+                    { label: 'RE-TEST EXPLOIT', active: this.patchAppliedActions.size > 0 }
+                ],
+                content: `
+                    <div class="patch-shell">
+                        <div class="patch-header">
+                            <div class="patch-brand">SHADOWDEF</div>
+                            <div class="patch-level">LEVEL 9 - ZERO-DAY LIVE PATCH LAB</div>
+                            <div class="patch-status">ENGINEERING CRISIS ROOM</div>
+                        </div>
+                        <div class="patch-phases">
+                            <div class="patch-phase active"><span>01</span>STAGE FIXES</div>
+                            <div class="patch-phase"><span>02</span>DEPLOY PATCH</div>
+                            <div class="patch-phase"><span>03</span>RE-TEST EXPLOIT</div>
+                        </div>
+                        <div class="patch-hint-strip">HINT: Fixing the primary issue may reveal a secondary path. Stage carefully, deploy deliberately, and always re-test the live exploit chain.</div>
+                        <div class="patch-grid">
+                            <main class="patch-main">
+                                <div class="patch-kicker">Architecture Overview</div>
+                                <div class="patch-overview">
+                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                    <div><strong>Task:</strong> ${this.mission.userTask || ''}</div>
+                                </div>
+                                <div class="patch-section">
+                                    <div class="patch-kicker">Auth Flow Modules</div>
+                                    <div class="patch-module-grid">${moduleMarkup}</div>
+                                </div>
+                                <div class="patch-section">
+                                    <div class="patch-kicker">Vulnerability Board</div>
+                                    <div class="patch-vuln-grid">${vulnMarkup}</div>
+                                </div>
+                                <div class="patch-section">
+                                    <div class="patch-kicker">Patch Operations</div>
+                                    <div class="patch-action-grid" id="patch-actions">${patchActions}</div>
+                                </div>
+                            </main>
+                            <aside class="patch-side">
+                                <div class="patch-kicker">Live Metrics</div>
+                                <div class="patch-sidebox">
+                                    <div class="patch-overview-grid">
+                                        <div class="patch-metric"><span>Vault Health</span><strong id="patch-vault">${Math.floor(this.patchMetrics.vaultHealth)}%</strong><div class="patch-bar"><div id="patch-vault-fill" style="width:${Math.max(0,Math.min(100,this.patchMetrics.vaultHealth))}%;"></div></div></div>
+                                        <div class="patch-metric"><span>Exploit Success</span><strong id="patch-exploit">${Math.floor(this.patchMetrics.exploitSuccessRate)}%</strong></div>
+                                        <div class="patch-metric"><span>Server Load</span><strong id="patch-load">${Math.floor(this.patchMetrics.serverLoad)}%</strong></div>
+                                        <div class="patch-metric"><span>User Experience</span><strong id="patch-ux">${Math.floor(this.patchMetrics.userExperienceScore)}%</strong></div>
+                                    </div>
+                                    <div class="patch-metric"><span>Vulnerabilities Remaining</span><strong id="patch-vuln">${this.patchMetrics.vulnerabilityCountRemaining}</strong></div>
+                                    <div>
+                                        <div class="patch-kicker">Staged Changes</div>
+                                        <div class="patch-stage-list">${stagedNames.length ? stagedNames.map(name => `<div>${name}</div>`).join('') : '<div>No changes staged yet.</div>'}</div>
+                                    </div>
+                                    <div>
+                                        <div class="patch-kicker">Projected Impact After Deploy</div>
+                                        <div class="patch-stage-list">
+                                            <div>Exploit success: ${stagingPreview.exploitSuccessRateDelta >= 0 ? '+' : ''}${stagingPreview.exploitSuccessRateDelta}%</div>
+                                            <div>Server load: ${stagingPreview.serverLoadDelta >= 0 ? '+' : ''}${stagingPreview.serverLoadDelta}%</div>
+                                            <div>User experience: ${stagingPreview.userExperienceScoreDelta >= 0 ? '+' : ''}${stagingPreview.userExperienceScoreDelta}%</div>
+                                            <div>Likely closures: ${stagingPreview.closes}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="patch-kicker" style="margin-top:16px;">Crisis Log</div>
+                                <div class="patch-log guess-feedback" id="guess-feedback">${logHtml}</div>
+                                <div id="attempt-counter" class="patch-attempts">Patch operations: <span style="color:var(--cyber-blue);">${this.attempts}</span></div>
+                            </aside>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupLivePatchEventListeners();
+        this.updatePatchUI();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    setupLivePatchEventListeners() {
+        document.querySelectorAll('button[data-patch-action]').forEach(btn => {
+            btn.addEventListener('click', () => { const id = btn.dataset.patchAction; if (id) this.handlePatchAction(id); });
+        });
+    }
+
     handlePatchAction(actionId) {
         if (this.isComplete) return;
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
         const option = (this.puzzleData.patchOptions || []).find(p => p.id === actionId);
         if (!option) return;
 
         if (actionId === 'patch_simulate_exploit') {
+            this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
             this.simulatePatchExploit();
-            this.evaluatePatchFailState();
+            this.evaluatePatchResult();
             return;
         }
 
-        this.patchAppliedActions.add(actionId);
-        const effects = option.effects || {};
-        this.patchMetrics.exploitSuccessRate += Number(effects.exploitSuccessRateDelta || 0);
-        this.patchMetrics.serverLoad += Number(effects.serverLoadDelta || 0);
-        this.patchMetrics.userExperienceScore += Number(effects.userExperienceScoreDelta || 0);
+        if (actionId === 'patch_deploy') {
+            if (!this.patchStagedActions.size) {
+                this.gameScreen.ui.showNotification('Stage at least one remediation before deployment.', 'warning');
+                return;
+            }
+            this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+            this.deployPatchChanges();
+            this.evaluatePatchResult();
+            return;
+        }
 
-        const closes = Array.isArray(effects.closesVulnerabilities) ? effects.closesVulnerabilities : [];
-        closes.forEach(id => this.patchClosedVulns.add(id));
+        if (this.patchAppliedActions.has(actionId) || this.patchStagedActions.has(actionId)) {
+            this.gameScreen.ui.showNotification('That remediation is already staged or deployed.', 'warning');
+            return;
+        }
+
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        this.patchStagedActions.add(actionId);
+        this.appendPatchLog(`Change staged: ${option.action}. Deploy to apply it.`);
+        if (this.visualizerElement) this.renderLivePatchSimulationPuzzle(this.visualizerElement);
+    }
+
+    deployPatchChanges() {
+        const stagedIds = Array.from(this.patchStagedActions);
+        stagedIds.forEach(actionId => {
+            const option = (this.puzzleData.patchOptions || []).find(p => p.id === actionId);
+            if (!option) return;
+            this.patchAppliedActions.add(actionId);
+            const effects = option.effects || {};
+            this.patchMetrics.exploitSuccessRate += Number(effects.exploitSuccessRateDelta || 0);
+            this.patchMetrics.serverLoad += Number(effects.serverLoadDelta || 0);
+            this.patchMetrics.userExperienceScore += Number(effects.userExperienceScoreDelta || 0);
+            (Array.isArray(effects.closesVulnerabilities) ? effects.closesVulnerabilities : []).forEach(id => this.patchClosedVulns.add(id));
+        });
+        this.patchStagedActions.clear();
         this.refreshPatchVulnerabilityCount();
         this.clampPatchMetrics();
         this.patchTurnsSincePatch = 0;
@@ -2522,52 +4545,127 @@ export class PasswordCrack {
             this.revealSecondaryPatchVulnerability();
         }
 
-        this.appendPatchLog(`Patch applied: ${option.action}.`);
-        this.updatePatchUI();
-        this.evaluatePatchWinState();
-        this.evaluatePatchFailState();
+        this.appendPatchLog(`Deployment completed: ${stagedIds.length} remediation change${stagedIds.length === 1 ? '' : 's'} applied.`);
+        if (this.visualizerElement) this.renderLivePatchSimulationPuzzle(this.visualizerElement);
     }
 
-    /**
-     * Simulate exploit against current patch state
-     */
     simulatePatchExploit() {
         const logic = this.puzzleData.exploitSimulationLogic || {};
         const sim = logic.onSimulate || {};
         this.applyPatchDelayEscalation();
-
         const remaining = this.getPatchRemainingVulnerabilities();
+        const totalVisible = (this.puzzleData.vulnerabilities || []).filter(v => v.status !== 'hidden').length;
         const fullyFixed = remaining.length === 0;
-        const partiallyFixed = remaining.length > 0 && remaining.length < (this.puzzleData.vulnerabilities || []).filter(v => v.status !== 'hidden').length;
+        const partiallyFixed = remaining.length > 0 && remaining.length < totalVisible;
 
         if (fullyFixed) {
             this.patchMetrics.exploitSuccessRate = Number(sim.ifFullyPatched?.exploitSuccessRateSet ?? 0);
             this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifFullyPatched?.vaultHealthDrop || 0));
-            this.appendPatchLog(sim.ifFullyPatched?.message || 'Exploit blocked. No active path detected.');
+            this.appendPatchLog(sim.ifFullyPatched?.message || 'Exploit blocked.');
         } else if (partiallyFixed) {
             this.patchMetrics.exploitSuccessRate += Number(sim.ifPartiallyPatched?.exploitSuccessRateAdjustment || -8);
             this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifPartiallyPatched?.vaultHealthDrop || 6));
-            this.appendPatchLog(sim.ifPartiallyPatched?.message || 'Exploit partially successful. Residual weakness still exploitable.');
+            this.appendPatchLog(sim.ifPartiallyPatched?.message || 'Exploit partially successful.');
         } else {
             this.patchMetrics.vaultHealth = Math.max(0, this.patchMetrics.vaultHealth - Number(sim.ifUnpatched?.vaultHealthDrop || 12));
-            this.appendPatchLog(sim.ifUnpatched?.message || 'Exploit succeeded. Active vulnerability chain confirmed.');
+            this.appendPatchLog(sim.ifUnpatched?.message || 'Exploit succeeded.');
         }
 
-        this.patchTurnsSincePatch += 1;
+        this.patchTurnsSincePatch++;
         this.clampPatchMetrics();
-        this.updatePatchUI();
-        this.evaluatePatchWinState();
+        if (this.visualizerElement) this.renderLivePatchSimulationPuzzle(this.visualizerElement);
     }
 
-    /**
-     * Reveal hidden secondary flaw after primary fix
-     */
+    // FIX L9: tiered win condition evaluation
+    evaluatePatchResult() {
+        if (this.isComplete) return;
+
+        // Check fail first
+        const failRules = this.puzzleData.failCondition?.any || [];
+        const failed = failRules.some(rule => this.evaluatePatchRule(rule));
+        if (failed) { this.finishPatchLab(false, null); return; }
+
+        // Check tiered win
+        const tiers = this.puzzleData.winCondition?.tiers;
+        if (Array.isArray(tiers)) {
+            for (const tier of tiers) {
+                const allPass = (tier.conditions?.all || []).every(rule => this.evaluatePatchRule(rule));
+                if (allPass) {
+                    this.finishPatchLab(true, tier);
+                    return;
+                }
+            }
+            return; // no tier matched yet — keep playing
+        }
+
+        // Legacy flat winCondition (fallback)
+        const allRules = this.puzzleData.winCondition?.all || [];
+        if (allRules.length && allRules.every(rule => this.evaluatePatchRule(rule))) {
+            this.finishPatchLab(true, null);
+        }
+    }
+
+    finishPatchLab(success, tier) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        const summary = this.puzzleData.educationalSummary || '';
+        const feedback = document.getElementById('guess-feedback');
+        const detailLines = [
+            `Exploit success rate: ${Math.floor(this.patchMetrics.exploitSuccessRate)}%`,
+            `Vault health: ${Math.floor(this.patchMetrics.vaultHealth)}%`,
+            `Vulnerabilities remaining: ${this.patchMetrics.vulnerabilityCountRemaining}`
+        ];
+
+        if (success && tier) {
+            const penaltyMsg = tier.scorePenaltyPercent > 0
+                ? `<div style="color:var(--cyber-orange);">Partial remediation — ${tier.scorePenaltyPercent}% score penalty applied. Risk remains above zero.</div>`
+                : '';
+            if (feedback) feedback.innerHTML += this.renderMissionDebrief({
+                tone: tier.scorePenaltyPercent > 0 ? 'warning' : 'success',
+                title: `${tier.label} - ${tier.starRating} star${tier.starRating !== 1 ? 's' : ''}`,
+                summary,
+                details: detailLines,
+                insight: penaltyMsg ? 'Residual risk remains. Re-testing after every deployment matters.' : (this.mission.knowledgeSummary?.insight || '')
+            });
+            // Apply score penalty
+            if (tier.scorePenaltyPercent > 0) {
+                const penalty = Math.floor(this.gameScreen.game.score.getScore() * (tier.scorePenaltyPercent / 100));
+                this.gameScreen.game.score.subtractPoints(penalty);
+            }
+        } else if (success) {
+            if (feedback) feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'success',
+                title: 'Remediation successful',
+                summary,
+                details: detailLines,
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        } else {
+            if (feedback) feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'error',
+                title: 'Remediation failed',
+                summary,
+                details: detailLines,
+                insight: 'Zero-day response fails when teams stop after the first visible fix.'
+            });
+        }
+
+        if (success) {
+            this.audio.playSuccess(); this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Remediation successful.', 'success');
+            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
+        } else {
+            this.audio.playFailure(); this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Remediation failed.', 'error');
+            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
+        }
+    }
+
     revealSecondaryPatchVulnerability() {
         const secondary = this.puzzleData.exploitSimulationLogic?.secondaryReveal || {};
         const vulnId = secondary.revealVulnerabilityId || 'vuln_static_api_token';
         if (this.patchSecondaryRevealed) return;
-        const vulns = this.puzzleData.vulnerabilities || [];
-        const target = vulns.find(v => v.id === vulnId);
+        const target = (this.puzzleData.vulnerabilities || []).find(v => v.id === vulnId);
         if (target) target.status = 'open';
         this.patchSecondaryRevealed = true;
         this.refreshPatchVulnerabilityCount();
@@ -2575,9 +4673,6 @@ export class PasswordCrack {
         this.gameScreen.ui.showNotification(secondary.revealMessage || 'Secondary access path detected.', 'warning');
     }
 
-    /**
-     * Apply escalation when patch actions are delayed
-     */
     applyPatchDelayEscalation() {
         const delayed = this.puzzleData.exploitSimulationLogic?.delayedEscalation || {};
         if (!delayed.enabled) return;
@@ -2587,25 +4682,14 @@ export class PasswordCrack {
         this.appendPatchLog(delayed.message || 'Threat pressure rising due to delayed remediation.');
     }
 
-    /**
-     * Get list of still-open vulnerabilities
-     * @returns {Array}
-     */
     getPatchRemainingVulnerabilities() {
-        const vulns = Array.isArray(this.puzzleData.vulnerabilities) ? this.puzzleData.vulnerabilities : [];
-        return vulns.filter(v => (v.status !== 'hidden') && !this.patchClosedVulns.has(v.id));
+        return (this.puzzleData.vulnerabilities || []).filter(v => v.status !== 'hidden' && !this.patchClosedVulns.has(v.id));
     }
 
-    /**
-     * Recount vulnerability metric
-     */
     refreshPatchVulnerabilityCount() {
         this.patchMetrics.vulnerabilityCountRemaining = this.getPatchRemainingVulnerabilities().length;
     }
 
-    /**
-     * Clamp patch dashboard metrics
-     */
     clampPatchMetrics() {
         const guard = this.puzzleData.exploitSimulationLogic?.metricGuards || {};
         const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -2615,64 +4699,25 @@ export class PasswordCrack {
         this.patchMetrics.vaultHealth = clamp(this.patchMetrics.vaultHealth, Number(guard.vaultHealthMin ?? 0), Number(guard.vaultHealthMax ?? 100));
     }
 
-    /**
-     * Update live patch dashboard UI
-     */
     updatePatchUI() {
-        const setText = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = String(value);
-        };
-        setText('patch-vault', `${Math.floor(this.patchMetrics.vaultHealth)}%`);
+        const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+        setText('patch-vault',   `${Math.floor(this.patchMetrics.vaultHealth)}%`);
         setText('patch-exploit', `${Math.floor(this.patchMetrics.exploitSuccessRate)}%`);
-        setText('patch-load', `${Math.floor(this.patchMetrics.serverLoad)}%`);
-        setText('patch-ux', `${Math.floor(this.patchMetrics.userExperienceScore)}%`);
-        setText('patch-vuln', `${this.patchMetrics.vulnerabilityCountRemaining}`);
+        setText('patch-load',    `${Math.floor(this.patchMetrics.serverLoad)}%`);
+        setText('patch-ux',      `${Math.floor(this.patchMetrics.userExperienceScore)}%`);
+        setText('patch-vuln',    `${this.patchMetrics.vulnerabilityCountRemaining}`);
         const fill = document.getElementById('patch-vault-fill');
         if (fill) fill.style.width = `${Math.max(0, Math.min(100, this.patchMetrics.vaultHealth))}%`;
     }
 
-    /**
-     * Log patch-lab feedback lines
-     * @param {string} message
-     */
     appendPatchLog(message) {
+        this.patchActivityLog.push(message);
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
-        const line = document.createElement('div');
-        line.textContent = `• ${message}`;
-        feedback.appendChild(line);
-        feedback.scrollTop = feedback.scrollHeight;
+        const line = document.createElement('div'); line.textContent = `• ${message}`;
+        feedback.appendChild(line); feedback.scrollTop = feedback.scrollHeight;
     }
 
-    /**
-     * Evaluate patch lab win condition
-     */
-    evaluatePatchWinState() {
-        if (this.isComplete) return;
-        const all = this.puzzleData.winCondition?.all || [];
-        if (!all.length) return;
-        const pass = all.every(rule => this.evaluatePatchRule(rule));
-        if (!pass) return;
-        this.finishPatchLab(true);
-    }
-
-    /**
-     * Evaluate patch lab fail condition
-     */
-    evaluatePatchFailState() {
-        if (this.isComplete) return;
-        const any = this.puzzleData.failCondition?.any || [];
-        const failed = any.some(rule => this.evaluatePatchRule(rule));
-        if (!failed) return;
-        this.finishPatchLab(false);
-    }
-
-    /**
-     * Evaluate one metric rule for patch lab
-     * @param {{metric:string,operator:string,value:number}} rule
-     * @returns {boolean}
-     */
     evaluatePatchRule(rule) {
         const value = Number(this.patchMetrics?.[rule.metric] ?? 0);
         const expected = Number(rule.value);
@@ -2684,2018 +4729,658 @@ export class PasswordCrack {
         return false;
     }
 
-    /**
-     * Complete live patch mission
-     * @param {boolean} success
-     */
-    finishPatchLab(success) {
-        if (this.isComplete) return;
-        this.isComplete = true;
-        const summary = this.puzzleData.educationalSummary || '';
-        const feedback = document.getElementById('guess-feedback');
-        if (feedback) feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
-        if (success) {
-            this.audio.playSuccess();
-            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Remediation successful.', 'success');
-            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
-        } else {
-            this.audio.playFailure();
-            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Remediation failed.', 'error');
-            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
-        }
+    // ─── LEVEL 10: enterprise architecture with live rating preview ───────────
+
+    buildEnterpriseDefaultConfig() {
+        return {
+            minimum_length: "12",
+            allow_passphrases: "yes",
+            require_complexity: "yes",
+            block_common_passwords: "yes",
+            password_storage: "hash_salt",
+            authentication_controls: "app_mfa",
+            login_protection: "rate_limiting",
+            monitoring_response: "breach_alerts"
+        };
     }
 
-    /**
-     * Setup listeners for threat hunt simulation
-     */
-    setupThreatHuntEventListeners() {
-        const actionButtons = Array.from(document.querySelectorAll('button[data-threat-action]'));
-        actionButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const actionId = btn.dataset.threatAction;
-                const eventId = btn.dataset.eventId;
-                if (!actionId || !eventId) return;
-                this.handleThreatAction(actionId, eventId);
+    renderEnterpriseArchitectureSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const opts = this.puzzleData.configurationOptions || {};
+        const policy = opts.passwordPolicy?.options || [];
+        const storage = opts.passwordStorage?.options || [];
+        const auth = opts.authenticationControls?.options || [];
+        const login = opts.loginProtection?.options || [];
+        const monitor = opts.monitoringResponse?.options || [];
+        const attacks = Array.isArray(this.puzzleData.attackSimulationMatrix) ? this.puzzleData.attackSimulationMatrix : [];
+        const previewRating = this.calculateEnterpriseRatingFromCurrentConfig();
+        const previewSummary = this.getEnterprisePreviewSummary();
+
+        const select = (id, values, current) => `
+            <select id="${id}" class="ea-select">
+                ${values.map(v => {
+                    const val = typeof v === 'string' ? v : v.id;
+                    const label = typeof v === 'string' ? v : v.label;
+                    return `<option value="${val}" ${String(val) === String(current) ? 'selected' : ''}>${label}</option>`;
+                }).join('')}
+            </select>`;
+
+        const policyMarkup = policy.map(p => `
+            <div class="ea-config-card">
+                <div class="ea-config-card__title">${p.label}</div>
+                ${select(`ea-${p.id}`, p.values || [], this.enterpriseConfig[p.id])}
+            </div>`).join('');
+
+        const selectCards = [
+            { title: 'Password Storage', id: 'ea-password_storage', markup: select('ea-password_storage', storage, this.enterpriseConfig.password_storage) },
+            { title: 'Authentication Controls', id: 'ea-authentication_controls', markup: select('ea-authentication_controls', auth, this.enterpriseConfig.authentication_controls) },
+            { title: 'Login Protection', id: 'ea-login_protection', markup: select('ea-login_protection', login, this.enterpriseConfig.login_protection) },
+            { title: 'Monitoring & Response', id: 'ea-monitoring_response', markup: select('ea-monitoring_response', monitor, this.enterpriseConfig.monitoring_response) },
+        ].map(card => `
+            <div class="ea-config-card">
+                <div class="ea-config-card__title">${card.title}</div>
+                ${card.markup}
+            </div>`).join('');
+
+        const attackMarkup = attacks.map(attack => `
+            <div class="ea-attack-card">
+                <div class="ea-attack-card__title">${attack.attackName}</div>
+                <div class="ea-attack-card__meta">Strong counters: ${(attack.strongCounters || []).join(', ')}</div>
+                <div class="ea-attack-card__meta">Partial counters: ${(attack.partialCounters || []).join(', ')}</div>
+            </div>`).join('');
+
+        container.innerHTML = `
+            <style>
+                .ea-shell{background:linear-gradient(180deg,#070b12 0%,#05080f 100%);color:#eef2ff;border:1px solid rgba(127,213,255,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+                .ea-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(127,213,255,.25);gap:16px;flex-wrap:wrap}
+                .ea-brand,.ea-level,.ea-status,.ea-phase,.ea-kicker,.ea-config-card__title,.ea-preview-label,.ea-attempts{font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
+                .ea-brand{color:#7fd5ff;font-weight:700}.ea-level{color:rgba(127,213,255,.72);font-size:.85rem}.ea-status{color:#00e87a;font-size:.82rem}
+                .ea-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(127,213,255,.12)}
+                .ea-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.ea-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
+                .ea-phase.active{color:#7fd5ff;background:rgba(127,213,255,.05);border-bottom-color:#7fd5ff}
+                .ea-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
+                .ea-grid{display:grid;grid-template-columns:1.15fr 360px;gap:0;min-height:700px}.ea-main,.ea-side{padding:24px;background:rgba(0,0,0,.18)}.ea-main{border-right:1px solid rgba(127,213,255,.12)}
+                .ea-kicker{font-size:.74rem;color:rgba(127,213,255,.64);margin-bottom:12px}
+                .ea-brief,.ea-preview,.ea-attack-card,.ea-config-card,.ea-report{background:rgba(0,0,0,.34);border:1px solid rgba(127,213,255,.12)}
+                .ea-brief,.ea-preview,.ea-report{padding:16px}.ea-brief strong{color:#7fd5ff}
+                .ea-design-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.ea-config-card{padding:14px}
+                .ea-config-card__title{color:#7fd5ff;font-size:.72rem;margin-bottom:10px}.ea-select{width:100%;padding:11px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(127,213,255,.16);color:#eef2ff}
+                .ea-preview{display:grid;gap:12px}.ea-preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+                .ea-preview-label{color:rgba(127,213,255,.68);font-size:.72rem}.ea-preview-rating{font-size:2rem;font-weight:700}.ea-preview-copy{color:rgba(180,190,230,.66);line-height:1.6}
+                .ea-attack-grid{display:grid;gap:12px}.ea-attack-card{padding:14px}.ea-attack-card__title{color:#eef2ff;font-weight:700}.ea-attack-card__meta{margin-top:8px;color:rgba(180,190,230,.62);font-size:.82rem;line-height:1.5}
+                .ea-actions{margin-top:18px}.ea-report{margin-top:18px;max-height:260px;overflow:auto;text-align:left;color:rgba(220,228,245,.86)}.ea-attempts{text-align:center;margin-top:16px;color:var(--text-secondary)}
+                @media (max-width:1080px){.ea-grid{grid-template-columns:1fr}.ea-main{border-right:0;border-bottom:1px solid rgba(127,213,255,.12)}.ea-design-grid{grid-template-columns:1fr}}
+                @media (max-width:720px){.ea-header{padding:14px 18px}.ea-main,.ea-side{padding:18px}.ea-phases{grid-template-columns:1fr}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: '// LEVEL 10 - CERTIFICATION BOARD',
+                title: 'ENTERPRISE SECURITY<br>ARCHITECT',
+                status: 'FINAL CERTIFICATION BOARD',
+                phases: [
+                    { label: 'DESIGN STACK', active: true },
+                    { label: 'ATTACK MATRIX', active: this.attempts > 0 },
+                    { label: 'EARN RATING', active: this.isComplete || this.attempts > 0 }
+                ],
+                content: `
+                    <div class="ea-shell">
+                        <div class="ea-header">
+                            <div class="ea-brand">SHADOWDEF</div>
+                            <div class="ea-level">LEVEL 10 - ENTERPRISE SECURITY ARCHITECT</div>
+                            <div class="ea-status">FINAL CERTIFICATION BOARD</div>
+                        </div>
+                        <div class="ea-phases">
+                            <div class="ea-phase active"><span>01</span>DESIGN STACK</div>
+                            <div class="ea-phase"><span>02</span>RUN ATTACK MATRIX</div>
+                            <div class="ea-phase"><span>03</span>EARN RATING</div>
+                        </div>
+                        <div class="ea-hint-strip">HINT: Great architectures balance storage, MFA, login controls, and detection. Maxing one axis while ignoring another creates exploitable gaps.</div>
+                        <div class="ea-grid">
+                            <main class="ea-main">
+                                <div class="ea-kicker">Certification Brief</div>
+                                <div class="ea-brief">
+                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                    <div><strong>Task:</strong> ${this.mission.userTask || ''}</div>
+                                </div>
+                                <div class="ea-kicker" style="margin-top:18px;">Architecture Studio</div>
+                                <div class="ea-design-grid">
+                                    ${policyMarkup}
+                                    ${selectCards}
+                                </div>
+                                <div class="ea-actions">
+                                    <button class="btn btn-primary" id="ea-run-assessment">RUN CERTIFICATION EVALUATION</button>
+                                </div>
+                                <div class="ea-report guess-feedback" id="guess-feedback">Configure the architecture, review the live preview, then run the certification board.</div>
+                            </main>
+                            <aside class="ea-side">
+                                <div class="ea-kicker">Live Certification Preview</div>
+                                <div class="ea-preview">
+                                    <div class="ea-preview-head">
+                                        <div>
+                                            <div class="ea-preview-label">${this.puzzleData.livePreview?.label || 'Estimated rating'}</div>
+                                            <div id="ea-live-rating" class="ea-preview-rating">${previewRating}</div>
+                                        </div>
+                                        <div class="ea-preview-copy">${this.puzzleData.livePreview?.footnote || ''}</div>
+                                    </div>
+                                    <div class="ea-preview-copy" id="ea-preview-summary">${previewSummary}</div>
+                                </div>
+                                <div class="ea-kicker" style="margin-top:18px;">Controlled Attack Matrix</div>
+                                <div class="ea-attack-grid">${attackMarkup}</div>
+                                <div id="attempt-counter" class="ea-attempts">Certification run pending</div>
+                            </aside>
+                        </div>
+                    </div>`
+            })}`;
+
+        this.setupEnterpriseArchitectureEventListeners();
+        if (this.puzzleData.livePreview?.enabled) this.updateEnterpriseRatingPreview();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    setupEnterpriseArchitectureEventListeners() {
+        const keys = ["minimum_length","allow_passphrases","require_complexity","block_common_passwords","password_storage","authentication_controls","login_protection","monitoring_response"];
+        keys.forEach(key => {
+            const el = document.getElementById(`ea-${key}`);
+            if (!el) return;
+            el.addEventListener('change', () => {
+                this.enterpriseConfig[key] = el.value;
+                this.audio.playButtonClick();
+                // FIX L10: update live preview on every change
+                if (this.puzzleData.livePreview?.enabled) this.updateEnterpriseRatingPreview();
             });
         });
-
-        const finalizeBtn = document.getElementById('threat-finalize');
-        if (finalizeBtn) {
-            finalizeBtn.addEventListener('click', () => this.finalizeThreatHunt());
-        }
+        document.getElementById('ea-run-assessment')?.addEventListener('click', () => this.runEnterpriseArchitectureAssessment());
     }
 
-    /**
-     * Handle one threat hunt action on an event
-     * @param {string} actionId
-     * @param {string} eventId
-     */
-    handleThreatAction(actionId, eventId) {
+    // FIX L10: compute and display live rating during design phase
+    updateEnterpriseRatingPreview() {
+        const rating = this.calculateEnterpriseRatingFromCurrentConfig();
+        const liveEl = document.getElementById('ea-live-rating');
+        const summaryEl = document.getElementById('ea-preview-summary');
+        if (!liveEl) return;
+        const colors = { 'A+': 'var(--cyber-green)', 'A': 'var(--cyber-blue)', 'B': 'var(--cyber-orange)', 'C': 'var(--cyber-pink)' };
+        liveEl.textContent = rating;
+        liveEl.style.color = colors[rating] || 'var(--cyber-blue)';
+        if (summaryEl) summaryEl.textContent = this.getEnterprisePreviewSummary();
+    }
+
+    getEnterprisePreviewSummary() {
+        const cfg = this.enterpriseConfig;
+        const strengths = [];
+        const gaps = [];
+
+        if (cfg.password_storage === 'hash_salt_iteration') strengths.push('slow salted password storage');
+        else if (cfg.password_storage === 'hash_salt') strengths.push('salted password storage');
+        else gaps.push('password storage is still too weak against database theft');
+
+        if (cfg.authentication_controls === 'hardware_key_mfa' || cfg.authentication_controls === 'app_mfa') strengths.push('strong MFA coverage');
+        else gaps.push('MFA is weak or missing against phishing and credential stuffing');
+
+        if (cfg.login_protection === 'adaptive_risk_login' || cfg.login_protection === 'account_lockout' || cfg.login_protection === 'rate_limiting') strengths.push('login abuse resistance');
+        else gaps.push('login abuse controls are too light');
+
+        if (cfg.monitoring_response === 'realtime_anomaly' || cfg.monitoring_response === 'breach_alerts') strengths.push('incident detection maturity');
+        else gaps.push('detection and response visibility');
+
+        const strongText = strengths.length ? `Current strengths: ${strengths.slice(0, 2).join(', ')}.` : '';
+        const gapText = gaps.length ? ` Biggest gap: ${gaps[0]}.` : '';
+        return `${strongText}${gapText}`.trim() || 'Balanced controls improve both attack resistance and incident response maturity.';
+    }
+
+    calculateEnterpriseRatingFromCurrentConfig() {
+        // Quick heuristic scoring for live preview (not the full weighted algo)
+        const cfg = this.enterpriseConfig;
+        let score = 0;
+        // Storage
+        if (cfg.password_storage === 'hash_salt_iteration') score += 25;
+        else if (cfg.password_storage === 'hash_salt') score += 20;
+        else if (cfg.password_storage === 'hash_only') score += 10;
+        // MFA
+        if (cfg.authentication_controls === 'hardware_key_mfa') score += 25;
+        else if (cfg.authentication_controls === 'app_mfa') score += 20;
+        else if (cfg.authentication_controls === 'sms_mfa') score += 12;
+        // Login protection
+        if (cfg.login_protection === 'adaptive_risk_login') score += 20;
+        else if (cfg.login_protection === 'account_lockout' || cfg.login_protection === 'captcha') score += 15;
+        else if (cfg.login_protection === 'rate_limiting') score += 12;
+        // Monitoring
+        if (cfg.monitoring_response === 'realtime_anomaly') score += 20;
+        else if (cfg.monitoring_response === 'breach_alerts') score += 15;
+        else if (cfg.monitoring_response === 'basic_logging') score += 8;
+        // Policy bonuses
+        if (cfg.block_common_passwords === 'yes') score += 5;
+        if (cfg.allow_passphrases === 'yes') score += 3;
+        if (cfg.minimum_length === '16') score += 2;
+
+        if (score >= 80) return 'A+';
+        if (score >= 65) return 'A';
+        if (score >= 45) return 'B';
+        return 'C';
+    }
+
+    runEnterpriseArchitectureAssessment() {
         if (this.isComplete) return;
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const event = this.getThreatEventById(eventId);
-        if (!event) return;
-
-        const chainEntry = this.getThreatChainEntryByEventId(eventId);
-        const isMalicious = !!chainEntry;
-        const rules = this.puzzleData.progressionLogic || {};
-        const progressRules = rules.attackerProgressRules || {};
-        const falseRules = rules.falsePositiveRules || {};
-        const containment = rules.containmentEffects || {};
-
-        const addFalsePositive = (dropIntegrity = Number(falseRules.systemIntegrityDropPerFalsePositive || 8)) => {
-            this.threatFalsePositiveCount += Number(falseRules.incorrectFlagIncrease || 1);
-            this.threatSystemIntegrity = Math.max(0, this.threatSystemIntegrity - dropIntegrity);
-            this.appendThreatLog(rules.operationalFeedback?.falseAlert || "False alert logged. Operational efficiency reduced.");
-        };
-
-        const addAttackerProgress = () => {
-            this.threatAttackerProgress += Number(progressRules.missedMaliciousEventIncrease || 1);
-        };
-
-        const markDetected = () => {
-            if (!chainEntry) return;
-            this.threatDetectedMajor.add(chainEntry.key);
-            this.threatAttackerProgress = Math.max(0, this.threatAttackerProgress - Number(progressRules.correctMajorDetectionDecrease || 1));
-        };
-
-        if (actionId === 'mark_suspicious') {
-            if (isMalicious) {
-                markDetected();
-                this.appendThreatLog("Suspicious privilege escalation detected.");
-            } else {
-                addFalsePositive();
-            }
-        }
-
-        if (actionId === 'investigate') {
-            this.threatInvestigatedEvents.add(eventId);
-            if (isMalicious) {
-                markDetected();
-                this.appendThreatLog(this.getThreatInvestigationMessage(chainEntry));
-            } else {
-                this.appendThreatLog(`Investigation complete for ${eventId}. No malicious chain evidence found.`);
-            }
-        }
-
-        if (actionId === 'isolate_account') {
-            const canStop = isMalicious && (containment.isolateAccountStops || []).includes(chainEntry.key);
-            if (canStop) {
-                markDetected();
-                this.threatContainedMajor.add(chainEntry.key);
-                if (chainEntry.key === 'lateral_movement') {
-                    this.appendThreatLog(rules.operationalFeedback?.lateralMove || "Attacker lateral movement confirmed.");
-                } else {
-                    this.appendThreatLog(`Containment applied: account isolation stopped ${chainEntry.label}.`);
-                }
-            } else {
-                addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10));
-            }
-        }
-
-        if (actionId === 'block_ip') {
-            const canStop = isMalicious && (containment.blockIPStops || []).includes(chainEntry.key);
-            if (canStop) {
-                markDetected();
-                this.threatContainedMajor.add(chainEntry.key);
-                this.appendThreatLog(rules.operationalFeedback?.exportAlert || "Unauthorized data export attempt identified.");
-            } else {
-                addFalsePositive(Number(falseRules.systemIntegrityDropOnWrongContainment || 10));
-            }
-        }
-
-        if (actionId === 'ignore') {
-            if (isMalicious) {
-                addAttackerProgress();
-                this.appendThreatLog(`Ignored malicious signal (${eventId}). Attacker progression increased.`);
-            } else {
-                this.appendThreatLog(`Ignored ${eventId}. No immediate risk confirmed.`);
-            }
-        }
-
-        this.applyThreatPassiveRisk();
-        this.evaluateThreatCriticalEscalation();
-        this.updateThreatHuntUI();
-        this.evaluateThreatFailState();
-    }
-
-    /**
-     * Lookup event by id in evidence panels
-     * @param {string} eventId
-     * @returns {Object|null}
-     */
-    getThreatEventById(eventId) {
-        const panels = Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
-        for (const panel of panels) {
-            const hit = (panel.entries || []).find(entry => entry.id === eventId);
-            if (hit) return hit;
-        }
-        return null;
-    }
-
-    /**
-     * Lookup hidden chain step by linked evidence id
-     * @param {string} eventId
-     * @returns {Object|null}
-     */
-    getThreatChainEntryByEventId(eventId) {
-        const chain = Array.isArray(this.puzzleData.hiddenAttackChain) ? this.puzzleData.hiddenAttackChain : [];
-        return chain.find(step => Array.isArray(step.linkedEvidence) && step.linkedEvidence.includes(eventId)) || null;
-    }
-
-    /**
-     * Compose deep investigation message
-     * @param {Object|null} chainEntry
-     * @returns {string}
-     */
-    getThreatInvestigationMessage(chainEntry) {
-        if (!chainEntry) return "Investigation did not confirm malicious behavior.";
-        return `Investigate result: ${chainEntry.label}. ${chainEntry.explanation}`;
-    }
-
-    /**
-     * Apply passive vault drain when attacker remains undetected
-     */
-    applyThreatPassiveRisk() {
-        const passive = this.puzzleData.progressionLogic?.passiveRisk || {};
-        if (!passive.enabledWhenUndetected) return;
-        const cycle = Math.max(1, Number(passive.cycleTurns || 2));
-        if (this.attempts % cycle !== 0) return;
-        if (this.threatAttackerProgress <= 0) return;
-        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(passive.vaultHealthDropPerCycle || 4));
-    }
-
-    /**
-     * Increase vault damage when progress reaches critical threshold
-     */
-    evaluateThreatCriticalEscalation() {
-        const progressRules = this.puzzleData.progressionLogic?.attackerProgressRules || {};
-        const critical = Number(progressRules.criticalThreshold || 5);
-        if (this.threatAttackerProgress < critical) return;
-        this.threatVaultHealth = Math.max(0, this.threatVaultHealth - Number(progressRules.rapidVaultDrainOnCritical || 12));
-        const msg = this.puzzleData.progressionLogic?.operationalFeedback?.criticalEscalation || "Warning: attacker progression has reached critical escalation level.";
-        this.appendThreatLog(msg);
-    }
-
-    /**
-     * Update threat hunt HUD
-     */
-    updateThreatHuntUI() {
-        const vault = Math.max(0, Math.min(100, this.threatVaultHealth));
-        const integrity = Math.max(0, Math.min(100, this.threatSystemIntegrity));
-        const vaultText = document.getElementById('threat-vault-text');
-        const vaultFill = document.getElementById('threat-vault-fill');
-        const integrityText = document.getElementById('threat-integrity-text');
-        const integrityFill = document.getElementById('threat-integrity-fill');
-        const fpText = document.getElementById('threat-fp-text');
-        const progressText = document.getElementById('threat-progress-text');
-        if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
-        if (vaultFill) vaultFill.style.width = `${vault}%`;
-        if (integrityText) integrityText.textContent = `${Math.floor(integrity)}%`;
-        if (integrityFill) integrityFill.style.width = `${integrity}%`;
-        if (fpText) fpText.textContent = `${this.threatFalsePositiveCount}`;
-        if (progressText) progressText.textContent = `${this.threatAttackerProgress}`;
-    }
-
-    /**
-     * Append line in threat hunt log feed
-     * @param {string} message
-     */
-    appendThreatLog(message) {
-        const feedback = document.getElementById('guess-feedback');
-        if (!feedback) return;
-        const line = document.createElement('div');
-        line.textContent = `• ${message}`;
-        feedback.appendChild(line);
-        feedback.scrollTop = feedback.scrollHeight;
-    }
-
-    /**
-     * Check fail conditions and end mission when reached
-     */
-    evaluateThreatFailState() {
-        const fail = this.puzzleData.failCondition?.any || [];
-        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
-        const failed = fail.some(rule => {
-            const metricValue = this.getThreatMetric(rule.metric, maxEscalation);
-            if (rule.operator === '<=') return metricValue <= Number(rule.value);
-            if (rule.operator === '<') return metricValue < Number(rule.value);
-            if (rule.operator === '>=') return metricValue >= Number(rule.value);
-            return false;
-        });
-        if (!failed) return;
-        this.finishThreatHunt(false);
-    }
-
-    /**
-     * Finalize hunt by checking win conditions
-     */
-    finalizeThreatHunt() {
-        if (this.isComplete) return;
-        this.evaluateThreatFailState();
-        if (this.isComplete) return;
-        const win = this.puzzleData.winCondition || {};
-        const minContained = Number(win.majorMaliciousEventsContainedMin || 3);
-        const vaultMin = Number(win.vaultHealthAbovePercent || 30);
-        const maxEscalation = Number(this.puzzleData.progressionLogic?.attackerProgressRules?.maxEscalation || 7);
-        const containOk = this.threatContainedMajor.size >= minContained;
-        const vaultOk = this.threatVaultHealth > vaultMin;
-        const progressOk = this.threatAttackerProgress < maxEscalation;
-        this.finishThreatHunt(containOk && vaultOk && progressOk);
-    }
-
-    /**
-     * Complete threat hunt mission with summary
-     * @param {boolean} success
-     */
-    finishThreatHunt(success) {
-        if (this.isComplete) return;
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
+        const attacks = Array.isArray(this.puzzleData.attackSimulationMatrix) ? this.puzzleData.attackSimulationMatrix : [];
+        this.enterpriseAttackResults = attacks.map(a => this.evaluateEnterpriseAttack(a));
+        this.enterpriseScores = this.calculateEnterpriseScores(this.enterpriseAttackResults);
+        this.enterpriseRating = this.calculateEnterpriseRatingFromScore(this.enterpriseScores.finalWeightedScore);
+        this.enterpriseBadgeUnlocked = this.isEnterpriseBadgeUnlocked(this.enterpriseRating, this.enterpriseScores.finalWeightedScore);
+        this.renderEnterpriseAssessmentFeedback();
         this.isComplete = true;
-        const summary = this.puzzleData.educationalSummary || {};
-        const reveal = summary.reveal || '';
-        const msg = summary.message || '';
-        const feedback = document.getElementById('guess-feedback');
-        if (feedback) {
-            feedback.innerHTML += `
-                <div style="margin-top:8px;"><strong>${reveal}</strong></div>
-                <div>${msg}</div>
-            `;
-        }
-        if (success) {
-            this.audio.playSuccess();
-            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Threat hunt complete.', 'success');
-            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
-        } else {
-            this.audio.playFailure();
-            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Threat hunt failed.', 'error');
-            setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
-        }
+        this.audio.playSuccess();
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1500);
     }
 
-    /**
-     * Resolve metric values for fail checks
-     * @param {string} metric
-     * @param {number} maxEscalation
-     * @returns {number}
-     */
-    getThreatMetric(metric, maxEscalation) {
-        if (metric === 'vaultHealth') return this.threatVaultHealth;
-        if (metric === 'systemIntegrity') return this.threatSystemIntegrity;
-        if (metric === 'attackerProgress') return this.threatAttackerProgress;
-        if (metric === 'maxEscalation') return maxEscalation;
-        return 0;
+    evaluateEnterpriseAttack(attack) {
+        const cfg = this.enterpriseConfig;
+        const chosen = [cfg.password_storage, cfg.authentication_controls, cfg.login_protection, cfg.monitoring_response, cfg.minimum_length, cfg.allow_passphrases, cfg.require_complexity, cfg.block_common_passwords];
+        const strong = (attack.strongCounters || []).filter(c => chosen.includes(c)).length;
+        const partial = (attack.partialCounters || []).filter(c => chosen.includes(c)).length;
+        let outcome = "Successful";
+        if (strong >= 2) outcome = "Blocked";
+        else if (strong >= 1 || partial >= 1) outcome = "Partially Mitigated";
+        return { attackId: attack.attackId, attackName: attack.attackName, outcome };
     }
 
-    /**
-     * Start stage-based coordinated simulation
-     */
-    startMultiStageDefenseSimulation() {
-        const base = this.puzzleData.baseStats || {};
-        const regen = base.energyRegenRate || {};
-        const regenAmount = Number(regen.amount || 3);
-        const regenEvery = Math.max(1, Number(regen.everySeconds || 3));
-        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
-        this.multiStageIndex = 0;
-        this.multiStageRemaining = Number(stages[0]?.duration || 20);
-        this.updateMultiSimulationUI();
-        this.appendMultiLog('APT campaign started.');
-        this.enterCurrentMultiStage();
-
-        this.multiEnergyTimerId = setInterval(() => {
-            if (this.isComplete) return;
-            this.multiEnergy = Math.min(100, this.multiEnergy + regenAmount);
-            this.updateMultiSimulationUI();
-        }, regenEvery * 1000);
-
-        this.multiCooldownTimerId = setInterval(() => {
-            if (this.isComplete) return;
-            Object.keys(this.multiDefenseCooldowns).forEach(key => {
-                this.multiDefenseCooldowns[key] = Math.max(0, Number(this.multiDefenseCooldowns[key] || 0) - 1);
-            });
-            this.updateMultiDefenseButtons();
-        }, 1000);
-
-        this.multiDurationTimerId = setInterval(() => {
-            if (this.isComplete) return;
-            this.multiRemainingTime = Math.max(0, this.multiRemainingTime - 1);
-            this.updateMultiSimulationUI();
-            if (this.multiRemainingTime <= 0) {
-                this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
-            }
-        }, 1000);
-
-        this.multiStageTimerId = setInterval(() => {
-            if (this.isComplete) return;
-            this.multiStageRemaining = Math.max(0, this.multiStageRemaining - 1);
-            this.updateMultiSimulationUI();
-            if (this.multiStageRemaining <= 0) {
-                this.advanceMultiStage();
-            }
-        }, 1000);
+    calculateEnterpriseScores(results) {
+        const algo = this.puzzleData.scoringAlgorithm || {};
+        const points = algo.attackOutcomePoints || {};
+        const scoreMap = { "Blocked": Number(points.blocked || 100), "Partially Mitigated": Number(points.partially_mitigated || 65), "Successful": Number(points.successful || 25) };
+        const avgAttack = results.length ? Math.round(results.reduce((s, r) => s + (scoreMap[r.outcome] || 0), 0) / results.length) : 0;
+        const cfg = this.enterpriseConfig;
+        const vaultSecurityScore = Math.max(0, Math.min(100, avgAttack + (cfg.password_storage === 'hash_salt_iteration' ? 8 : cfg.password_storage === 'hash_salt' ? 5 : 0)));
+        const breachResistanceScore = Math.max(0, Math.min(100, avgAttack + (cfg.authentication_controls === 'hardware_key_mfa' ? 10 : cfg.authentication_controls === 'app_mfa' ? 6 : 0)));
+        const userExperienceScore = Math.max(0, Math.min(100, 75 - (cfg.login_protection === 'adaptive_risk_login' ? 4 : 0) - (cfg.authentication_controls === 'hardware_key_mfa' ? 8 : 0) + (cfg.allow_passphrases === 'yes' ? 6 : -3)));
+        const operationalStabilityScore = Math.max(0, Math.min(100, 78 - (cfg.monitoring_response === 'realtime_anomaly' ? 8 : cfg.monitoring_response === 'breach_alerts' ? 4 : 0) - (cfg.login_protection === 'adaptive_risk_login' ? 5 : 0)));
+        const incidentResponseMaturity = Math.max(0, Math.min(100, (cfg.monitoring_response === 'realtime_anomaly' ? 90 : cfg.monitoring_response === 'breach_alerts' ? 78 : cfg.monitoring_response === 'basic_logging' ? 60 : 35)));
+        const w = algo.weightedCategories || {};
+        const weighted = vaultSecurityScore * Number(w.vaultSecurityScore?.weight || 0.3) + breachResistanceScore * Number(w.breachResistanceScore?.weight || 0.25) + userExperienceScore * Number(w.userExperienceScore?.weight || 0.15) + operationalStabilityScore * Number(w.operationalStabilityScore?.weight || 0.15) + incidentResponseMaturity * Number(w.incidentResponseMaturity?.weight || 0.15);
+        return { vaultSecurityScore: Math.round(vaultSecurityScore), breachResistanceScore: Math.round(breachResistanceScore), userExperienceScore: Math.round(userExperienceScore), operationalStabilityScore: Math.round(operationalStabilityScore), incidentResponseMaturity: Math.round(incidentResponseMaturity), finalWeightedScore: Math.round(weighted) };
     }
 
-    /**
-     * Enter current stage and schedule attacks
-     */
-    enterCurrentMultiStage() {
-        const stage = this.getCurrentMultiStage();
-        if (!stage) {
-            this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
-            return;
-        }
-        this.multiStageRemaining = Number(stage.duration || 20);
-        const stageLabel = stage.stageLabel || `Stage ${this.multiStageIndex + 1}/4`;
-        this.appendMultiLog(stageLabel);
-        if (stage.bossWarning) {
-            this.appendMultiLog(stage.bossWarning);
-            this.gameScreen.ui.showNotification(stage.bossWarning, 'warning');
-        }
-        this.scheduleNextMultiAttack();
+    calculateEnterpriseRatingFromScore(score) {
+        const rules = this.puzzleData.scoringAlgorithm?.ratingRules || [];
+        for (const rule of rules) { if (score >= Number(rule.minScore || 0)) return rule.rating; }
+        return 'C';
     }
 
-    /**
-     * Move to next stage and apply escalation outcomes
-     */
-    advanceMultiStage() {
-        this.applyCurrentStageEscalationIfNeeded();
-        this.multiStageIndex += 1;
-        this.multiActiveAttacks = [];
-        if (this.multiSpawnTimeoutId) {
-            clearTimeout(this.multiSpawnTimeoutId);
-            this.multiSpawnTimeoutId = null;
-        }
-        if (this.multiAttackResolveTimeoutId) {
-            clearTimeout(this.multiAttackResolveTimeoutId);
-            this.multiAttackResolveTimeoutId = null;
-        }
-        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
-        if (this.multiStageIndex >= stages.length) {
-            this.finishMultiStageDefenseSimulation(this.multiVaultHealth > 0);
-            return;
-        }
-        this.enterCurrentMultiStage();
-        this.updateMultiSimulationUI();
+    isEnterpriseBadgeUnlocked(rating, score) {
+        const logic = this.puzzleData.certificationBadgeLogic?.unlockCondition || {};
+        const order = { "C": 1, "B": 2, "A": 3, "A+": 4 };
+        return (order[rating] || 0) >= (order[logic.minimumRating || 'A'] || 0) && score >= Number(logic.minimumScore || 80);
     }
 
-    /**
-     * Stop all multi-stage timers
-     */
-    stopMultiStageDefenseSimulation() {
-        if (this.multiSpawnTimeoutId) clearTimeout(this.multiSpawnTimeoutId);
-        if (this.multiAttackResolveTimeoutId) clearTimeout(this.multiAttackResolveTimeoutId);
-        if (this.multiEnergyTimerId) clearInterval(this.multiEnergyTimerId);
-        if (this.multiDurationTimerId) clearInterval(this.multiDurationTimerId);
-        if (this.multiCooldownTimerId) clearInterval(this.multiCooldownTimerId);
-        if (this.multiStageTimerId) clearInterval(this.multiStageTimerId);
-        this.multiSpawnTimeoutId = null;
-        this.multiAttackResolveTimeoutId = null;
-        this.multiEnergyTimerId = null;
-        this.multiDurationTimerId = null;
-        this.multiCooldownTimerId = null;
-        this.multiStageTimerId = null;
-    }
-
-    /**
-     * Get active stage object
-     * @returns {Object|null}
-     */
-    getCurrentMultiStage() {
-        const stages = Array.isArray(this.puzzleData.stages) ? this.puzzleData.stages : [];
-        return stages[this.multiStageIndex] || null;
-    }
-
-    /**
-     * Schedule next attack for current stage
-     */
-    scheduleNextMultiAttack() {
-        if (this.isComplete) return;
-        const stage = this.getCurrentMultiStage();
-        if (!stage) return;
-        const spawn = stage.attackProfile?.spawnRate || { minSeconds: 2, maxSeconds: 4 };
-        let minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
-        let maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
-        const modifier = stage.attackProfile?.conditionalSpawnModifier;
-        if (modifier && modifier.ifFlag === 'compromisedAccounts' && Number(this.multiFlags.compromisedAccounts || 0) > 0) {
-            const factor = Math.max(0.1, 1 - (Number(modifier.increaseFrequencyPercent || 0) / 100));
-            minSeconds *= factor;
-            maxSeconds *= factor;
-        }
-        const delayMs = Math.floor((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
-        this.multiSpawnTimeoutId = setTimeout(() => {
-            if (this.isComplete) return;
-            this.spawnMultiStageAttack();
-            this.scheduleNextMultiAttack();
-        }, delayMs);
-    }
-
-    /**
-     * Spawn one or multiple attacks based on stage profile
-     */
-    spawnMultiStageAttack() {
-        const stage = this.getCurrentMultiStage();
-        if (!stage) return;
-        const attackNames = Array.isArray(stage.attackProfile?.attackTypes) ? stage.attackProfile.attackTypes : [];
-        if (!attackNames.length) return;
-        this.resolveOutstandingMultiAttacks();
-
-        const spawnAll = !!stage.attackProfile?.simultaneousWaves;
-        const selected = spawnAll ? attackNames.slice() : [attackNames[Math.floor(Math.random() * attackNames.length)]];
-        this.multiActiveAttacks = selected.map(name => this.buildMultiAttackState(name, stage));
-        const label = this.multiActiveAttacks.map(a => `${a.type} (-${a.damage})`).join(', ');
-        const panel = document.getElementById('multi-current-attacks');
-        if (panel) panel.innerHTML = label;
-        this.appendMultiLog(`Incoming: ${label}`);
-
-        this.multiAttackResolveTimeoutId = setTimeout(() => {
-            if (this.isComplete) return;
-            this.resolveOutstandingMultiAttacks();
-            this.multiActiveAttacks = [];
-            this.updateMultiSimulationUI();
-        }, 2200);
-    }
-
-    /**
-     * Build attack object with stage modifiers
-     * @param {string} attackType
-     * @param {Object} stage
-     * @returns {{type:string, damage:number, blocked:boolean}}
-     */
-    buildMultiAttackState(attackType, stage) {
-        const baseDamage = Number(stage.attackProfile?.baseDamage?.[attackType] || 10);
-        let damage = baseDamage;
-        const modifier = stage.attackProfile?.conditionalDamageModifier;
-        if (modifier && modifier.targetAttack === attackType) {
-            if (modifier.ifFlag === 'elevatedAccess' && this.multiFlags.elevatedAccess) {
-                if (modifier.increaseDamagePercent) damage = Math.round(damage * (1 + Number(modifier.increaseDamagePercent) / 100));
-            }
-            if (modifier.ifFlag === 'databaseStolen' && this.multiFlags.databaseStolen) {
-                if (modifier.multiplyDamageBy) damage = Math.round(damage * Number(modifier.multiplyDamageBy));
-            }
-        }
-        return { type: attackType, damage, blocked: false };
-    }
-
-    /**
-     * Use defense module during multi-stage simulation
-     * @param {string} defenseName
-     */
-    activateMultiDefense(defenseName) {
-        if (this.isComplete) return;
-        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
-        const defense = modules.find(d => d.name === defenseName);
-        if (!defense) return;
-        const cooldown = Number(this.multiDefenseCooldowns[defenseName] || 0);
-        if (cooldown > 0) {
-            this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldown}s).`, 'warning');
-            return;
-        }
-        const cost = Number(defense.energyCost || 0);
-        if (this.multiEnergy < cost) {
-            this.gameScreen.ui.showNotification('Not enough energy for that defense.', 'warning');
-            return;
-        }
-        this.multiEnergy = Math.max(0, this.multiEnergy - cost);
-        this.multiDefenseCooldowns[defenseName] = Number(defense.cooldown || 0);
-        this.audio.playButtonClick();
-        this.appendMultiLog(`Defense: ${defenseName}`);
-        this.multiActiveAttacks.forEach(attack => {
-            if (attack.blocked) return;
-            const match1 = Array.isArray(defense.protectsAgainst) && defense.protectsAgainst.includes(attack.type);
-            const stage = this.getCurrentMultiStage();
-            const counterList = Array.isArray(stage?.counteredBy?.[attack.type]) ? stage.counteredBy[attack.type] : [];
-            const match2 = counterList.includes(defenseName);
-            if (match1 || match2) {
-                attack.blocked = true;
-                this.appendMultiLog(`Blocked: ${attack.type}`);
-                this.audio.playSuccess();
-            }
-        });
-        this.updateMultiSimulationUI();
-        this.updateMultiDefenseButtons();
-    }
-
-    /**
-     * Apply damage for any unresolved attacks
-     */
-    resolveOutstandingMultiAttacks() {
-        const stage = this.getCurrentMultiStage();
-        if (!stage) return;
-        let unresolved = 0;
-        this.multiActiveAttacks.forEach(attack => {
-            if (attack.blocked) return;
-            unresolved += 1;
-            this.multiVaultHealth = Math.max(0, this.multiVaultHealth - Number(attack.damage || 0));
-            this.appendMultiLog(`Impact: ${attack.type} (-${attack.damage})`);
-        });
-        if (unresolved > 0) {
-            const key = stage.id || `stage_${this.multiStageIndex + 1}`;
-            this.multiUncounteredByStage[key] = Number(this.multiUncounteredByStage[key] || 0) + unresolved;
-            this.audio.playFailure();
-        }
-        if (this.multiVaultHealth <= 0) {
-            this.finishMultiStageDefenseSimulation(false);
-        }
-        this.updateMultiSimulationUI();
-    }
-
-    /**
-     * Apply stage escalation flags based on misses
-     */
-    applyCurrentStageEscalationIfNeeded() {
-        const stage = this.getCurrentMultiStage();
-        if (!stage) return;
-        const key = stage.id || `stage_${this.multiStageIndex + 1}`;
-        const misses = Number(this.multiUncounteredByStage[key] || 0);
-        const threshold = Number(stage.failureEffects?.onUncounteredThreshold || 9999);
-        if (misses < threshold) return;
-        const esc = stage.failureEffects?.escalation || {};
-        if (esc.compromisedAccounts !== undefined) this.multiFlags.compromisedAccounts = Number(esc.compromisedAccounts);
-        if (esc.elevatedAccess !== undefined) this.multiFlags.elevatedAccess = !!esc.elevatedAccess;
-        if (esc.databaseStolen !== undefined) this.multiFlags.databaseStolen = !!esc.databaseStolen;
-        if (esc.alertMessage) {
-            this.appendMultiLog(esc.alertMessage);
-            this.gameScreen.ui.showNotification(esc.alertMessage, 'warning');
-        }
-        this.updateMultiSimulationUI();
-    }
-
-    /**
-     * Update HUD for multi-stage simulation
-     */
-    updateMultiSimulationUI() {
-        const vault = Math.max(0, Math.min(100, this.multiVaultHealth));
-        const energy = Math.max(0, Math.min(100, this.multiEnergy));
-        const vaultText = document.getElementById('multi-vault-text');
-        const vaultFill = document.getElementById('multi-vault-fill');
-        const energyText = document.getElementById('multi-energy-text');
-        const energyFill = document.getElementById('multi-energy-fill');
-        const timeText = document.getElementById('multi-time-text');
-        const stageLabel = document.getElementById('multi-stage-label');
-        const stageTime = document.getElementById('multi-stage-time');
-        if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
-        if (vaultFill) vaultFill.style.width = `${vault}%`;
-        if (energyText) energyText.textContent = `${Math.floor(energy)}%`;
-        if (energyFill) energyFill.style.width = `${energy}%`;
-        if (timeText) timeText.textContent = `${Math.floor(Math.max(0, this.multiRemainingTime))}s`;
-        const stage = this.getCurrentMultiStage();
-        if (stageLabel) stageLabel.textContent = stage?.stageLabel || 'Stage Complete';
-        if (stageTime) stageTime.textContent = `${Math.floor(Math.max(0, this.multiStageRemaining))}s`;
-        this.updateMultiDefenseButtons();
-    }
-
-    /**
-     * Update multi-stage defense button states
-     */
-    updateMultiDefenseButtons() {
-        const buttons = Array.from(document.querySelectorAll('button[data-multi-defense]'));
-        const modules = Array.isArray(this.puzzleData.defenseModules) ? this.puzzleData.defenseModules : [];
-        buttons.forEach(btn => {
-            const name = btn.dataset.multiDefense;
-            const module = modules.find(m => m.name === name);
-            if (!module) return;
-            const cooldown = Number(this.multiDefenseCooldowns[name] || 0);
-            const affordable = this.multiEnergy >= Number(module.energyCost || 0);
-            btn.disabled = this.isComplete || cooldown > 0 || !affordable;
-            const cd = document.getElementById(`multi-cd-${this.sanitizeId(name)}`);
-            if (cd) {
-                if (cooldown > 0) cd.textContent = `COOLDOWN: ${cooldown}s`;
-                else if (!affordable) cd.textContent = 'LOW ENERGY';
-                else cd.textContent = 'READY';
-            }
-        });
-    }
-
-    /**
-     * Append log line for multi-stage simulation
-     * @param {string} message
-     */
-    appendMultiLog(message) {
+    renderEnterpriseAssessmentFeedback() {
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
-        const line = document.createElement('div');
-        line.textContent = `• ${message}`;
-        feedback.appendChild(line);
-        feedback.scrollTop = feedback.scrollHeight;
-    }
-
-    /**
-     * Finish multi-stage simulation
-     * @param {boolean} success
-     */
-    finishMultiStageDefenseSimulation(success) {
-        if (this.isComplete) return;
-        this.isComplete = true;
-        this.stopMultiStageDefenseSimulation();
-        const summary = this.puzzleData.finalSummary || 'Modern cyber attacks happen in stages. Small security gaps can combine into major breaches. Layered defense and early detection are critical.';
-        const feedback = document.getElementById('guess-feedback');
-        if (feedback) feedback.innerHTML += `<div style="margin-top:8px;"><strong>Summary:</strong> ${summary}</div>`;
-        if (success) {
-            this.audio.playSuccess();
-            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Boss campaign contained.', 'success');
-            setTimeout(() => this.gameScreen.completePuzzle(true), 1300);
-        } else {
-            this.audio.playFailure();
-            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'APT campaign breached defenses.', 'error');
-            setTimeout(() => this.gameScreen.completePuzzle(false), 1300);
-        }
-    }
-
-    /**
-     * Build safe id suffix from display labels
-     * @param {string} text
-     * @returns {string}
-     */
-    sanitizeId(text) {
-        return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    }
-
-    /**
-     * Get configured total budget for strategy mode
-     * @returns {number}
-     */
-    getStrategyTotalBudget() {
-        return Number(this.puzzleData.totalBudget || this.puzzleData.initialScenarioDisplay?.budgetPoints || 100);
-    }
-
-    /**
-     * Sum selected defense costs
-     * @returns {number}
-     */
-    getStrategyUsedBudget() {
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        return defenses.reduce((sum, defense) => {
-            if (!this.strategySelectedDefenses.has(defense.id)) return sum;
-            return sum + Number(defense.cost || 0);
-        }, 0);
-    }
-
-    /**
-     * Toggle one defense with budget check
-     * @param {string} defenseId
-     * @param {HTMLElement} button
-     */
-    toggleStrategyDefense(defenseId, button) {
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const defense = defenses.find(item => item.id === defenseId);
-        if (!defense) return;
-
-        if (this.strategySelectedDefenses.has(defenseId)) {
-            this.strategySelectedDefenses.delete(defenseId);
-            button.classList.remove('selected');
-            this.audio.playButtonClick();
-            this.updateStrategyBudgetUI();
-            return;
-        }
-
-        const used = this.getStrategyUsedBudget();
-        const total = this.getStrategyTotalBudget();
-        const nextCost = used + Number(defense.cost || 0);
-        if (nextCost > total) {
-            this.gameScreen.ui.showNotification(`Budget exceeded. You have ${Math.max(0, total - used)} points left.`, 'warning');
-            this.audio.playFailure();
-            return;
-        }
-
-        this.strategySelectedDefenses.add(defenseId);
-        button.classList.add('selected');
-        this.audio.playButtonClick();
-        this.updateStrategyBudgetUI();
-    }
-
-    /**
-     * Update budget meter UI for strategy mode
-     */
-    updateStrategyBudgetUI() {
-        const used = this.getStrategyUsedBudget();
-        const total = this.getStrategyTotalBudget();
-        const pct = Math.max(0, Math.min(100, (used / Math.max(1, total)) * 100));
-        const text = document.getElementById('strategy-budget-text');
-        const fill = document.getElementById('strategy-budget-fill');
-        if (text) text.textContent = `${used} / ${total}`;
-        if (fill) fill.style.width = `${pct}%`;
-    }
-
-    /**
-     * Clear selected defenses in strategy mode
-     */
-    clearStrategySelection() {
-        this.strategySelectedDefenses.clear();
-        document.querySelectorAll('button[data-defense-id].selected').forEach(el => el.classList.remove('selected'));
-        this.updateStrategyBudgetUI();
-        this.audio.playButtonClick();
-    }
-
-    /**
-     * Simulate attack waves based on selected defenses
-     * @returns {{waveResults: Array, vaultIntegrity: number}}
-     */
-    runStrategySimulation() {
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const waves = Array.isArray(this.puzzleData.attackWaves) ? this.puzzleData.attackWaves : [];
-        const selected = defenses.filter(defense => this.strategySelectedDefenses.has(defense.id));
-        const sim = this.puzzleData.simulationLogic || {};
-        const thresholds = sim.statusThresholds || {};
-        const blockedMin = Number(thresholds.blockedMin ?? 0.67);
-        const partialMin = Number(thresholds.partialMin ?? 0.34);
-        const cap = Number(sim.protectionScoreCapPerWave ?? 1);
-
-        const waveResults = waves.map(wave => {
-            const base = Number(wave.baselineProtection || 0);
-            const mapped = selected.reduce((sum, defense) => sum + Number(defense.protectionMapping?.[wave.id] || 0), 0);
-            const score = Math.min(cap, Math.max(0, base + mapped));
-            let status = 'Successful';
-            if (score >= blockedMin) {
-                status = 'Blocked';
-            } else if (score >= partialMin) {
-                status = 'Partially Blocked';
-            }
-            return {
-                id: wave.id,
-                name: wave.name,
-                protectionScore: score,
-                status
-            };
-        });
-
-        const outcome = this.puzzleData.outcomeCalculation || {};
-        const weights = outcome.waveWeights || {};
-        const scoreByStatus = outcome.scoreByStatus || {};
-        let weightedScoreSum = 0;
-        let weightSum = 0;
-        waveResults.forEach(result => {
-            const w = Number(weights[result.id] || 0);
-            let key = 'successful';
-            if (result.status === 'Blocked') key = 'blocked';
-            if (result.status === 'Partially Blocked') key = 'partial';
-            const score = Number(scoreByStatus[key] ?? 0);
-            weightedScoreSum += score * w;
-            weightSum += w;
-        });
-        const vaultIntegrity = Math.max(0, Math.min(100, Math.round((weightedScoreSum / Math.max(1, weightSum)) * 100)));
-
-        return { waveResults, vaultIntegrity };
-    }
-
-    /**
-     * Submit selected strategy and evaluate simulation
-     */
-    submitStrategyBuilderDecision() {
-        if (this.isComplete) return;
-        if (this.strategySelectedDefenses.size === 0) {
-            this.gameScreen.ui.showNotification('Choose at least one defense before simulation.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const result = this.runStrategySimulation();
-        this.strategySimulationResult = result;
-        this.renderStrategySimulationResult(result);
-
-        const successThreshold = 55;
-        if (result.vaultIntegrity >= successThreshold) {
-            this.isComplete = true;
-            this.audio.playSuccess();
-            this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Defense plan stabilized the vault.', 'success');
-            setTimeout(() => this.gameScreen.completePuzzle(true), 1300);
-            return;
-        }
-
-        this.audio.playFailure();
-        if (this.attempts >= this.maxAttempts) {
-            this.isComplete = true;
-            this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Defense plan left critical gaps.', 'error');
-            setTimeout(() => this.gameScreen.completePuzzle(false), 1300);
-            return;
-        }
-
-        this.gameScreen.ui.showNotification('Coverage is low. Rebalance defenses and run again.', 'warning');
-    }
-
-    /**
-     * Render strategy simulation outputs
-     * @param {{waveResults: Array, vaultIntegrity: number}} result
-     */
-    renderStrategySimulationResult(result) {
-        const waves = Array.isArray(result?.waveResults) ? result.waveResults : [];
-        waves.forEach(wave => {
-            const statusEl = document.getElementById(`strategy-wave-status-${wave.id}`);
-            if (!statusEl) return;
-            statusEl.textContent = wave.status;
-            if (wave.status === 'Blocked') {
-                statusEl.style.color = 'var(--cyber-green)';
-            } else if (wave.status === 'Partially Blocked') {
-                statusEl.style.color = 'var(--cyber-blue)';
-            } else {
-                statusEl.style.color = 'var(--cyber-pink)';
-            }
-        });
-
-        const metric = this.puzzleData.outcomeCalculation?.finalMetric || {};
-        const label = metric.label || 'Vault Integrity';
-        const feedback = document.getElementById('guess-feedback');
-        if (!feedback) return;
-
-        const lines = waves.map(w => `<div>• ${w.name}: <strong>${w.status}</strong></div>`).join('');
+        const fg = this.puzzleData.feedbackGenerator || {};
+        const mitigatedCount = this.enterpriseAttackResults.filter(r => r.outcome !== 'Successful').length;
+        const totalThreats = this.enterpriseAttackResults.length;
+        const areaPairs = [["Vault Security", this.enterpriseScores.vaultSecurityScore], ["Breach Resistance", this.enterpriseScores.breachResistanceScore], ["User Experience", this.enterpriseScores.userExperienceScore], ["Operational Stability", this.enterpriseScores.operationalStabilityScore], ["Incident Response Maturity", this.enterpriseScores.incidentResponseMaturity]];
+        areaPairs.sort((a, b) => b[1] - a[1]);
+        const strongestArea = areaPairs[0][0];
+        const weakestArea = areaPairs[areaPairs.length - 1][0];
+        const recommendation = weakestArea === "Incident Response Maturity" ? "Improve continuous monitoring." : weakestArea === "User Experience" ? "Reduce unnecessary friction while keeping strong controls." : "Strengthen layered controls in weaker architecture areas.";
+        const summary = (fg.summaryTemplate || "You successfully mitigated [mitigatedCount] of [totalThreats] simulated threats.").replace("[mitigatedCount]", String(mitigatedCount)).replace("[totalThreats]", String(totalThreats));
+        const resultLines = this.enterpriseAttackResults.map(r => `<div>• ${r.attackName}: <strong>${r.outcome}</strong> - ${this.getEnterpriseAttackNarrative(r)}</div>`).join('');
+        const badgeLine = this.enterpriseBadgeUnlocked ? `<div><strong>Badge Unlocked:</strong> ${this.puzzleData.certificationBadgeLogic?.badgeName || 'Certified Security Architect'}</div>` : `<div>${this.puzzleData.certificationBadgeLogic?.lockedMessage || ''}</div>`;
         feedback.innerHTML = `
-            <div><strong>Simulation Result:</strong></div>
-            ${lines}
-            <div style="margin-top:8px;"><strong>${label}:</strong> ${result.vaultIntegrity}%</div>
-            <div style="margin-top:8px;">${this.puzzleData.educationalSummary || ''}</div>
-        `;
+            ${this.renderMissionDebrief({
+                tone: this.enterpriseRating === 'A+' || this.enterpriseRating === 'A' ? 'success' : this.enterpriseRating === 'B' ? 'warning' : 'error',
+                title: `Final Rating: ${this.enterpriseRating} - ${this.puzzleData.ratingBands?.[this.enterpriseRating] || ''}`,
+                summary,
+                details: [
+                    `Final score: ${this.enterpriseScores.finalWeightedScore}/100`,
+                    `Strongest area: ${strongestArea}`,
+                    `Weakest area: ${weakestArea}`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            })}
+            <div style="margin-top:14px;"><strong>Phase 2: Attack Evaluation</strong></div>${resultLines}
+            <div style="margin-top:10px;"><strong>Phase 3: Metrics</strong></div>
+            <div>Vault Security: ${this.enterpriseScores.vaultSecurityScore} | Breach Resistance: ${this.enterpriseScores.breachResistanceScore}</div>
+            <div>User Experience: ${this.enterpriseScores.userExperienceScore} | Stability: ${this.enterpriseScores.operationalStabilityScore} | IR Maturity: ${this.enterpriseScores.incidentResponseMaturity}</div>
+            <div>${(fg.recommendationTemplate || "Recommended improvement: [recommendation].").replace("[recommendation]", recommendation)}</div>
+            <div style="margin-top:6px;">${fg.humilityMessage || ''}</div>
+            <div style="margin-top:8px;">${badgeLine}</div>`;
     }
 
-    /**
-     * Show database preview for selected system
-     * @param {string} systemId
-     */
-    viewInspectionDatabase(systemId) {
-        const system = (this.puzzleData.systems || []).find(item => item.id === systemId);
-        if (!system) return;
-        const panel = document.getElementById(`db-${systemId}`);
-        if (!panel) return;
-        const rows = Array.isArray(system.databasePreview) ? system.databasePreview : [];
-        panel.style.display = 'block';
-        panel.innerHTML = `<strong>Database Preview:</strong><div>${rows.join('</div><div>')}</div>`;
-    }
+    // ─── multi-select helpers ────────────────────────────────────────────────
 
-    /**
-     * Show breach outcome for selected system
-     * @param {string} systemId
-     */
-    simulateInspectionBreach(systemId) {
-        const system = (this.puzzleData.systems || []).find(item => item.id === systemId);
-        if (!system) return;
-        const panel = document.getElementById(`breach-${systemId}`);
-        if (!panel) return;
-        panel.style.display = 'block';
-        panel.innerHTML = `<strong>Breach Simulation:</strong><div>${system.breachOutcome || ''}</div>`;
-    }
-
-    /**
-     * Submit safer-system choice
-     */
-    submitInspectionChoice() {
-        if (this.isComplete) return;
-        if (!this.inspectionSelectedSystem) {
-            this.gameScreen.ui.showNotification('Choose a system first.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const feedback = document.getElementById('guess-feedback');
-        const isCorrect = this.inspectionSelectedSystem === this.puzzleData.correctAnswer;
-
-        if (!isCorrect) {
-            if (feedback) {
-                feedback.innerHTML = `
-                    <div><strong>Not correct yet.</strong></div>
-                    <div>${this.mission.failureFeedback || 'Review both systems and try again.'}</div>
-                    <div style="margin-top:6px;">${this.puzzleData.simpleExplanation || ''}</div>
-                `;
-            }
-            this.audio.playFailure();
-            this.gameScreen.ui.showNotification('Incorrect choice. Review and try again.', 'error');
-            return;
-        }
-
-        this.isComplete = true;
-        const shock = this.puzzleData.shockReveal || null;
-        if (feedback) {
-            feedback.innerHTML = `
-                <div><strong>Correct choice:</strong> System B</div>
-                <div>${this.puzzleData.simpleExplanation || ''}</div>
-                ${shock ? `<div style="margin-top:10px;"><strong>${shock.title}</strong> ${shock.message}</div>` : ''}
-                <div style="margin-top:10px;">${this.puzzleData.educationalSummary || ''}</div>
-            `;
-        }
-        this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Correct choice.', 'success');
-        setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
-    }
-
-    /**
-     * Handle investigation cause answer
-     */
-    submitInvestigationCause() {
-        if (this.isComplete) return;
-        if (!this.investigationSelectedCause) {
-            this.gameScreen.ui.showNotification('Select a cause first.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const feedback = document.getElementById('guess-feedback');
-        const correctCause = this.puzzleData.correctAnswer;
-
-        if (this.investigationSelectedCause !== correctCause) {
-            if (feedback) {
-                feedback.innerHTML = `
-                    <div><strong>Not correct yet.</strong></div>
-                    <div>${this.mission.failureFeedback || 'Review the evidence and try again.'}</div>
-                    <div style="margin-top:6px;">${this.puzzleData.simpleExplanation || ''}</div>
-                `;
-            }
-            this.audio.playFailure();
-            this.gameScreen.ui.showNotification('Incorrect. Review evidence and try again.', 'error');
-            return;
-        }
-
-        this.investigationStage = 'defense';
-        const reveal = this.puzzleData.revealOnCorrect || {};
-        if (feedback) {
-            feedback.innerHTML = `
-                <div><strong>Correct cause found:</strong> Dictionary Attack</div>
-                <div>${this.puzzleData.simpleExplanation || ''}</div>
-                <div style="margin-top:6px;"><strong>Actual password:</strong> ${reveal.actualPassword || 'unknown'}</div>
-                <div>${reveal.message || ''} The system allowed unlimited attempts.</div>
-            `;
-        }
-        this.audio.playSuccess();
-        this.gameScreen.ui.showNotification('Cause identified. Continue to defense question.', 'success');
-
-        const causeBlock = document.getElementById('investigation-cause-block');
-        const defenseBlock = document.getElementById('investigation-defense-block');
-        if (causeBlock) causeBlock.style.display = 'none';
-        if (defenseBlock) defenseBlock.style.display = 'block';
-
-        if (!this.puzzleData.followUpDefenseQuestion) {
-            setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
-        }
-    }
-
-    /**
-     * Handle investigation defense answer
-     */
-    submitInvestigationDefense() {
-        if (this.isComplete) return;
-        const followUp = this.puzzleData.followUpDefenseQuestion || null;
-        if (!followUp) {
-            this.gameScreen.completePuzzle(true);
-            return;
-        }
-        if (!this.investigationSelectedDefense) {
-            this.gameScreen.ui.showNotification('Select a defense option first.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
-        const feedback = document.getElementById('guess-feedback');
-        const isCorrect = this.investigationSelectedDefense === followUp.correctAnswer;
-        if (!isCorrect) {
-            if (feedback) {
-                feedback.innerHTML = `
-                    <div><strong>Not the best defense.</strong></div>
-                    <div>${followUp.explanation || 'Try again and pick a control that blocks repeated guesses.'}</div>
-                `;
-            }
-            this.audio.playFailure();
-            this.gameScreen.ui.showNotification('Try again. Think about what blocks repeated guesses.', 'error');
-            return;
-        }
-
-        this.isComplete = true;
-        if (feedback) {
-            feedback.innerHTML = `
-                <div><strong>Correct defense:</strong> Add lockout rule</div>
-                <div>${followUp.explanation || ''}</div>
-                <div style="margin-top:8px;">${this.puzzleData.educationalSummary || ''}</div>
-            `;
-        }
-        this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Investigation complete.', 'success');
-        setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
-    }
-
-    /**
-     * Start countdown timer for prediction mode
-     */
-    startPredictionTimer() {
-        this.updatePredictionTimerUI();
-        this.predictionTimerId = setInterval(() => {
-            if (this.isComplete) return;
-            this.predictionRemaining = Math.max(0, this.predictionRemaining - 1);
-            this.updatePredictionTimerUI();
-            if (this.predictionRemaining <= 0) {
-                this.onPredictionChoiceFailure('Time is up. The weaker password broke first.');
-            }
-        }, 1000);
-    }
-
-    /**
-     * Stop prediction timer
-     */
-    stopPredictionTimer() {
-        if (this.predictionTimerId) {
-            clearInterval(this.predictionTimerId);
-            this.predictionTimerId = null;
-        }
-    }
-
-    /**
-     * Update prediction timer UI
-     */
-    updatePredictionTimerUI() {
-        const timerText = document.getElementById('prediction-timer-text');
-        const timerFill = document.getElementById('prediction-timer-fill');
-        if (timerText) timerText.textContent = `${this.predictionRemaining}s`;
-        if (timerFill) {
-            const pct = Math.max(0, Math.min(100, (this.predictionRemaining / Math.max(1, this.puzzleData.timeLimit || 1)) * 100));
-            timerFill.style.width = `${pct}%`;
-        }
-    }
-
-    /**
-     * Resolve break time in seconds for a password in prediction mode
-     * @param {string} password
-     * @returns {number}
-     */
-    getPredictionBreakTime(password) {
-        if (typeof this.puzzleData.simulateBreakTime === 'function') {
-            return this.puzzleData.simulateBreakTime(password, this.predictionSession);
-        }
-        const table = this.predictionSession?.breakTimeSeconds || {};
-        return table[password] || 60;
-    }
-
-    /**
-     * Submit prediction and run race animation
-     */
-    submitPredictionChoiceDecision() {
-        if (this.isComplete) return;
-        if (!this.predictionSelected) {
-            this.gameScreen.ui.showNotification('Select one password first.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-        this.stopPredictionTimer();
-
-        const session = this.predictionSession || {};
-        const options = Array.isArray(session.options) ? session.options : [];
-        const times = options.map(option => this.getPredictionBreakTime(option));
-        const minTime = Math.min(...times);
-        const maxTime = Math.max(...times, 1);
-        const raceBoard = document.getElementById('prediction-race-board');
-        if (raceBoard) raceBoard.style.display = 'block';
-
-        options.forEach((option, idx) => {
-            const bar = document.getElementById(`race-bar-${idx}`);
-            const label = document.getElementById(`race-time-${idx}`);
-            const t = times[idx];
-            const crackedPct = Math.max(8, Math.min(100, ((maxTime - t) / maxTime) * 100 + 8));
-            if (bar) {
-                bar.style.background = t === minTime ? 'var(--cyber-pink)' : 'var(--cyber-green)';
-                requestAnimationFrame(() => {
-                    bar.style.width = `${crackedPct}%`;
-                });
-            }
-            if (label) {
-                label.textContent = `${t}s`;
-            }
-        });
-
-        const correct = this.predictionSelected === session.correctAnswer;
-        const feedback = document.getElementById('guess-feedback');
-        const explanation = session.simpleExplanation || this.puzzleData.simpleExplanation || '';
-        if (feedback) {
-            feedback.innerHTML = `
-                <div><strong>${correct ? (this.mission.successFeedback || 'Good call.') : (this.mission.failureFeedback || 'Incorrect prediction.')}</strong></div>
-                <div style="margin-top:6px;">${explanation}</div>
-            `;
-        }
-
-        const shock = this.puzzleData.shockEvent || null;
-        const showShock = shock && shock.triggerCaseId && shock.triggerCaseId === session.caseId;
-
-        setTimeout(() => {
-            if (showShock && feedback) {
-                feedback.innerHTML += `<div style="margin-top:10px;"><strong>${shock.title}</strong> ${shock.message}</div>`;
-            }
-            if (correct) {
-                this.onPredictionChoiceSuccess();
-            } else {
-                this.onPredictionChoiceFailure('Incorrect prediction. The weaker password broke first.');
-            }
-        }, this.puzzleData?.simulationUI?.animateDurationMs || 3200);
-    }
-
-    /**
-     * Success handler for prediction-choice mode
-     */
-    onPredictionChoiceSuccess() {
-        if (this.isComplete) return;
-        this.isComplete = true;
-        this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Good prediction.', 'success');
-        setTimeout(() => this.gameScreen.completePuzzle(true), 1200);
-    }
-
-    /**
-     * Failure handler for prediction-choice mode
-     * @param {string} message
-     */
-    onPredictionChoiceFailure(message) {
-        if (this.isComplete) return;
-        this.isComplete = true;
-        this.stopPredictionTimer();
-        this.audio.playFailure();
-        this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-        this.gameScreen.ui.showNotification(message || this.mission.failureFeedback || 'Incorrect prediction.', 'error');
-        setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
-    }
-
-    /**
-     * Fill inputs with text (for paste)
-     * @param {string} text - Text to fill
-     * @param {number} startIndex - Starting index
-     */
-    fillInputs(text, startIndex = 0) {
-        for (let i = 0; i < text.length && (startIndex + i) < this.inputs.length; i++) {
-            this.inputs[startIndex + i].value = text[i];
-        }
-        this.updateDisplay();
-    }
-
-    /**
-     * Submit multi-select classification
-     */
     submitMultiSelectSelection() {
         if (this.isComplete) return;
-
-        if (this.selectedOptions.size === 0) {
-            this.gameScreen.ui.showNotification('Select at least one password before submission.', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.gameScreen.updateAttempts(this.attempts);
-
+        if (this.selectedOptions.size === 0) { this.gameScreen.ui.showNotification('Select at least one password before submission.', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter(); this.gameScreen.updateAttempts(this.attempts);
         const selectedIds = Array.from(this.selectedOptions);
-        const isValid = typeof this.puzzleData.validateSelection === 'function'
-            ? this.puzzleData.validateSelection(selectedIds, this.session)
-            : false;
-
-        if (isValid) {
-            this.onMultiSelectSuccess();
-            return;
-        }
-
+        const isValid = typeof this.puzzleData.validateSelection === 'function' ? this.puzzleData.validateSelection(selectedIds, this.session) : false;
+        if (isValid) { this.onMultiSelectSuccess(); return; }
         this.showMultiSelectFeedback();
         this.increaseRisk();
-
         this.revealSecondaryClue();
-
-        if (this.hasRiskBreached()) {
-            const breachMessage = this.riskSystem?.breachMessage || 'Simulated breach triggered by repeated wrong decisions.';
-            this.gameScreen.ui.showNotification(breachMessage, 'error');
-            this.onMultiSelectFailure();
-            return;
-        }
-
-        if (this.attempts >= this.maxAttempts) {
-            this.onMultiSelectFailure();
-        } else {
-            this.gameScreen.ui.showNotification('Classification mismatch detected. Reassess behavioral indicators.', 'error');
-        }
+        if (this.hasRiskBreached()) { this.gameScreen.ui.showNotification(this.riskSystem?.breachMessage || 'Breach simulated.', 'error'); this.onMultiSelectFailure(); return; }
+        if (this.attempts >= this.maxAttempts) this.onMultiSelectFailure();
+        else this.gameScreen.ui.showNotification('Classification mismatch detected. Reassess behavioral indicators.', 'error');
     }
 
-    /**
-     * Clear current multi-select choices
-     */
     clearMultiSelectSelection() {
         this.selectedOptions.clear();
-        document.querySelectorAll('.password-option.selected').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('[data-option-id].selected').forEach(el => el.classList.remove('selected'));
         this.audio.playButtonClick();
+        if (this.interactionMode === 'humanPsychologyLab' && this.visualizerElement) {
+            this.pushHumanLabLog('sys', 'Selection buffer cleared. Awaiting revised analyst classification.');
+            this.updateHumanPsychologyLiveUI();
+            return;
+        }
     }
 
-    /**
-     * Show concise classification feedback without revealing answers
-     */
     showMultiSelectFeedback() {
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
-
-        const selectedIds = this.selectedOptions;
         const weakCount = (this.session?.options || []).filter(o => o.isWeak).length;
-        const selectedCount = selectedIds.size;
-
-        feedback.innerHTML = `
-            <div><strong>SOC Feedback:</strong> Selection pattern does not fully align with observed human-risk behaviors.</div>
-            <div>Weak credentials expected in set: ${weakCount}</div>
-            <div>Your current selection count: ${selectedCount}</div>
-        `;
+        if (this.interactionMode === 'humanPsychologyLab') {
+            const options = this.session?.options || [];
+            const selected = options.filter(opt => this.selectedOptions.has(opt.id));
+            const falsePositives = selected.filter(opt => !opt.isWeak);
+            const missed = options.filter(opt => opt.isWeak && !this.selectedOptions.has(opt.id));
+            feedback.innerHTML = `
+                <div><strong>Analyst Review:</strong> The board is not classified correctly yet.</div>
+                <div>Weak passwords in this set: ${weakCount}</div>
+                <div>Your flagged count: ${this.selectedOptions.size}</div>
+                <div>Missed predictable passwords: ${missed.length}</div>
+                <div>Strong passwords incorrectly flagged: ${falsePositives.length}</div>`;
+            this.pushHumanLabLog('danger', `Classification mismatch. Missed ${missed.length} weak entry(s) and flagged ${falsePositives.length} resilient credential(s).`);
+            return;
+        }
+        feedback.innerHTML = `<div><strong>SOC Feedback:</strong> Selection pattern does not fully align with observed human-risk behaviors.</div><div>Weak credentials expected in set: ${weakCount}</div><div>Your current selection count: ${this.selectedOptions.size}</div>`;
     }
 
-    /**
-     * Reveal optional subtle clue after first failed attempt
-     */
     revealSecondaryClue() {
         const failHints = Array.isArray(this.session?.failHints) ? this.session.failHints : [];
         let text = '';
-        if (failHints.length) {
-            const idx = Math.min(this.attempts - 1, failHints.length - 1);
-            text = failHints[idx] || '';
-        } else if (this.attempts === 1) {
-            text = this.session?.subtleClueOnFail || '';
-        }
+        if (failHints.length) { const idx = Math.min(this.attempts - 1, failHints.length - 1); text = failHints[idx] || ''; }
+        else if (this.attempts === 1) text = this.session?.subtleClueOnFail || '';
         if (!text) return;
         const hintsContainer = document.getElementById('password-hints');
         if (!hintsContainer) return;
-
         const clue = document.createElement('div');
-        clue.className = 'hint animate-fadeIn';
-        clue.textContent = `→ ${text}`;
+        clue.className = this.interactionMode === 'humanPsychologyLab' ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
+        clue.textContent = this.interactionMode === 'humanPsychologyLab' ? text : `→ ${text}`;
         hintsContainer.appendChild(clue);
+        if (this.interactionMode === 'humanPsychologyLab') {
+            this.pushHumanLabLog('warn', `Additional analyst clue injected: ${text}`);
+        }
     }
 
-    /**
-     * Render post-completion security insight panel
-     */
     renderSecurityInsight() {
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
         const insights = Array.isArray(this.session?.securityInsight) ? this.session.securityInsight : [];
         const correctWeak = Array.isArray(this.session?.correctWeakPasswords) ? this.session.correctWeakPasswords : [];
-        if (!insights.length && !correctWeak.length) return;
-
-        const answersLine = correctWeak.length
-            ? `<div><strong>Correct weak passwords in this round:</strong> ${correctWeak.join(', ')}</div>`
-            : '';
-
-        feedback.innerHTML = `
-            ${answersLine}
-            <div><strong>Security Insight:</strong></div>
-            <div>• ${insights.join('</div><div>• ')}</div>
-        `;
-
-        if (this.puzzleData.finalReview) {
-            const weakTotal = (this.session?.options || []).filter(o => o.isWeak).length;
-            const selectedIds = Array.from(this.selectedOptions);
-            const correctSelected = (this.session?.options || []).filter(o => o.isWeak && selectedIds.includes(o.id)).length;
-            const max = this.riskSystem?.max || 100;
-            const riskPercent = Math.floor((this.riskValue / max) * 100);
-            const rating = riskPercent <= 15 ? 'A+' : riskPercent <= 30 ? 'A' : riskPercent <= 55 ? 'B' : 'C';
-            const focus = rating === 'A+' || rating === 'A'
-                ? 'keep blocking common patterns and reuse'
-                : rating === 'B'
-                    ? 'reduce predictable patterns and strengthen policy checks'
-                    : 'avoid common passwords and apply all controls together';
-            const summary = `You spotted ${correctSelected}/${weakTotal} weak risks. Your final security rating is ${rating}. Main improvement area: ${focus}.`;
-            feedback.innerHTML += `
-                <div style="margin-top:10px;"><strong>Final Review:</strong> ${summary}</div>
-            `;
+        const answersLine = correctWeak.length ? `<div><strong>Correct weak passwords:</strong> ${correctWeak.join(', ')}</div>` : '';
+        if (this.interactionMode === 'humanPsychologyLab') {
+            feedback.innerHTML = `${answersLine}<div><strong>Analyst Debrief:</strong></div><div>• ${insights.join('</div><div>• ')}</div>`;
+            this.pushHumanLabLog('ok', `Debrief ready. Verified weak credentials: ${correctWeak.join(', ') || 'none listed'}.`);
+            return;
         }
+        feedback.innerHTML = `${answersLine}<div><strong>Security Insight:</strong></div><div>• ${insights.join('</div><div>• ')}</div>`;
     }
 
-    /**
-     * Update password display
-     */
-    updateDisplay() {
-        const display = document.getElementById('password-display');
-        if (!display) return;
-
-        let displayText = '';
-        this.inputs.forEach(input => {
-            displayText += input.value || '_';
-        });
-
-        display.textContent = displayText;
-    }
-
-    /**
-     * Get current guess
-     * @returns {string} Current password guess
-     */
-    getCurrentGuess() {
-        if (this.interactionMode === 'multiSelect' || this.interactionMode === 'singleChoice' || this.interactionMode === 'predictionChoice' || this.interactionMode === 'investigation' || this.interactionMode === 'inspection' || this.interactionMode === 'strategyBuilder' || this.interactionMode === 'liveDefenseSimulation' || this.interactionMode === 'multiStageDefenseSimulation' || this.interactionMode === 'threatHuntSimulation' || this.interactionMode === 'livePatchSimulation' || this.interactionMode === 'enterpriseArchitectureSimulation') return '';
-        return this.inputs.map(input => input.value).join('').toUpperCase();
-    }
-
-    /**
-     * Check if password is correct
-     */
-    checkPassword() {
-        if (this.isComplete) return;
-        if (this.interactionMode === 'multiSelect') {
-            this.submitMultiSelectSelection();
-            return;
-        }
-        if (this.interactionMode === 'singleChoice') {
-            this.submitSingleChoiceDecision();
-            return;
-        }
-        if (this.interactionMode === 'predictionChoice') {
-            this.submitPredictionChoiceDecision();
-            return;
-        }
-        if (this.interactionMode === 'investigation') {
-            if (this.investigationStage === 'cause') {
-                this.submitInvestigationCause();
-            } else {
-                this.submitInvestigationDefense();
-            }
-            return;
-        }
-        if (this.interactionMode === 'inspection') {
-            this.submitInspectionChoice();
-            return;
-        }
-        if (this.interactionMode === 'strategyBuilder') {
-            this.submitStrategyBuilderDecision();
-            return;
-        }
-        if (this.interactionMode === 'liveDefenseSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'multiStageDefenseSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'threatHuntSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'livePatchSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-            return;
-        }
-
-        const guess = this.getCurrentGuess();
-        
-        // Check if all fields filled
-        if (guess.length !== this.password.length) {
-            this.gameScreen.ui.showNotification('Enter all characters!', 'warning');
-            return;
-        }
-
-        this.attempts++;
-        this.updateAttemptCounter();
-        this.updateVisualizerState();
-
-        if (guess === this.password) {
-            // Correct!
-            this.onSuccess();
-        } else {
-            // Incorrect
-            this.showGuessFeedback(guess);
-            this.onFailure();
-        }
-
-        // Update game screen stats
-        this.gameScreen.updateAttempts(this.attempts);
-    }
-
-    /**
-     * Handle correct password
-     */
-    onSuccess() {
-        this.isComplete = true;
-        this.audio.playSuccess();
-
-        // Mark all inputs as correct
-        this.inputs.forEach(input => {
-            input.classList.add('correct');
-            input.disabled = true;
-        });
-
-        // Flash screen
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
-
-        // Show success message
-        const successMessage = (this.visualProfile === 'enterprise-architecture')
-            ? `${this.mission.successFeedback || 'Password cracked!'} ${this.buildEnterpriseSummary()}`
-            : (this.mission.successFeedback || 'Password cracked!');
-
-        this.gameScreen.ui.showNotification(successMessage, 'success');
-
-        // Complete mission
-        setTimeout(() => {
-            this.gameScreen.completePuzzle(true);
-        }, 1000);
-    }
-
-    /**
-     * Handle multi-select success
-     */
     onMultiSelectSuccess() {
         this.isComplete = true;
         this.audio.playSuccess();
-        this.gameScreen.ui.flashScreen('rgba(0, 255, 65, 0.2)', 300);
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        this.updateHumanPsychologyLiveUI();
         this.renderSecurityInsight();
-        this.gameScreen.ui.showNotification(
-            this.mission.successFeedback || 'Credential vulnerability successfully identified. Human predictability confirmed.',
-            'success'
-        );
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'success',
+                title: 'Weak credential set identified',
+                summary: this.mission.successFeedback || 'You separated predictable passwords from resilient ones.',
+                details: [
+                    `Submissions used: ${this.attempts}`,
+                    `Final risk meter: ${Math.round(this.riskValue)}%`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+        this.pushHumanLabLog('ok', 'Weak credential set isolated. Containment report ready for command review.');
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Credential vulnerability identified.', 'success');
         setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
     }
 
-    /**
-     * Handle multi-select failure
-     */
     onMultiSelectFailure() {
         this.isComplete = true;
         this.audio.playFailure();
-        document.querySelectorAll('.password-option').forEach(el => el.disabled = true);
+        document.querySelectorAll('[data-option-id]').forEach(el => el.disabled = true);
+        this.updateHumanPsychologyLiveUI();
         this.renderSecurityInsight();
-        this.gameScreen.ui.showNotification(
-            this.mission.failureFeedback || 'Security oversight detected. Reassess behavioral patterns used in password creation.',
-            'error'
-        );
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: 'error',
+                title: 'Attacker shortcut missed',
+                summary: this.mission.failureFeedback || 'Security oversight detected.',
+                details: [
+                    `Submissions used: ${this.attempts}`,
+                    `Final risk meter: ${Math.round(this.riskValue)}%`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+        this.pushHumanLabLog('danger', 'Attacker shortcut preserved. Analyst board closed with unresolved exposure.');
+        this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Security oversight detected.', 'error');
         setTimeout(() => this.gameScreen.completePuzzle(false), 1700);
     }
 
-    /**
-     * Handle incorrect password
-     */
+    // ─── typing puzzle helpers ────────────────────────────────────────────────
+
+    createInputs() {
+        let html = '';
+        for (let i = 0; i < this.password.length; i++) {
+            html += `<input type="text" class="char-input" maxlength="1" data-index="${i}" autocomplete="off" spellcheck="false">`;
+        }
+        return html;
+    }
+
+    renderMissionBrief() {
+        if (!this.mission || !this.mission.scenario) return '';
+        const scenarioText = this.dynamicScenario || this.mission.scenario;
+        const taskText = this.dynamicUserTask || this.mission.userTask || 'Identify and validate the credential.';
+        return `<div class="password-brief"><div><strong>OBJECTIVE:</strong> ${this.mission.objective || ''}</div><div><strong>SCENARIO:</strong> ${scenarioText}</div><div><strong>TASK:</strong> ${taskText}</div></div>`;
+    }
+
+    setupEventListeners() {
+        this.inputs = Array.from(document.querySelectorAll('.char-input'));
+        document.getElementById('submit-password')?.addEventListener('click', () => this.checkPassword());
+        document.getElementById('clear-password')?.addEventListener('click', () => this.clearInputs());
+        this.inputs.forEach((input, index) => {
+            input.addEventListener('input', e => {
+                e.target.value = e.target.value.toUpperCase();
+                if (e.target.value && index < this.inputs.length - 1) this.inputs[index + 1].focus();
+                this.audio.playTyping();
+                this.updateDisplay();
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) { this.inputs[index - 1].focus(); this.inputs[index - 1].select(); }
+                if (e.key === 'Enter') this.checkPassword();
+            });
+            input.addEventListener('keypress', e => { if (!/[a-zA-Z0-9]/.test(e.key)) e.preventDefault(); });
+            input.addEventListener('paste', e => { e.preventDefault(); this.fillInputs(e.clipboardData.getData('text').toUpperCase(), index); });
+        });
+        if (this.inputs[0]) this.inputs[0].focus();
+    }
+
+    updateDisplay() {
+        const display = document.getElementById('password-display');
+        if (display) display.textContent = this.inputs.map(i => i.value || '_').join('');
+    }
+
+    getCurrentGuess() { return this.inputs.map(i => i.value).join('').toUpperCase(); }
+
+    fillInputs(text, startIndex = 0) {
+        for (let i = 0; i < text.length && (startIndex + i) < this.inputs.length; i++) this.inputs[startIndex + i].value = text[i];
+        this.updateDisplay();
+    }
+
+    checkPassword() {
+        if (this.isComplete) return;
+        const guess = this.getCurrentGuess();
+        if (guess.length !== this.password.length) { this.gameScreen.ui.showNotification('Enter all characters!', 'warning'); return; }
+        this.attempts++; this.updateAttemptCounter();
+        if (guess === this.password) { this.onSuccess(); }
+        else { this.showGuessFeedback(guess); this.onFailure(); }
+        this.gameScreen.updateAttempts(this.attempts);
+    }
+
+    onSuccess() {
+        this.isComplete = true;
+        this.audio.playSuccess();
+        this.inputs.forEach(i => { i.classList.add('correct'); i.disabled = true; });
+        this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+        this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Password cracked!', 'success');
+        setTimeout(() => this.gameScreen.completePuzzle(true), 1000);
+    }
+
     onFailure() {
         this.audio.playFailure();
-
-        // Reset previous transient error styles
-        this.inputs.forEach(input => {
-            if (input.classList.contains('incorrect')) {
-                input.classList.remove('incorrect');
-            }
-        });
-
-        // Shake only currently incorrect letters
-        this.inputs.forEach(input => {
-            if (!input.classList.contains('correct') && !input.classList.contains('partial')) {
-                input.classList.add('incorrect');
-            }
-            setTimeout(() => {
-                input.classList.remove('incorrect');
-            }, 500);
-        });
-
-        // Flash screen
-        this.gameScreen.ui.flashScreen('rgba(255, 0, 110, 0.2)', 300);
-
-        // Check if out of attempts
-        if (this.attempts >= this.maxAttempts) {
-            this.onOutOfAttempts();
-        } else {
-            this.gameScreen.ui.showNotification(
-                `Authentication rejected. ${this.maxAttempts - this.attempts} attempts remaining`,
-                'error'
-            );
-        }
+        this.inputs.forEach(i => { if (!i.classList.contains('correct') && !i.classList.contains('partial')) { i.classList.add('incorrect'); setTimeout(() => i.classList.remove('incorrect'), 500); } });
+        this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+        if (this.attempts >= this.maxAttempts) this.onOutOfAttempts();
+        else this.gameScreen.ui.showNotification(`Authentication rejected. ${this.maxAttempts - this.attempts} attempts remaining`, 'error');
     }
 
-    /**
-     * Handle running out of attempts
-     */
     onOutOfAttempts() {
         this.isComplete = true;
-
-        // Disable inputs
-        this.inputs.forEach(input => {
-            input.disabled = true;
-        });
-
-        this.gameScreen.ui.showNotification(
-            this.mission.failureFeedback || 'Out of attempts! Mission failed.',
-            'error'
-        );
-
-        setTimeout(() => {
-            this.gameScreen.completePuzzle(false);
-        }, 2000);
+        this.inputs.forEach(i => { i.disabled = true; });
+        this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Out of attempts! Mission failed.', 'error');
+        setTimeout(() => this.gameScreen.completePuzzle(false), 2000);
     }
 
-    /**
-     * Clear all inputs
-     */
-    clearInputs() {
-        if (this.interactionMode === 'multiSelect') {
-            this.clearMultiSelectSelection();
-            return;
-        }
-        if (this.interactionMode === 'singleChoice') {
-            this.singleChoiceSelected = null;
-            const selected = document.querySelector('input[name="attack-choice"]:checked');
-            if (selected) selected.checked = false;
-            this.audio.playButtonClick();
-            return;
-        }
-        if (this.interactionMode === 'predictionChoice') {
-            this.predictionSelected = null;
-            const selected = document.querySelector('input[name="prediction-choice"]:checked');
-            if (selected) selected.checked = false;
-            this.audio.playButtonClick();
-            return;
-        }
-        if (this.interactionMode === 'investigation') {
-            this.investigationSelectedCause = null;
-            this.investigationSelectedDefense = null;
-            const selectedCause = document.querySelector('input[name="investigation-cause"]:checked');
-            const selectedDefense = document.querySelector('input[name="investigation-defense"]:checked');
-            if (selectedCause) selectedCause.checked = false;
-            if (selectedDefense) selectedDefense.checked = false;
-            this.audio.playButtonClick();
-            return;
-        }
-        if (this.interactionMode === 'inspection') {
-            this.inspectionSelectedSystem = null;
-            const selected = document.querySelector('input[name="inspection-choice"]:checked');
-            if (selected) selected.checked = false;
-            this.audio.playButtonClick();
-            return;
-        }
-        if (this.interactionMode === 'strategyBuilder') {
-            this.clearStrategySelection();
-            return;
-        }
-        if (this.interactionMode === 'liveDefenseSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'multiStageDefenseSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'threatHuntSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'livePatchSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-            return;
-        }
-        this.inputs.forEach(input => {
-            input.value = '';
+    showGuessFeedback(guess) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const pattern = [];
+        const wrongLetters = new Set();
+        const presentLetters = new Set();
+        for (let i = 0; i < this.password.length; i++) {
+            const char = guess[i] || '';
+            const input = this.inputs[i];
+            if (!input) continue;
             input.classList.remove('correct', 'partial', 'incorrect');
-        });
-        
-        if (this.inputs[0]) {
-            this.inputs[0].focus();
+            if (char === this.password[i]) { pattern.push(char); input.classList.add('correct'); }
+            else if (this.password.includes(char)) { pattern.push('_'); presentLetters.add(char); input.classList.add('partial'); }
+            else { pattern.push('_'); wrongLetters.add(char); input.classList.add('incorrect'); }
         }
-        
+        feedback.innerHTML = `<div><strong>Correct positions:</strong> ${pattern.join(' ')}</div><div>Present but misplaced: ${presentLetters.size ? Array.from(presentLetters).join(', ') : 'none'}</div><div>Incorrect letters: ${wrongLetters.size ? Array.from(wrongLetters).join(', ') : 'none'}</div>`;
+    }
+
+    clearInputs() {
+        this.inputs.forEach(i => { i.value = ''; i.classList.remove('correct', 'partial', 'incorrect'); });
+        if (this.inputs[0]) this.inputs[0].focus();
         this.updateDisplay();
         this.audio.playButtonClick();
     }
 
-    /**
-     * Show position-accurate feedback after an incorrect guess
-     * @param {string} guess
-     */
-    showGuessFeedback(guess) {
-        const feedback = document.getElementById('guess-feedback');
-        if (!feedback) return;
+    // ─── hint system ──────────────────────────────────────────────────────────
 
-        const pattern = [];
-        const wrongLetters = new Set();
-        const presentLetters = new Set();
-
-        for (let i = 0; i < this.password.length; i++) {
-            const char = guess[i] || '';
-            const input = this.inputs[i];
-
-            if (!input) continue;
-            input.classList.remove('correct', 'partial', 'incorrect');
-
-            if (char === this.password[i]) {
-                pattern.push(char);
-                input.classList.add('correct');
-            } else if (this.password.includes(char)) {
-                pattern.push('_');
-                presentLetters.add(char);
-                input.classList.add('partial');
-            } else {
-                pattern.push('_');
-                wrongLetters.add(char);
-                input.classList.add('incorrect');
-            }
-        }
-
-        const presentText = presentLetters.size
-            ? `Present but misplaced: ${Array.from(presentLetters).join(', ')}`
-            : 'Present but misplaced: none';
-        const wrongText = wrongLetters.size
-            ? `Incorrect letters: ${Array.from(wrongLetters).join(', ')}`
-            : 'Incorrect letters: none';
-
-        feedback.innerHTML = `
-            <div><strong>Correct positions:</strong> ${pattern.join(' ')}</div>
-            <div>${presentText}</div>
-            <div>${wrongText}</div>
-        `;
-    }
-
-    /**
-     * Update attempt counter display
-     */
-    updateAttemptCounter() {
-        const counter = document.getElementById('attempt-counter');
-        if (counter) {
-            if (this.interactionMode === 'multiSelect') {
-                counter.innerHTML = `
-                    Submissions: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'singleChoice') {
-                counter.innerHTML = `
-                    Decisions: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'predictionChoice') {
-                counter.innerHTML = `
-                    Decisions: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'investigation') {
-                counter.innerHTML = `
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'inspection') {
-                counter.innerHTML = `
-                    Decisions: <span style="color: var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'strategyBuilder') {
-                counter.innerHTML = `
-                    Simulations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
-                `;
-                return;
-            }
-            if (this.interactionMode === 'liveDefenseSimulation') {
-                counter.innerHTML = 'Live defense active';
-                return;
-            }
-            if (this.interactionMode === 'multiStageDefenseSimulation') {
-                counter.innerHTML = 'Boss simulation active';
-                return;
-            }
-            if (this.interactionMode === 'threatHuntSimulation') {
-                counter.innerHTML = `
-                    Investigation actions: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
-                `;
-                return;
-            }
-            if (this.interactionMode === 'livePatchSimulation') {
-                counter.innerHTML = `
-                    Patch operations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
-                `;
-                return;
-            }
-            if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-                counter.innerHTML = `
-                    Certification evaluations: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span>
-                `;
-                return;
-            }
-            counter.innerHTML = `
-                Attempts: <span style="color: var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'}');">${this.attempts}</span> / ${this.maxAttempts}
-            `;
-        }
-    }
-
-    /**
-     * Show a hint
-     */
     showHint() {
-        if (this.interactionMode === 'multiSelect') {
-            this.gameScreen.ui.showNotification('Story intelligence is already provided. Use behavioral inference.', 'info');
-            return;
-        }
-        if (this.interactionMode === 'singleChoice') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            const feedback = document.getElementById('guess-feedback');
-            if (feedback) {
-                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
-            }
-            this.audio.playHint();
-            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
-            return;
-        }
-        if (this.interactionMode === 'predictionChoice') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            const feedback = document.getElementById('guess-feedback');
-            if (feedback) {
-                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
-            }
-            this.audio.playHint();
-            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
-            return;
-        }
-        if (this.interactionMode === 'investigation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            const feedback = document.getElementById('guess-feedback');
-            if (feedback) {
-                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
-            }
-            this.audio.playHint();
-            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
-            return;
-        }
-        if (this.interactionMode === 'inspection') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            const feedback = document.getElementById('guess-feedback');
-            if (feedback) {
-                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
-            }
-            this.audio.playHint();
-            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
-            return;
-        }
-        if (this.interactionMode === 'strategyBuilder') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            const feedback = document.getElementById('guess-feedback');
-            if (feedback) {
-                feedback.innerHTML = `<strong>Hint:</strong> ${hintText}`;
-            }
-            this.audio.playHint();
-            this.gameScreen.ui.showNotification('Hint revealed!', 'info');
-            return;
-        }
-        if (this.interactionMode === 'liveDefenseSimulation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.gameScreen.ui.showNotification(hintText, 'info');
-            this.audio.playHint();
-            return;
-        }
-        if (this.interactionMode === 'multiStageDefenseSimulation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.gameScreen.ui.showNotification(hintText, 'info');
-            this.audio.playHint();
-            return;
-        }
-        if (this.interactionMode === 'threatHuntSimulation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.gameScreen.ui.showNotification(hintText, 'info');
-            this.audio.playHint();
-            return;
-        }
-        if (this.interactionMode === 'livePatchSimulation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.gameScreen.ui.showNotification(hintText, 'info');
-            this.audio.playHint();
-            return;
-        }
-        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-            const hintKeys = ['hint1', 'hint2', 'hint3'];
-            if (this.hintsShown >= hintKeys.length) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.hintsShown++;
-            const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]];
-            if (!hintText) {
-                this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-                return;
-            }
-            this.gameScreen.ui.showNotification(hintText, 'info');
-            this.audio.playHint();
-            return;
-        }
+        if (this.isComplete) { this.gameScreen.ui.showNotification('Puzzle already complete!', 'info'); return; }
+        if (this.interactionMode === 'multiSelect') { this.gameScreen.ui.showNotification('Story intelligence is already provided.', 'info'); return; }
 
-        if (this.isComplete) {
-            this.gameScreen.ui.showNotification('Puzzle already complete!', 'info');
-            return;
-        }
-
-        if (this.hintsShown >= this.hints.length) {
-            this.gameScreen.ui.showNotification('No more hints available!', 'warning');
-            return;
-        }
-
+        const hintKeys = ['hint1', 'hint2', 'hint3'];
+        if (this.hintsShown >= hintKeys.length) { this.gameScreen.ui.showNotification('No more hints available!', 'warning'); return; }
+        const hintText = this.mission?.hintSystem?.[hintKeys[this.hintsShown]];
+        if (!hintText) { this.gameScreen.ui.showNotification('No more hints available!', 'warning'); return; }
         this.hintsShown++;
-        this.updateVisualizerState();
-        const hintsContainer = document.getElementById('password-hints');
-        
-        if (hintsContainer) {
-            const newHint = document.createElement('div');
-            newHint.className = 'hint animate-fadeIn';
-            newHint.textContent = `→ ${this.hints[this.hintsShown - 1]}`;
-            hintsContainer.appendChild(newHint);
+
+        if (['singleChoice','predictionChoice','investigation','inspection','liveDefenseSimulation','threatHuntSimulation','livePatchSimulation','enterpriseArchitectureSimulation'].includes(this.interactionMode)) {
+            this.gameScreen.ui.showNotification(hintText, 'info');
+        } else {
+            const hintsContainer = document.getElementById('password-hints');
+            if (hintsContainer) {
+                const newHint = document.createElement('div');
+                newHint.className = this.interactionMode === 'humanPsychologyLab' ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
+                newHint.textContent = this.interactionMode === 'humanPsychologyLab' ? hintText : `→ ${hintText}`;
+                hintsContainer.appendChild(newHint);
+            }
+            if (this.interactionMode === 'humanPsychologyLab') {
+                this.pushHumanLabLog('warn', `Operator requested hint: ${hintText}`);
+            }
         }
 
         this.audio.playHint();
         this.gameScreen.ui.showNotification('Hint revealed!', 'info');
+        this.gameScreen.game.score.recordHint();
+        this.gameScreen.updateHintsDisplay();
     }
 
-    /**
-     * Get puzzle statistics
-     * @returns {Object} Puzzle stats
-     */
-    getStats() {
-        return {
-            attempts: this.attempts,
-            hintsUsed: this.hintsShown,
-            completed: this.isComplete
-        };
+    // ─── utility ──────────────────────────────────────────────────────────────
+
+    sanitizeId(text) { return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+
+    updateAttemptCounter() {
+        const counter = document.getElementById('attempt-counter');
+        if (!counter) return;
+        const modeLabels = { multiSelect:'Submissions', humanPsychologyLab:'Submissions', singleChoice:'Decisions', predictionChoice:'Decisions', investigation:'Decisions', inspection:'Decisions', liveDefenseSimulation:'Live defense active', threatHuntSimulation:'Investigation actions', livePatchSimulation:'Patch operations', enterpriseArchitectureSimulation:'Certification evaluations' };
+        const label = modeLabels[this.interactionMode] || 'Attempts';
+        if (label === 'Live defense active') { counter.innerHTML = 'Live defense active'; return; }
+        if (this.interactionMode === 'humanPsychologyLab') {
+            counter.innerHTML = `${label}: <span class="${this.attempts >= this.maxAttempts - 1 ? 'is-hot' : ''}">${this.attempts}</span> / ${this.maxAttempts}`;
+            return;
+        }
+        counter.innerHTML = `${label}: <span style="color:var(--cyber-${this.attempts >= this.maxAttempts - 1 ? 'pink' : 'blue'});">${this.attempts}</span> / ${this.maxAttempts}`;
     }
 
-    /**
-     * Clean up puzzle
-     */
+    getStats() { return { attempts: this.attempts, hintsUsed: this.hintsShown, completed: this.isComplete }; }
+
     destroy() {
-        if (this.interactionMode === 'multiSelect') {
-            return;
+        this.stopSingleChoiceTimers();
+        this.stopPredictionTimer();
+        this.stopLiveDefenseSimulation();
+        this.stopHumanLabMatrixAnimation();
+        this.inputs.forEach(i => { i.removeEventListener('input', null); i.removeEventListener('keydown', null); i.removeEventListener('keypress', null); i.removeEventListener('paste', null); });
+    }
+
+    // ─── dynamic password generation (retained from original) ─────────────────
+
+    generateDynamicPasswordProfile(puzzleData) {
+        if (puzzleData.randomizationType === 'keywordSuffix') return this.generateKeywordPasswordProfile(puzzleData);
+        const rawNames = Array.isArray(puzzleData.candidateNames) ? puzzleData.candidateNames : [];
+        const names = rawNames.map(n => String(n || '').toUpperCase().replace(/[^A-Z]/g, '')).filter(n => n.length >= 4 && n.length <= 6);
+        const fallback = ['SARAH','EMILY','DAVID','NADIA','RUBEL','JULIA'];
+        const namePool = names.length ? names : fallback;
+        const selectedName = namePool[Math.floor(Math.random() * namePool.length)];
+        const key = `mission-${this.mission?.id || 'unknown'}-variant`;
+        const variant = this.pickNonRepeatingVariant(key, ['name_pin','codename_year','id_pattern','pure_word']);
+        const labels = ['SOC Report', 'SIEM Correlation', 'Forensic Artifact'];
+        if (variant === 'name_pin') {
+            const d1 = Math.floor(Math.random() * 8) + 1, d2 = Math.min(9, d1 + (Math.floor(Math.random() * 2) + 1));
+            return { password: `${selectedName}${d1}${d2}`, hints: [`${labels[0]}: Blueprint is NAME##. Name is ${selectedName.length} letters starting with '${selectedName[0]}'.`, `${labels[1]}: Sorted letters: ${selectedName.split('').sort().join('')}. Numeric tail is two digits.`, `${labels[2]}: Sum = ${d1+d2}, diff = ${Math.abs(d2-d1)}, second digit greater.`], scenarioNarrative: 'HR profile leakage correlated with old identity policy traces.', taskNarrative: 'Recover credential format NAME## from profile and arithmetic evidence.', overallAnswerHint: 'Pattern is NAME## (a person name followed by two digits).' };
         }
-        if (this.interactionMode === 'singleChoice') {
-            this.stopSingleChoiceTimers();
-            return;
-        }
-        if (this.interactionMode === 'predictionChoice') {
-            this.stopPredictionTimer();
-            return;
-        }
-        if (this.interactionMode === 'investigation') {
-            return;
-        }
-        if (this.interactionMode === 'inspection') {
-            return;
-        }
-        if (this.interactionMode === 'strategyBuilder') {
-            return;
-        }
-        if (this.interactionMode === 'liveDefenseSimulation') {
-            this.stopLiveDefenseSimulation();
-            return;
-        }
-        if (this.interactionMode === 'multiStageDefenseSimulation') {
-            this.stopMultiStageDefenseSimulation();
-            return;
-        }
-        if (this.interactionMode === 'threatHuntSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'livePatchSimulation') {
-            return;
-        }
-        if (this.interactionMode === 'enterpriseArchitectureSimulation') {
-            return;
-        }
-        // Remove event listeners
-        this.inputs.forEach(input => {
-            input.removeEventListener('input', null);
-            input.removeEventListener('keydown', null);
-            input.removeEventListener('keypress', null);
-            input.removeEventListener('paste', null);
-        });
+        const word = ['TRUST','SHIELD','FORENSIC','ACCESS','CONTROL','AUDIT'][Math.floor(Math.random() * 6)];
+        return { password: word, hints: [`${labels[0]}: Blueprint is WORD (letters only). Length is ${word.length}.`, `${labels[1]}: Sorted signature is ${word.split('').sort().join('')}.`, `${labels[2]}: Starts with '${word[0]}', ends with '${word[word.length-1]}'.`], scenarioNarrative: 'SOC threat-model replay found a plaintext dictionary-only credential.', taskNarrative: 'Recover the exact word credential from lexical evidence.', overallAnswerHint: 'Pattern is WORD (letters only).' };
+    }
+
+    generateKeywordPasswordProfile(puzzleData) {
+        const keywords = (Array.isArray(puzzleData.candidateKeywords) ? puzzleData.candidateKeywords : []).map(w => String(w || '').toUpperCase().replace(/[^A-Z]/g, '')).filter(w => w.length >= 5 && w.length <= 8);
+        const pool = keywords.length ? keywords : ['WELCOME','ACCESS','PORTAL','SECURE','SYSTEM','LOGIN'];
+        const selectedWord = pool[Math.floor(Math.random() * pool.length)];
+        const a = Math.floor(Math.random() * 8) + 1, b = Math.min(9, a + 1);
+        return { password: `${selectedWord}${a}${b}`, hints: [`SOC: Blueprint is KEYWORD##. Prefix is a common keyword (${selectedWord.length} chars).`, `Pattern: sorted signature ${selectedWord.split('').sort().join('')}.`, `Numeric suffix rule: sum = ${a+b}, second digit is one greater than first.`], scenarioNarrative: 'Crack-speed simulation flagged a weak default pattern.', taskNarrative: 'Recover KEYWORD## from lexical signature and numeric relation.', overallAnswerHint: 'Pattern is KEYWORD## (keyword + two digits).' };
+    }
+
+    pickNonRepeatingVariant(stateKey, variants) {
+        if (!Array.isArray(variants) || !variants.length) return '';
+        if (!window.__shadowdefVariantState) window.__shadowdefVariantState = {};
+        const last = window.__shadowdefVariantState[stateKey];
+        const pool = (variants.length > 1 && last && variants.includes(last)) ? variants.filter(v => v !== last) : variants;
+        const selected = pool[Math.floor(Math.random() * pool.length)];
+        window.__shadowdefVariantState[stateKey] = selected;
+        return selected;
     }
 }

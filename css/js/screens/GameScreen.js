@@ -1,6 +1,6 @@
 /**
  * GameScreen - Manages active gameplay screen
- * Coordinates puzzle, timer, AI opponent, and objectives
+ * IMPROVED v2 — knowledgeSummary overlay shown before results modal
  */
 
 import { CONFIG } from '../data/config.js';
@@ -8,8 +8,8 @@ import { Timer } from '../systems/Timer.js';
 import { AIOpponent } from '../systems/AIOpponent.js';
 import { PasswordCrack } from '../puzzles/PasswordCrack.js';
 import { FirewallBypass } from '../puzzles/FirewallBypass.js';
-import { NetworkNav } from '../puzzles/NetworkNav.js';       
-import { MalwareDetect } from '../puzzles/MalwareDetect.js'; 
+import { NetworkNav } from '../puzzles/NetworkNav.js';
+import { MalwareDetect } from '../puzzles/MalwareDetect.js';
 import { PhishingID } from '../puzzles/PhishingID.js';
 
 export class GameScreen {
@@ -17,49 +17,30 @@ export class GameScreen {
         this.game = game;
         this.ui = game.ui;
         this.audio = game.audio;
-        
         this.currentMission = null;
         this.activePuzzle = null;
         this.timer = null;
         this.aiOpponent = null;
-        
         this.isPaused = false;
         this.isComplete = false;
     }
 
-    /**
-     * Load and start a mission
-     * @param {Object} mission - Mission data
-     */
+    // ─── mission load ─────────────────────────────────────────────────────────
+
     loadMission(mission) {
         this.currentMission = mission;
         this.isComplete = false;
         this.isPaused = false;
-        
-        console.log(`🎯 Loading mission: ${mission.title}`);
-        
-        // Reset UI
+        this.applyMissionTheme();
         this.resetUI();
-        
-        // Load objectives
         this.loadObjectives();
-        
-        // Initialize timer
         this.startTimer();
-        
-        // Initialize AI opponent
         this.startAIOpponent();
-        
-        // Load puzzle
         this.loadPuzzle();
-        
-        // Update hints display
         this.updateHintsDisplay();
+        this.syncEmbeddedMissionHUD();
     }
 
-    /**
-     * Reset UI elements
-     */
     resetUI() {
         document.getElementById('timer').textContent = '00:00';
         document.getElementById('score').textContent = '0';
@@ -68,16 +49,11 @@ export class GameScreen {
         document.getElementById('ai-progress-text').textContent = '0%';
     }
 
-    /**
-     * Load mission objectives
-     */
     loadObjectives() {
         const objectivesList = document.getElementById('objectives');
         if (!objectivesList) return;
-        
         objectivesList.innerHTML = '';
-        
-        this.currentMission.objectives.forEach((objective, index) => {
+        (this.currentMission.objectives || []).forEach((objective, index) => {
             const li = document.createElement('li');
             li.className = 'objective';
             li.id = `objective-${index}`;
@@ -86,80 +62,52 @@ export class GameScreen {
         });
     }
 
-    /**
-     * Complete an objective
-     * @param {number} index - Objective index
-     */
     completeObjective(index) {
         const objective = document.getElementById(`objective-${index}`);
-        if (objective) {
-            objective.classList.add('completed');
-        }
+        if (objective) objective.classList.add('completed');
     }
 
-    /**
-     * Start mission timer
-     */
     startTimer() {
         const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
-        
         this.timer = new Timer(targetTime, {
             onTick: (time) => this.updateTimerDisplay(time),
-            onWarning: () => {
-                this.ui.showNotification('Time running low!', 'warning');
-                this.audio.playTimerWarning();
-            },
+            onWarning: () => { this.ui.showNotification('Time running low!', 'warning'); this.audio.playTimerWarning(); },
             onExpire: () => this.onTimeExpired()
         });
-        
         this.timer.start();
     }
 
-    /**
-     * Update timer display
-     * @param {number} seconds - Remaining seconds
-     */
     updateTimerDisplay(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         const timerElement = document.getElementById('timer');
         if (timerElement) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            timerElement.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            
-            // Color warning
-            if (seconds <= CONFIG.TIMING.WARNING_TIME) {
-                timerElement.style.color = 'var(--cyber-pink)';
-            } else {
-                timerElement.style.color = 'var(--cyber-blue)';
-            }
+            timerElement.textContent = formatted;
+            timerElement.style.color = seconds <= CONFIG.TIMING.WARNING_TIME ? 'var(--cyber-pink)' : 'var(--cyber-blue)';
+        }
+
+        const embeddedTimer = document.getElementById('l1-timer');
+        if (embeddedTimer) {
+            embeddedTimer.textContent = formatted;
+            embeddedTimer.classList.toggle('danger', seconds <= CONFIG.TIMING.WARNING_TIME);
         }
     }
 
-    /**
-     * Handle time expired
-     */
     onTimeExpired() {
         if (this.isComplete) return;
-        
         this.ui.showNotification('Time expired!', 'error');
         this.completePuzzle(false);
     }
 
-    /**
-     * Start AI opponent
-     */
     startAIOpponent() {
         const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
         const aiSpeed = this.currentMission.aiSpeed || 1.0;
-        
         this.aiOpponent = new AIOpponent(targetTime, aiSpeed, {
             onProgress: (progress) => this.updateAIProgress(progress),
             onWin: () => this.onAIWin()
         });
-        
         this.aiOpponent.start();
-        
-        // Update AI name
         const aiName = document.getElementById('ai-name');
         if (aiName) {
             const names = ['CYBER-THREAT', 'BLACK-HAT', 'DARK-ZERO', 'PHANTOM-X'];
@@ -167,216 +115,226 @@ export class GameScreen {
         }
     }
 
-    /**
-     * Update AI opponent progress
-     * @param {number} progress - Progress percentage (0-100)
-     */
     updateAIProgress(progress) {
         const progressBar = document.getElementById('ai-progress');
         const progressText = document.getElementById('ai-progress-text');
-        
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-        }
-        
-        if (progressText) {
-            progressText.textContent = `${Math.floor(progress)}%`;
-        }
+        if (progressBar) progressBar.style.width = `${progress}%`;
+        if (progressText) progressText.textContent = `${Math.floor(progress)}%`;
+
+        const embeddedAi = document.getElementById('l1-ai-progress');
+        if (embeddedAi) embeddedAi.textContent = `${Math.floor(progress)}%`;
     }
 
-    /**
-     * Handle AI opponent winning
-     */
     onAIWin() {
         if (this.isComplete) return;
-        
         this.ui.showNotification('AI opponent completed first!', 'error');
         this.completePuzzle(false);
     }
 
+    loadPuzzle() {
+        const puzzleArea = document.getElementById('puzzle-area');
+        if (!puzzleArea) { console.error('Puzzle area not found'); return; }
+        if (this.activePuzzle && this.activePuzzle.destroy) this.activePuzzle.destroy();
 
-
-loadPuzzle() {
-    const puzzleArea = document.getElementById('puzzle-area');
-    if (!puzzleArea) {
-        console.error('Puzzle area not found');
-        return;
-    }
-    
-    // Clean up existing puzzle
-    if (this.activePuzzle && this.activePuzzle.destroy) {
-        this.activePuzzle.destroy();
-    }
-    
-    // Create new puzzle based on type
         switch (this.currentMission.type) {
-        case 'password':
-            this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this, this.currentMission);
-            break;
-        case 'firewall':
-            this.activePuzzle = new FirewallBypass(this.currentMission.puzzle, this);
-            break;
-        case 'network':  
-            this.activePuzzle = new NetworkNav(this.currentMission.puzzle, this);
-            break;
-        case 'malware':  
-            this.activePuzzle = new MalwareDetect(this.currentMission.puzzle, this);
-            break;
-        case 'phishing': 
-            this.activePuzzle = new PhishingID(this.currentMission.puzzle, this);
-            break;
-        default:
-            console.error(`Unknown puzzle type: ${this.currentMission.type}`);
-            return;
+            case 'password': this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this, this.currentMission); break;
+            case 'firewall': this.activePuzzle = new FirewallBypass(this.currentMission.puzzle, this); break;
+            case 'network':  this.activePuzzle = new NetworkNav(this.currentMission.puzzle, this); break;
+            case 'malware':  this.activePuzzle = new MalwareDetect(this.currentMission.puzzle, this); break;
+            case 'phishing': this.activePuzzle = new PhishingID(this.currentMission.puzzle, this); break;
+            default: console.error(`Unknown puzzle type: ${this.currentMission.type}`); return;
+        }
+        this.activePuzzle.render(puzzleArea);
     }
-    
-    // Render puzzle
-    this.activePuzzle.render(puzzleArea);
-}
 
-    /**
-     * Update attempts display
-     * @param {number} attempts - Number of attempts
-     */
+    applyMissionTheme() {
+        const gameScreen = document.getElementById('game-screen');
+        if (!gameScreen) return;
+        gameScreen.classList.remove('game-screen--human-lab');
+        gameScreen.classList.remove('game-screen--single-choice-lab');
+        gameScreen.classList.remove('game-screen--prediction-lab');
+        gameScreen.classList.remove('game-screen--investigation-lab');
+        gameScreen.classList.remove('game-screen--inspection-lab');
+        gameScreen.classList.remove('game-screen--salt-lab');
+        gameScreen.classList.remove('game-screen--live-defense-lab');
+        gameScreen.classList.remove('game-screen--threat-hunt-lab');
+        gameScreen.classList.remove('game-screen--patch-lab');
+        gameScreen.classList.remove('game-screen--enterprise-finale');
+        if (this.currentMission?.puzzle?.interactionMode === 'humanPsychologyLab') {
+            gameScreen.classList.add('game-screen--human-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'singleChoice') {
+            gameScreen.classList.add('game-screen--single-choice-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'predictionChoice') {
+            gameScreen.classList.add('game-screen--prediction-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'investigation') {
+            gameScreen.classList.add('game-screen--investigation-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'inspection') {
+            gameScreen.classList.add('game-screen--inspection-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'saltReuseLab') {
+            gameScreen.classList.add('game-screen--salt-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'liveDefenseSimulation') {
+            gameScreen.classList.add('game-screen--live-defense-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'threatHuntSimulation') {
+            gameScreen.classList.add('game-screen--threat-hunt-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'livePatchSimulation') {
+            gameScreen.classList.add('game-screen--patch-lab');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'enterpriseArchitectureSimulation') {
+            gameScreen.classList.add('game-screen--enterprise-finale');
+        }
+    }
+
+    // ─── stats update ─────────────────────────────────────────────────────────
+
     updateAttempts(attempts) {
         const attemptsElement = document.getElementById('attempts');
-        if (attemptsElement) {
-            attemptsElement.textContent = attempts;
-        }
-        
-        // Record in score manager
+        if (attemptsElement) attemptsElement.textContent = attempts;
         this.game.score.recordAttempt();
         this.updateScore();
     }
 
-    /**
-     * Update score display
-     */
     updateScore() {
+        const score = this.game.score.getScore();
         const scoreElement = document.getElementById('score');
-        if (scoreElement) {
-            scoreElement.textContent = this.game.score.getScore();
-        }
+        if (scoreElement) scoreElement.textContent = score;
+
+        const embeddedScore = document.getElementById('l1-score');
+        if (embeddedScore) embeddedScore.textContent = String(score).padStart(3, '0');
     }
 
-    /**
-     * Update hints display
-     */
     updateHintsDisplay() {
         const hintsElement = document.getElementById('hints-remaining');
         const maxHints = CONFIG.HINTS.MAX_HINTS_PER_MISSION;
         const used = this.game.score.hintsUsed;
-        
-        if (hintsElement) {
-            hintsElement.textContent = maxHints - used;
-        }
+        if (hintsElement) hintsElement.textContent = maxHints - used;
+
+        const embeddedHints = document.getElementById('l1-hints-remaining');
+        if (embeddedHints) embeddedHints.textContent = maxHints - used;
     }
 
-    /**
-     * Complete puzzle (success or failure)
-     * @param {boolean} success - Whether puzzle was completed successfully
-     */
+    syncEmbeddedMissionHUD() {
+        if (this.timer) {
+            this.updateTimerDisplay(this.timer.getRemaining());
+        }
+
+        if (this.aiOpponent) {
+            this.updateAIProgress(this.aiOpponent.getProgress());
+        }
+
+        this.updateScore();
+        this.updateHintsDisplay();
+    }
+
+    // ─── puzzle completion ────────────────────────────────────────────────────
+
     completePuzzle(success) {
         if (this.isComplete) return;
-        
         this.isComplete = true;
-        
-        // Stop timer and AI
-        if (this.timer) {
-            this.timer.stop();
-        }
-        
-        if (this.aiOpponent) {
-            this.aiOpponent.stop();
-        }
-        
-        // Get final stats
+        if (this.timer) this.timer.stop();
+        if (this.aiOpponent) this.aiOpponent.stop();
+
         const stats = {
-            success: success,
+            success,
             time: this.timer ? this.timer.getElapsed() : 0,
             attempts: this.game.score.attempts,
             hintsUsed: this.game.score.hintsUsed,
             targetTime: this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME
         };
-        
-        // Calculate final score
         const finalScore = this.game.score.calculateFinalScore(stats);
-        
-        // Complete mission in game controller
-        this.game.completeMission(success, {
-            ...stats,
-            finalScore
-        });
+        this.game.completeMission(success, { ...stats, finalScore });
     }
 
-    /**
-     * Show results screen
-     * @param {boolean} success - Mission success
-     * @param {Object} stats - Mission stats
-     * @param {number} finalScore - Final score
-     */
+    // ─── results display with knowledge summary overlay ───────────────────────
+
     showResults(success, stats, finalScore) {
+        // FIX: show knowledge summary overlay BEFORE the results modal if it exists
+        const knowledgeSummary = this.currentMission?.knowledgeSummary;
+        if (knowledgeSummary && success) {
+            this.showKnowledgeSummary(knowledgeSummary, () => {
+                this.showResultsModal(success, stats, finalScore);
+            });
+        } else {
+            this.showResultsModal(success, stats, finalScore);
+        }
+    }
+
+    // NEW: knowledge summary overlay
+    showKnowledgeSummary(summary, onContinue) {
+        const bulletsHtml = (summary.bullets || []).map(b => `
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
+                <span style="color:var(--cyber-blue);flex-shrink:0;margin-top:2px;">→</span>
+                <span style="color:var(--text-secondary);line-height:1.5;">${b}</span>
+            </div>`).join('');
+
+        this.ui.showModal(
+            summary.title || 'What you learned',
+            `
+            <div style="text-align:left;">
+                <div style="margin-bottom:20px;">
+                    ${bulletsHtml}
+                </div>
+                ${summary.insight ? `
+                <div style="background:rgba(0,243,255,0.07);border:1px solid rgba(0,243,255,0.3);border-radius:4px;padding:14px 16px;margin-top:16px;">
+                    <div style="color:var(--cyber-blue);font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Key Insight</div>
+                    <div style="color:var(--text-primary);line-height:1.6;">${summary.insight}</div>
+                </div>` : ''}
+            </div>`,
+            {
+                closable: false,
+                buttons: [
+                    {
+                        text: 'VIEW RESULTS →',
+                        class: 'btn-primary',
+                        onClick: () => {
+                            this.ui.closeModal();
+                            setTimeout(() => onContinue(), 300);
+                        }
+                    }
+                ]
+            }
+        );
+    }
+
+    showResultsModal(success, stats, finalScore) {
         const rank = this.game.score.getScoreRank(finalScore);
         const xp = this.game.score.calculateXP(finalScore, this.currentMission);
         const credits = this.game.score.calculateCredits(finalScore, this.currentMission);
+
         const failedPasswordReveal = !success &&
             this.currentMission?.type === 'password' &&
             this.currentMission?.puzzle?.revealAnswerOnFail !== false &&
             this.activePuzzle?.password
-            ? `
-                <div class="divider"></div>
-                <div class="modal-stat">
-                    <span>Correct Answer:</span>
-                    <span style="color: var(--cyber-orange); font-family: var(--font-mono); letter-spacing: 1px;">
-                        ${this.activePuzzle.password}
-                    </span>
-                </div>
-            `
+            ? `<div class="divider"></div>
+               <div class="modal-stat">
+                   <span>Correct Answer:</span>
+                   <span style="color:var(--cyber-orange);font-family:var(--font-mono);letter-spacing:1px;">${this.activePuzzle.password}</span>
+               </div>`
             : '';
-        
+
         const modal = this.ui.showModal(
             success ? 'MISSION COMPLETE' : 'MISSION FAILED',
-            `
-                <div class="modal-stats">
-                    <div class="modal-stat">
-                        <span>Time:</span>
-                        <span>${this.formatTime(stats.time)}</span>
-                    </div>
-                    <div class="modal-stat">
-                        <span>Attempts:</span>
-                        <span>${stats.attempts}</span>
-                    </div>
-                    <div class="modal-stat">
-                        <span>Hints Used:</span>
-                        <span>${stats.hintsUsed}</span>
-                    </div>
-                    <div class="modal-stat">
-                        <span>Accuracy:</span>
-                        <span>${this.game.score.getAccuracyPercent()}%</span>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="modal-stat">
-                        <span>Final Score:</span>
-                        <span style="color: ${rank.color}">${finalScore}</span>
-                    </div>
-                    <div class="modal-stat">
-                        <span>Rank:</span>
-                        <span style="color: ${rank.color}">${rank.rank} - ${rank.name}</span>
-                    </div>
-                    ${failedPasswordReveal}
-                    ${success ? `
-                        <div class="divider"></div>
-                        <div class="modal-stat">
-                            <span>XP Earned:</span>
-                            <span style="color: var(--cyber-green)">+${xp}</span>
-                        </div>
-                        <div class="modal-stat">
-                            <span>Credits Earned:</span>
-                            <span style="color: var(--cyber-green)">+${credits} ${CONFIG.CURRENCY.SYMBOL}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            `,
+            `<div class="modal-stats">
+                <div class="modal-stat"><span>Time:</span><span>${this.formatTime(stats.time)}</span></div>
+                <div class="modal-stat"><span>Attempts:</span><span>${stats.attempts}</span></div>
+                <div class="modal-stat"><span>Hints Used:</span><span>${stats.hintsUsed}</span></div>
+                <div class="modal-stat"><span>Accuracy:</span><span>${this.game.score.getAccuracyPercent()}%</span></div>
+                <div class="divider"></div>
+                <div class="modal-stat"><span>Final Score:</span><span style="color:${rank.color}">${finalScore}</span></div>
+                <div class="modal-stat"><span>Rank:</span><span style="color:${rank.color}">${rank.rank} — ${rank.name}</span></div>
+                ${failedPasswordReveal}
+                ${success ? `
+                <div class="divider"></div>
+                <div class="modal-stat"><span>XP Earned:</span><span style="color:var(--cyber-green)">+${xp}</span></div>
+                <div class="modal-stat"><span>Credits Earned:</span><span style="color:var(--cyber-green)">+${credits} ${CONFIG.CURRENCY.SYMBOL}</span></div>` : ''}
+            </div>`,
             {
                 type: success ? 'success' : 'error',
                 closable: false,
@@ -386,13 +344,8 @@ loadPuzzle() {
                         class: 'btn-primary',
                         onClick: () => {
                             if (success) {
-                                // Check if there's a next level in the current section
-                                if (this.game.hasNextLevelInCurrentSection()) {
-                                    this.game.goToNextLevel();
-                                } else {
-                                    // Last level - go back to current section levels
-                                    this.game.backToCurrentCategoryLevels();
-                                }
+                                if (this.game.hasNextLevelInCurrentSection()) this.game.goToNextLevel();
+                                else this.game.backToCurrentCategoryLevels();
                             } else {
                                 this.game.startMission(this.currentMission);
                             }
@@ -401,103 +354,65 @@ loadPuzzle() {
                     {
                         text: 'BACK TO LEVELS',
                         class: 'btn',
-                        onClick: () => {
-                            this.game.backToCurrentCategoryLevels();
-                        }
+                        onClick: () => { this.game.backToCurrentCategoryLevels(); }
                     }
                 ]
             }
         );
-        
-        // Add result-specific class to modal
+
         if (modal) {
             const modalContent = modal.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.style.borderColor = success ? 'var(--cyber-green)' : 'var(--cyber-pink)';
-            }
+            if (modalContent) modalContent.style.borderColor = success ? 'var(--cyber-green)' : 'var(--cyber-pink)';
         }
     }
 
-    /**
-     * Pause game
-     */
+    // ─── pause / resume ───────────────────────────────────────────────────────
+
     pause() {
         if (this.isPaused || this.isComplete) return;
-        
         this.isPaused = true;
-        
-        if (this.timer) {
-            this.timer.pause();
-        }
-        
-        if (this.aiOpponent) {
-            this.aiOpponent.pause();
-        }
-        
-        this.ui.showModal(
-            'GAME PAUSED',
-            '<p style="text-align: center; color: var(--text-secondary);">Game is paused</p>',
-            {
-                buttons: [
-                    {
-                        text: 'RESUME',
-                        class: 'btn-primary',
-                        onClick: () => this.resume()
-                    },
-                    {
-                        text: 'QUIT MISSION',
-                        class: 'btn',
-                        onClick: () => this.game.backToCurrentCategoryLevels()
-                    }
-                ]
-            }
-        );
+        if (this.timer) this.timer.pause();
+        if (this.aiOpponent) this.aiOpponent.pause();
+        this.ui.showModal('GAME PAUSED', '<p style="text-align:center;color:var(--text-secondary);">Game is paused</p>', {
+            buttons: [
+                { text: 'RESUME', class: 'btn-primary', onClick: () => this.resume() },
+                { text: 'QUIT MISSION', class: 'btn', onClick: () => this.game.backToCurrentCategoryLevels() }
+            ]
+        });
     }
 
-    /**
-     * Resume game
-     */
     resume() {
         if (!this.isPaused) return;
-        
         this.isPaused = false;
-        
-        if (this.timer) {
-            this.timer.resume();
-        }
-        
-        if (this.aiOpponent) {
-            this.aiOpponent.resume();
-        }
-        
+        if (this.timer) this.timer.resume();
+        if (this.aiOpponent) this.aiOpponent.resume();
         this.ui.closeModal();
     }
 
-    /**
-     * Format time as MM:SS
-     * @param {number} seconds - Time in seconds
-     * @returns {string} Formatted time
-     */
+    // ─── utility ──────────────────────────────────────────────────────────────
+
     formatTime(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
-    /**
-     * Clean up game screen
-     */
     destroy() {
-        if (this.timer) {
-            this.timer.stop();
-        }
-        
-        if (this.aiOpponent) {
-            this.aiOpponent.stop();
-        }
-        
-        if (this.activePuzzle && this.activePuzzle.destroy) {
-            this.activePuzzle.destroy();
+        if (this.timer) this.timer.stop();
+        if (this.aiOpponent) this.aiOpponent.stop();
+        if (this.activePuzzle && this.activePuzzle.destroy) this.activePuzzle.destroy();
+        const gameScreen = document.getElementById('game-screen');
+        if (gameScreen) {
+            gameScreen.classList.remove('game-screen--human-lab');
+            gameScreen.classList.remove('game-screen--single-choice-lab');
+            gameScreen.classList.remove('game-screen--prediction-lab');
+            gameScreen.classList.remove('game-screen--investigation-lab');
+            gameScreen.classList.remove('game-screen--inspection-lab');
+            gameScreen.classList.remove('game-screen--salt-lab');
+            gameScreen.classList.remove('game-screen--live-defense-lab');
+            gameScreen.classList.remove('game-screen--threat-hunt-lab');
+            gameScreen.classList.remove('game-screen--patch-lab');
+            gameScreen.classList.remove('game-screen--enterprise-finale');
         }
     }
 }
