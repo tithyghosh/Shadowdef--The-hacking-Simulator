@@ -1,15 +1,16 @@
 const LOGIN_ICON_SVG = `
     <svg class="icon-svg" viewBox="0 0 24 24">
-        <path d="M14 4h7v16h-7"></path>
-        <path d="M3 12h10"></path>
-        <path d="m9 8 4 4-4 4"></path>
+        <path d="M10 5h7v14h-7"></path>
+        <path d="M3.8 12h9.8"></path>
+        <path d="m9.8 8.4 3.8 3.6-3.8 3.6"></path>
     </svg>
 `;
 
 const LOGOUT_ICON_SVG = `
     <svg class="icon-svg" viewBox="0 0 24 24">
-        <path d="M12 4v7"></path>
-        <path d="M7.5 6.2a8 8 0 1 0 9 0"></path>
+        <path d="M13.8 5h-7v14h7"></path>
+        <path d="M20.2 12h-9.8"></path>
+        <path d="m14.2 8.4-3.8 3.6 3.8 3.6"></path>
     </svg>
 `;
 
