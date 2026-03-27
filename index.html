@@ -127,7 +127,7 @@
                     </div>
 
                     <div class="arc-node arc-node-rankings" id="n2">
-                        <button class="anode-btn" type="button" data-dock="rankings" aria-label="Rankings">
+                        <button class="anode-btn" type="button" data-action="rankings" data-dock="rankings" aria-label="Rankings">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
@@ -163,7 +163,7 @@
                     </div>
 
                     <div class="arc-node arc-node-radar" id="n5">
-                        <button class="anode-btn" type="button" data-action="radar" data-dock="radar" aria-label="Guidebook">
+                        <button class="anode-btn" type="button" data-action="guidebook" data-dock="guidebook" aria-label="Guidebook">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
@@ -249,12 +249,16 @@
             <!-- Achievements content will be rendered by AchievementsScreen.js -->
         </div>
 
+        <div id="rankings-screen" class="screen">
+            <!-- Rankings content will be rendered by RankingsScreen.js -->
+        </div>
+
         <div id="maps-screen" class="screen">
             <!-- Maps content will be rendered by MapsScreen.js -->
         </div>
 
-        <div id="radar-screen" class="screen">
-            <!-- Radar content will be rendered by RadarScreen.js -->
+        <div id="guidebook-screen" class="screen">
+            <!-- Guidebook content will be rendered by GuidebookScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
@@ -595,9 +599,10 @@
                 const { AudioManager } = await import('./css/js/core/AudioManager.js');
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
+                const { RankingsScreen } = await import('./css/js/screens/RankingsScreen.js');
                 const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
                 const { MapsScreen } = await import('./css/js/screens/MapsScreen.js');
-                const { RadarScreen } = await import('./css/js/screens/RadarScreen.js');
+                const { GuidebookScreen } = await import('./css/js/screens/GuidebookScreen.js');
                 
                 // Initialize managers
                 const authManager = AuthManager.getInstance();
@@ -608,18 +613,20 @@
                 const game = new Game(ui, audio);
                 const loginScreen = new LoginScreen(game);
                 const profileScreen = new ProfileScreen(game);
+                const rankingsScreen = new RankingsScreen(game);
                 const achievementsScreen = new AchievementsScreen(game);
                 const mapsScreen = new MapsScreen(game);
-                const radarScreen = new RadarScreen(game);
+                const guidebookScreen = new GuidebookScreen(game);
                 
                 // Make globally available
                 window.game = game;
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.rankingsScreen = rankingsScreen;
                 window.achievementsScreen = achievementsScreen;
                 window.mapsScreen = mapsScreen;
-                window.radarScreen = radarScreen;
+                window.guidebookScreen = guidebookScreen;
                 window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
@@ -923,6 +930,10 @@
                             game.screens.showScreen('achievements-screen');
                             achievementsScreen.render();
                             break;
+                        case 'rankings':
+                            game.screens.showScreen('rankings-screen');
+                            rankingsScreen.render();
+                            break;
                         case 'settings':
                             game.showSettings();
                             break;
@@ -930,9 +941,9 @@
                             game.screens.showScreen('maps-screen');
                             mapsScreen.render();
                             break;
-                        case 'radar':
-                            game.screens.showScreen('radar-screen');
-                            radarScreen.render();
+                        case 'guidebook':
+                            game.screens.showScreen('guidebook-screen');
+                            guidebookScreen.render();
                             break;
                         case 'credits':
                             game.showCredits();

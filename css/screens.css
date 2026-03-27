@@ -2296,694 +2296,1489 @@
     }
 }
 
-#radar-screen {
+#achievements-screen {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(circle at center, rgba(0, 229, 255, 0.08) 0%, rgba(5, 8, 16, 0.94) 36%, #04070f 100%);
+        radial-gradient(circle at top, rgba(255, 208, 0, 0.08) 0%, rgba(5, 8, 16, 0.95) 34%, #04070f 100%);
     overflow: hidden;
 }
 
-.radar-screen-shell {
+.achievements-screen-shell {
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    padding: 32px;
+    padding: 28px;
     color: #d9f8ff;
     font-family: 'Orbitron', sans-serif;
 }
 
-.radar-screen-grid,
-.radar-screen-scanlines {
+.achievements-screen-grid,
+.achievements-screen-scanlines {
     position: absolute;
     inset: 0;
     pointer-events: none;
 }
 
-.radar-screen-grid {
+.achievements-screen-grid {
     background-image:
-        linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
     background-size: 48px 48px;
     opacity: 0.24;
 }
 
-.radar-screen-scanlines {
-    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 4px);
+.achievements-screen-scanlines {
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 4px);
     opacity: 0.14;
 }
 
-.radar-screen-frame {
+.achievements-screen-frame {
     position: relative;
     z-index: 1;
-    width: min(1380px, 100%);
+    width: min(1440px, 100%);
+    height: 100%;
+    margin: 0 auto;
+    padding: 28px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    padding: 32px;
+    gap: 20px;
     border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.82));
-    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 22px 60px rgba(0, 0, 0, 0.38);
+    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.84));
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 24px 60px rgba(0, 0, 0, 0.38);
     backdrop-filter: blur(12px);
 }
 
-.radar-screen-header,
-.radar-panel-head,
-.radar-hero,
-.radar-content,
-.radar-hero-summary,
-.radar-sector-topline,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-next-actions,
-.radar-inline-actions,
-.radar-target-row {
+.achievements-screen-header,
+.achievements-screen-status,
+.achievements-hero,
+.achievements-content,
+.achievements-panel-head,
+.achievement-card-head,
+.achievements-next-item,
+.achievements-roadmap-step {
     display: flex;
 }
 
-.radar-screen-header,
-.radar-panel-head,
-.radar-sector-topline,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-next-actions,
-.radar-target-row {
+.achievements-screen-header,
+.achievements-panel-head,
+.achievement-card-head,
+.achievements-roadmap-step {
     align-items: center;
+}
+
+.achievements-screen-header,
+.achievements-panel-head {
     justify-content: space-between;
 }
 
-.radar-screen-header {
+.achievements-screen-header {
     gap: 20px;
 }
 
-.radar-back-btn {
+.achievements-back-btn {
     align-self: flex-start;
 }
 
-.radar-screen-title-wrap,
-.radar-panel-head > div,
-.radar-next-target,
-.radar-target-copy {
+.achievements-screen-title-wrap,
+.achievements-next-copy,
+.achievement-card-copy,
+.achievements-roadmap-copy {
     display: flex;
     flex-direction: column;
 }
 
-.radar-screen-title-wrap {
+.achievements-screen-title-wrap {
     flex: 1;
-    gap: 6px;
+    gap: 8px;
 }
 
-.radar-screen-kicker,
-.radar-panel-kicker,
-.radar-summary-label,
-.radar-sector-progress-meta,
-.radar-chip-label,
-.radar-target-index,
-.radar-scope-core-label {
+.achievements-screen-kicker,
+.achievements-panel-kicker,
+.achievements-summary-label,
+.achievement-card-progress-label,
+.achievement-card-state,
+.achievements-roadmap-desc,
+.achievements-next-meta {
     font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 0.22em;
     text-transform: uppercase;
+    letter-spacing: 0.18em;
 }
 
-.radar-screen-kicker,
-.radar-panel-kicker {
+.achievements-screen-kicker,
+.achievements-panel-kicker,
+.achievements-summary-label,
+.achievement-card-progress-label,
+.achievement-card-state,
+.achievements-roadmap-desc,
+.achievements-next-meta {
     font-size: 11px;
-    color: rgba(0, 229, 255, 0.72);
+    color: rgba(0, 229, 255, 0.74);
 }
 
-.radar-screen-title {
+.achievements-screen-title {
     margin: 0;
-    font-size: clamp(2.1rem, 4vw, 3.5rem);
+    font-size: clamp(2rem, 4vw, 3.2rem);
     line-height: 0.95;
-    letter-spacing: 0.14em;
-    color: #f3fbff;
-    text-shadow: 0 0 22px rgba(0, 229, 255, 0.12);
+    letter-spacing: 0.12em;
+    color: #f4fbff;
 }
 
-.radar-screen-subtitle,
-.radar-panel-copy,
-.radar-sector-copy,
-.radar-next-copy,
-.radar-empty-state,
-.radar-scope-core-copy,
-.radar-target-copy span {
+.achievements-screen-subtitle,
+.achievements-panel-copy,
+.achievement-card-desc,
+.achievements-next-desc,
+.achievements-guest-copy,
+.achievements-empty-note {
     font-family: 'Rajdhani', sans-serif;
-    color: rgba(208, 230, 242, 0.72);
+    color: rgba(208, 230, 242, 0.78);
+    line-height: 1.55;
 }
 
-.radar-screen-subtitle {
+.achievements-screen-subtitle,
+.achievements-panel-copy,
+.achievement-card-desc,
+.achievements-next-desc,
+.achievements-guest-copy,
+.achievements-empty-note {
     margin: 0;
-    max-width: 720px;
-    font-size: 1rem;
-    line-height: 1.45;
 }
 
-.radar-screen-status {
-    display: flex;
+.achievements-screen-status {
     gap: 10px;
     align-self: flex-start;
 }
 
-.radar-status-chip,
-.radar-sector-threat,
-.radar-next-sector {
+.achievements-status-chip {
     padding: 8px 12px;
-    border: 1px solid rgba(0, 229, 255, 0.18);
+    border: 1px solid rgba(0, 229, 255, 0.16);
     background: rgba(0, 229, 255, 0.08);
     font-family: 'Share Tech Mono', monospace;
     font-size: 11px;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
+    color: #8fefff;
 }
 
-.radar-status-chip.is-online,
-.radar-chip.is-on {
+.achievements-status-chip.is-online {
     color: #00ffae;
-    border-color: rgba(0, 255, 174, 0.3);
+    border-color: rgba(0, 255, 174, 0.28);
     background: rgba(0, 255, 174, 0.08);
 }
 
-.radar-status-chip.is-guest,
-.radar-chip.is-off {
+.achievements-status-chip.is-guest {
     color: #ffb35d;
     border-color: rgba(255, 179, 93, 0.24);
     background: rgba(255, 179, 93, 0.08);
 }
 
-.radar-status-chip.is-live,
-.radar-chip.is-neutral {
-    color: #00e5ff;
+.achievements-status-chip.is-live {
+    color: #ffd45d;
+    border-color: rgba(255, 212, 93, 0.24);
+    background: rgba(255, 212, 93, 0.08);
 }
 
-.radar-hero {
+.achievements-hero {
     gap: 18px;
     align-items: stretch;
 }
 
-.radar-hero-panel,
-.radar-panel {
+.achievements-hero-panel,
+.achievements-panel,
+.achievements-summary-card,
+.achievement-card {
     border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(2, 9, 20, 0.84), rgba(2, 8, 18, 0.68));
+    background: linear-gradient(180deg, rgba(2, 9, 20, 0.84), rgba(2, 8, 18, 0.7));
     box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.04);
 }
 
-.radar-hero-panel {
-    flex: 1.45;
-    min-height: 272px;
-    padding: 20px;
+.achievements-hero-panel {
+    position: relative;
+    flex: 0 0 320px;
+    min-height: 220px;
+    padding: 22px;
+    overflow: hidden;
 }
 
-.radar-hero-summary {
-    flex: 0.85;
-    gap: 16px;
-    flex-wrap: wrap;
+.achievements-hero-ring {
+    position: absolute;
+    inset: 16px;
+    border: 1px solid rgba(255, 212, 93, 0.18);
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(255, 212, 93, 0.08);
 }
 
-.radar-summary-card {
-    flex: 1 1 calc(50% - 8px);
-    min-height: 128px;
-    padding: 16px 18px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(3, 12, 26, 0.88), rgba(2, 8, 18, 0.7));
+.achievements-hero-core {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: calc(100% - 34px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
-.radar-summary-label {
-    font-size: 11px;
-    color: rgba(0, 229, 255, 0.74);
-}
-
-.radar-summary-value {
-    margin-top: 14px;
-    font-size: clamp(2rem, 4vw, 3rem);
+.achievements-hero-value {
+    font-size: clamp(2.6rem, 5vw, 4rem);
     line-height: 0.95;
     color: #f4fbff;
 }
 
-.radar-summary-value span {
-    margin-left: 4px;
-    font-size: 0.42em;
+.achievements-hero-value span {
+    margin-left: 6px;
+    font-size: 0.34em;
     color: rgba(208, 230, 242, 0.7);
 }
 
-.radar-summary-value--tight {
-    font-size: clamp(1.25rem, 2vw, 1.75rem);
-    line-height: 1.15;
+.achievements-hero-label {
+    margin-top: 12px;
+    color: rgba(255, 212, 93, 0.86);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
 }
 
-.radar-hero-scope {
-    position: relative;
-    width: min(100%, 640px);
-    height: 228px;
-    margin: 0 auto;
-    border-radius: 24px;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at center, rgba(0, 229, 255, 0.12) 0%, rgba(0, 229, 255, 0.05) 18%, transparent 54%),
-        linear-gradient(180deg, rgba(0, 229, 255, 0.05), rgba(0, 0, 0, 0));
-}
-
-.radar-scope-ring,
-.radar-scope-core,
-.radar-scope-node,
-.radar-scope-sweep {
+.achievements-hero-progress {
     position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    height: 10px;
+    border: 1px solid rgba(255, 212, 93, 0.16);
+    background: rgba(255, 255, 255, 0.04);
 }
 
-.radar-scope-ring {
-    inset: 50%;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    transform: translate(-50%, -50%);
+.achievements-hero-progress-bar,
+.achievement-card-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255, 212, 93, 0.42), rgba(0, 229, 255, 0.94));
 }
 
-.radar-scope-ring--outer {
-    width: 80%;
-    height: 80%;
+.achievements-summary-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
 }
 
-.radar-scope-ring--mid {
-    width: 58%;
-    height: 58%;
-    border-style: dashed;
+.achievements-summary-card {
+    min-height: 102px;
+    padding: 16px 18px;
 }
 
-.radar-scope-ring--inner {
-    width: 34%;
-    height: 34%;
-    border-color: rgba(255, 215, 0, 0.18);
-}
-
-.radar-scope-sweep {
-    inset: 6% 10%;
-    background: conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(0, 229, 255, 0.18) 35deg, transparent 70deg);
-    mix-blend-mode: screen;
-    animation: radarSweep 5.2s linear infinite;
-}
-
-.radar-scope-core {
-    top: 50%;
-    left: 50%;
-    width: min(320px, 74%);
-    padding: 18px 20px;
-    border: 1px solid rgba(0, 229, 255, 0.16);
-    background: rgba(2, 9, 20, 0.88);
-    transform: translate(-50%, -50%);
-    text-align: center;
-    box-shadow: 0 0 36px rgba(0, 229, 255, 0.08), inset 0 0 20px rgba(0, 229, 255, 0.05);
-}
-
-.radar-scope-core-label {
-    font-size: 10px;
-    color: rgba(0, 229, 255, 0.7);
-}
-
-.radar-scope-core-title {
-    margin-top: 10px;
-    font-size: clamp(1.1rem, 1.7vw, 1.55rem);
-    line-height: 1.05;
+.achievements-summary-value {
+    margin-top: 14px;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    line-height: 1;
     color: #f4fbff;
-    max-width: 100%;
+}
+
+.achievements-summary-value--tight {
+    font-size: clamp(1rem, 1.7vw, 1.35rem);
+    line-height: 1.2;
     overflow-wrap: anywhere;
 }
 
-.radar-scope-core-title--multiline {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    min-height: 88px;
-}
-
-.radar-scope-core-title--multiline span {
-    display: block;
-}
-
-.radar-scope-core-copy {
-    margin-top: 8px;
-    font-size: 0.88rem;
-    line-height: 1.4;
-    max-width: 30ch;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.radar-scope-core-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 12px;
-}
-
-.radar-scope-core-tags span {
-    padding: 6px 8px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(0, 229, 255, 0.06);
-    color: rgba(208, 230, 242, 0.8);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-}
-
-.radar-scope-node {
-    top: var(--node-y);
-    left: var(--node-x);
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.28);
-    background: rgba(3, 12, 28, 0.9);
-    color: #e8fdff;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 18px rgba(0, 229, 255, 0.12);
-    animation: radarNodePulse 2.8s ease-in-out infinite;
-    animation-delay: var(--node-delay);
-    cursor: pointer;
-    appearance: none;
-}
-
-.radar-scope-node span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 0.12em;
-}
-
-.radar-scope-node,
-.radar-sector-card,
-.radar-target-row {
-    font: inherit;
-}
-
-.radar-content {
+.achievements-content {
     gap: 18px;
     min-height: 0;
+    flex: 1;
 }
 
-.radar-panel {
-    flex: 1;
+.achievements-panel {
     padding: 18px;
 }
 
-.radar-panel-title {
-    margin: 4px 0 0;
-    font-size: 1.35rem;
+.achievements-panel-title {
+    margin: 6px 0 0;
+    font-size: 1.24rem;
     color: #f4fbff;
 }
 
-.radar-panel-copy {
-    font-size: 0.95rem;
-}
-
-.radar-side {
-    flex: 0.96;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.radar-sector-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin-top: 14px;
-}
-
-.radar-sector-card {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-    text-align: left;
-    color: inherit;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(5, 14, 28, 0.86), rgba(2, 8, 18, 0.76));
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-    appearance: none;
-}
-
-.radar-sector-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(0, 229, 255, 0.36);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
-}
-
-.radar-sector-index {
-    color: rgba(0, 229, 255, 0.74);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.14em;
-}
-
-.radar-sector-title,
-.radar-next-title {
-    font-size: 1.18rem;
-    color: #f4fbff;
-    line-height: 1.18;
-    max-width: 24ch;
-}
-
-.radar-sector-progress-track {
-    height: 8px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(0, 0, 0, 0.28);
-}
-
-.radar-sector-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, rgba(0, 229, 255, 0.34), rgba(0, 229, 255, 0.88));
-}
-
-.radar-sector-progress-meta,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-chip-value,
-.radar-target-time {
-    font-size: 0.92rem;
-}
-
-.radar-sector-stats,
-.radar-next-meta,
-.radar-target-copy span,
-.radar-target-time {
-    font-family: 'Share Tech Mono', monospace;
-    color: rgba(181, 213, 225, 0.72);
-    letter-spacing: 0.08em;
-}
-
-.radar-next-target {
-    margin-top: 14px;
-    gap: 12px;
-}
-
-.radar-next-copy {
-    max-width: 46ch;
-    line-height: 1.5;
-}
-
-.radar-next-actions {
-    gap: 12px;
-    justify-content: flex-start;
-}
-
-.radar-chip-grid {
+.achievements-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.achievement-card {
+    padding: 16px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.achievement-card.is-unlocked {
+    border-color: rgba(255, 212, 93, 0.2);
+    box-shadow: inset 0 0 0 1px rgba(255, 212, 93, 0.05), 0 14px 28px rgba(0, 0, 0, 0.18);
+}
+
+.achievement-card.is-locked {
+    opacity: 0.72;
+}
+
+.achievement-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0, 229, 255, 0.28);
+}
+
+.achievement-card-head {
+    gap: 14px;
+}
+
+.achievement-card-icon,
+.achievements-next-icon,
+.achievements-roadmap-node {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.achievement-card-icon,
+.achievements-next-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    font-size: 24px;
+    color: #f4fbff;
+    background: rgba(4, 14, 26, 0.88);
+}
+
+.achievement-card-icon.tone-gold,
+.achievements-next-icon.tone-gold,
+.achievements-roadmap-node.tone-gold {
+    box-shadow: 0 0 16px rgba(255, 212, 93, 0.16);
+    border-color: rgba(255, 212, 93, 0.26);
+    color: #ffd45d;
+}
+
+.achievement-card-icon.tone-cyan,
+.achievements-next-icon.tone-cyan,
+.achievements-roadmap-node.tone-cyan {
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.14);
+    color: #00e5ff;
+}
+
+.achievement-card-icon.tone-green,
+.achievements-next-icon.tone-green,
+.achievements-roadmap-node.tone-green {
+    box-shadow: 0 0 16px rgba(0, 255, 174, 0.14);
+    border-color: rgba(0, 255, 174, 0.24);
+    color: #00ffae;
+}
+
+.achievement-card-icon.tone-purple,
+.achievements-next-icon.tone-purple,
+.achievements-roadmap-node.tone-purple {
+    box-shadow: 0 0 16px rgba(190, 105, 255, 0.16);
+    border-color: rgba(190, 105, 255, 0.24);
+    color: #d18bff;
+}
+
+.achievement-card-icon.tone-red,
+.achievements-next-icon.tone-red,
+.achievements-roadmap-node.tone-red {
+    box-shadow: 0 0 16px rgba(255, 94, 122, 0.16);
+    border-color: rgba(255, 94, 122, 0.22);
+    color: #ff839a;
+}
+
+.achievement-card-icon.tone-silver,
+.achievements-next-icon.tone-silver,
+.achievements-roadmap-node.tone-silver {
+    box-shadow: 0 0 16px rgba(198, 220, 230, 0.14);
+    border-color: rgba(198, 220, 230, 0.22);
+    color: #d9edf8;
+}
+
+.achievement-card-copy {
+    gap: 5px;
+    min-width: 0;
+}
+
+.achievement-card-name,
+.achievements-next-name,
+.achievements-roadmap-name {
+    color: #f4fbff;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.achievement-card-desc {
+    margin-top: 14px;
+    min-height: 72px;
+}
+
+.achievement-card-foot {
+    margin-top: 16px;
+}
+
+.achievement-card-progress-track {
+    margin-top: 8px;
+    height: 8px;
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.achievement-card-progress-meta,
+.achievements-next-meta {
+    margin-top: 8px;
+}
+
+.achievements-side {
+    flex: 0 0 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.achievements-next-item {
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.achievements-next-item--stack {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.achievements-next-copy {
+    gap: 6px;
+}
+
+.achievements-next-item--stack .achievement-card-progress-track {
+    width: 100%;
+}
+
+.achievements-roadmap {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     margin-top: 14px;
 }
 
-.radar-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 14px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(4, 12, 24, 0.72);
+.achievements-roadmap-step {
+    gap: 12px;
 }
 
-.radar-chip-value {
-    color: #f4fbff;
-}
-
-.radar-inline-actions {
-    margin-top: 16px;
-    justify-content: flex-start;
-}
-
-.radar-target-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.radar-target-row {
-    gap: 16px;
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid rgba(0, 229, 255, 0.12);
-    background: rgba(3, 10, 21, 0.68);
-    text-align: left;
-    color: inherit;
-    cursor: pointer;
-    appearance: none;
-}
-
-.radar-target-row:hover {
-    border-color: rgba(0, 229, 255, 0.34);
-}
-
-.radar-target-index {
-    min-width: 34px;
-    color: rgba(0, 229, 255, 0.8);
+.achievements-roadmap-node {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 229, 255, 0.18);
+    background: rgba(4, 14, 26, 0.84);
+    font-family: 'Share Tech Mono', monospace;
     font-size: 12px;
 }
 
-.radar-target-copy {
-    flex: 1;
-    gap: 4px;
+.achievements-roadmap-step.is-unlocked .achievements-roadmap-name {
+    color: #ffffff;
 }
 
-.radar-target-copy strong {
-    font-size: 1rem;
-    color: #f4fbff;
-}
-
-.radar-empty-state {
-    margin-top: 18px;
-    padding: 16px;
-    border: 1px dashed rgba(0, 229, 255, 0.14);
+.achievements-empty-note {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px dashed rgba(0, 229, 255, 0.16);
     background: rgba(3, 10, 21, 0.56);
 }
 
-.radar-sector-card.tone-red .radar-sector-progress-bar {
-    background: linear-gradient(90deg, rgba(255, 94, 122, 0.34), rgba(255, 94, 122, 0.94));
+.achievements-auth-btn {
+    margin-top: 14px;
 }
 
-.radar-sector-card.tone-gold .radar-sector-progress-bar {
-    background: linear-gradient(90deg, rgba(255, 204, 92, 0.34), rgba(255, 204, 92, 0.94));
-}
-
-.radar-scope-node.tone-red,
-.radar-next-target.tone-red .radar-next-sector {
-    border-color: rgba(255, 94, 122, 0.35);
-    color: #ff839a;
-}
-
-.radar-scope-node.tone-gold,
-.radar-next-target.tone-gold .radar-next-sector {
-    border-color: rgba(255, 204, 92, 0.35);
-    color: #ffd36a;
-}
-
-.radar-sector-card.is-high .radar-sector-threat,
-.radar-scope-node.is-high {
-    border-color: rgba(255, 94, 122, 0.38);
-    color: #ff839a;
-}
-
-.radar-sector-card.is-elevated .radar-sector-threat,
-.radar-scope-node.is-elevated {
-    border-color: rgba(255, 204, 92, 0.34);
-    color: #ffd36a;
-}
-
-.radar-sector-card.is-stable .radar-sector-threat,
-.radar-scope-node.is-stable,
-.radar-sector-card.is-secured .radar-sector-threat,
-.radar-scope-node.is-secured {
-    color: #00ffae;
-    border-color: rgba(0, 255, 174, 0.32);
-}
-
-@keyframes radarSweep {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes radarNodePulse {
-    0%, 100% { box-shadow: 0 0 14px rgba(0, 229, 255, 0.08); }
-    50% { box-shadow: 0 0 26px rgba(0, 229, 255, 0.2); }
-}
-
-@media (max-width: 1100px) {
-    .radar-screen-shell {
-        padding: 18px;
-    }
-
-    .radar-screen-frame {
-        padding: 22px;
-    }
-
-    .radar-hero,
-    .radar-content {
+@media (max-width: 1180px) {
+    .achievements-hero,
+    .achievements-content {
         flex-direction: column;
     }
 
-    .radar-sector-grid {
+    .achievements-grid {
         grid-template-columns: 1fr;
     }
 
-    .radar-hero-summary {
-        width: 100%;
+    .achievements-side {
+        flex-basis: auto;
+        padding-right: 0;
     }
 }
 
 @media (max-width: 760px) {
-    .radar-screen-shell {
+    .achievements-screen-shell {
         padding: 0;
     }
 
-    .radar-screen-frame {
+    .achievements-screen-frame {
         width: 100%;
         min-height: 100%;
         padding: 18px 16px 24px;
         border: 0;
     }
 
-    .radar-screen-header {
+    .achievements-screen-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .radar-screen-status {
+    .achievements-screen-status {
         flex-wrap: wrap;
     }
 
-    .radar-hero-panel {
-        min-height: 280px;
-        padding: 16px;
+    .achievements-hero-panel {
+        min-height: 200px;
     }
 
-    .radar-hero-scope {
-        height: 240px;
-    }
-
-    .radar-summary-card {
-        min-height: 116px;
-    }
-
-    .radar-chip-grid {
+    .achievements-summary-grid {
         grid-template-columns: 1fr;
     }
+}
 
-    .radar-next-actions,
-    .radar-target-row {
+#rankings-screen {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top, rgba(0, 255, 174, 0.08) 0%, rgba(5, 8, 16, 0.95) 34%, #04070f 100%);
+    overflow: hidden;
+}
+
+.rankings-screen-shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 28px;
+    color: #d9f8ff;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.rankings-screen-grid,
+.rankings-screen-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.rankings-screen-grid {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.24;
+}
+
+.rankings-screen-scanlines {
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 4px);
+    opacity: 0.14;
+}
+
+.rankings-screen-frame {
+    position: relative;
+    z-index: 1;
+    width: min(1440px, 100%);
+    height: 100%;
+    margin: 0 auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.84));
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 24px 60px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(12px);
+}
+
+.rankings-screen-header,
+.rankings-screen-status,
+.rankings-hero,
+.rankings-content,
+.rankings-panel-head,
+.rankings-track-step,
+.rankings-next-item,
+.rankings-metric-row {
+    display: flex;
+}
+
+.rankings-screen-header,
+.rankings-panel-head,
+.rankings-track-step,
+.rankings-metric-row {
+    align-items: center;
+}
+
+.rankings-screen-header,
+.rankings-panel-head,
+.rankings-metric-row {
+    justify-content: space-between;
+}
+
+.rankings-screen-header {
+    gap: 20px;
+}
+
+.rankings-back-btn {
+    align-self: flex-start;
+}
+
+.rankings-screen-title-wrap,
+.rankings-next-copy,
+.rankings-track-copy {
+    display: flex;
+    flex-direction: column;
+}
+
+.rankings-screen-title-wrap {
+    flex: 1;
+    gap: 8px;
+}
+
+.rankings-screen-kicker,
+.rankings-panel-kicker,
+.rankings-summary-label,
+.rankings-track-desc,
+.rankings-next-meta,
+.rankings-grade-range {
+    font-family: 'Share Tech Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+}
+
+.rankings-screen-kicker,
+.rankings-panel-kicker,
+.rankings-summary-label,
+.rankings-track-desc,
+.rankings-next-meta,
+.rankings-grade-range {
+    font-size: 11px;
+    color: rgba(0, 229, 255, 0.74);
+}
+
+.rankings-screen-title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 0.95;
+    letter-spacing: 0.12em;
+    color: #f4fbff;
+}
+
+.rankings-screen-subtitle,
+.rankings-panel-copy,
+.rankings-next-desc,
+.rankings-empty-note,
+.rankings-note,
+.rankings-summary-sub {
+    font-family: 'Rajdhani', sans-serif;
+    color: rgba(208, 230, 242, 0.78);
+    line-height: 1.55;
+}
+
+.rankings-screen-subtitle,
+.rankings-panel-copy,
+.rankings-next-desc,
+.rankings-empty-note,
+.rankings-note,
+.rankings-summary-sub {
+    margin: 0;
+}
+
+.rankings-screen-status {
+    gap: 10px;
+    align-self: flex-start;
+}
+
+.rankings-status-chip {
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 229, 255, 0.16);
+    background: rgba(0, 229, 255, 0.08);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8fefff;
+}
+
+.rankings-status-chip.is-online {
+    color: #00ffae;
+    border-color: rgba(0, 255, 174, 0.28);
+    background: rgba(0, 255, 174, 0.08);
+}
+
+.rankings-status-chip.is-guest {
+    color: #ffb35d;
+    border-color: rgba(255, 179, 93, 0.24);
+    background: rgba(255, 179, 93, 0.08);
+}
+
+.rankings-status-chip.is-live {
+    color: #00f3ff;
+}
+
+.rankings-hero {
+    gap: 18px;
+    align-items: stretch;
+}
+
+.rankings-hero-panel,
+.rankings-panel,
+.rankings-summary-card,
+.rankings-grade-card {
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(2, 9, 20, 0.84), rgba(2, 8, 18, 0.7));
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.04);
+}
+
+.rankings-hero-panel {
+    position: relative;
+    flex: 0 0 320px;
+    min-height: 220px;
+    padding: 22px;
+    overflow: hidden;
+}
+
+.rankings-hero-ring {
+    position: absolute;
+    inset: 16px;
+    border: 1px solid rgba(0, 255, 174, 0.16);
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(0, 255, 174, 0.08);
+}
+
+.rankings-hero-core {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: calc(100% - 34px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.rankings-hero-rank {
+    font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+    line-height: 0.95;
+    color: #00ffae;
+}
+
+.rankings-hero-label {
+    margin-top: 12px;
+    color: #f4fbff;
+    font-size: 1.14rem;
+    letter-spacing: 0.12em;
+}
+
+.rankings-hero-meta {
+    margin-top: 8px;
+    color: rgba(208, 230, 242, 0.7);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.rankings-hero-progress,
+.rankings-next-bar {
+    height: 10px;
+    border: 1px solid rgba(0, 255, 174, 0.16);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rankings-hero-progress {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+}
+
+.rankings-hero-progress-bar,
+.rankings-next-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(0, 255, 174, 0.42), rgba(0, 229, 255, 0.94));
+}
+
+.rankings-summary-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.rankings-summary-card {
+    min-height: 102px;
+    padding: 16px 18px;
+}
+
+.rankings-summary-value {
+    margin-top: 14px;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    line-height: 1;
+    color: #f4fbff;
+}
+
+.rankings-summary-value--tight {
+    font-size: clamp(1rem, 1.7vw, 1.35rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.rankings-content {
+    gap: 18px;
+    min-height: 0;
+    flex: 1;
+}
+
+.rankings-panel {
+    padding: 18px;
+}
+
+.rankings-panel-title {
+    margin: 6px 0 0;
+    font-size: 1.24rem;
+    color: #f4fbff;
+}
+
+.rankings-track {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.rankings-track-step {
+    gap: 12px;
+}
+
+.rankings-track-node,
+.rankings-next-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.rankings-track-node {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    background: rgba(4, 14, 26, 0.84);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: #d9edf8;
+}
+
+.rankings-track-step.is-complete .rankings-track-node {
+    border-color: rgba(0, 255, 174, 0.24);
+    color: #00ffae;
+}
+
+.rankings-track-step.is-current .rankings-track-node {
+    box-shadow: 0 0 18px rgba(0, 255, 174, 0.16);
+}
+
+.rankings-track-node.tone-cyan,
+.rankings-next-icon.tone-cyan {
+    color: #00e5ff;
+}
+
+.rankings-track-node.tone-green,
+.rankings-next-icon.tone-green {
+    color: #00ffae;
+}
+
+.rankings-track-node.tone-purple,
+.rankings-next-icon.tone-purple {
+    color: #d18bff;
+}
+
+.rankings-track-node.tone-gold,
+.rankings-next-icon.tone-gold {
+    color: #ffd45d;
+}
+
+.rankings-track-node.tone-red,
+.rankings-next-icon.tone-red {
+    color: #ff839a;
+}
+
+.rankings-track-copy {
+    gap: 4px;
+}
+
+.rankings-track-name,
+.rankings-next-name,
+.rankings-grade-name,
+.rankings-grade-title {
+    color: #f4fbff;
+}
+
+.rankings-grade-board {
+    margin-top: 20px;
+}
+
+.rankings-grade-title {
+    margin-bottom: 12px;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+}
+
+.rankings-grade-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.rankings-grade-card {
+    padding: 14px;
+}
+
+.rankings-grade-card.is-active {
+    border-color: rgba(0, 255, 174, 0.24);
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 174, 0.04), 0 12px 26px rgba(0, 0, 0, 0.18);
+}
+
+.rankings-grade-rank {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.rankings-side {
+    flex: 0 0 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.rankings-next-item {
+    gap: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 14px;
+}
+
+.rankings-next-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    background: rgba(4, 14, 26, 0.88);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+}
+
+.rankings-next-copy {
+    gap: 6px;
+}
+
+.rankings-next-bar {
+    width: 100%;
+}
+
+.rankings-metric-list,
+.rankings-note-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.rankings-metric-row {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.08);
+    font-family: 'Rajdhani', sans-serif;
+    color: rgba(208, 230, 242, 0.8);
+}
+
+.rankings-metric-row strong {
+    color: #f4fbff;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.08em;
+}
+
+.rankings-note {
+    padding-left: 16px;
+    position: relative;
+    font-family: 'Rajdhani', sans-serif;
+}
+
+.rankings-note::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    background: rgba(0, 255, 174, 0.92);
+    box-shadow: 0 0 10px rgba(0, 255, 174, 0.38);
+}
+
+.rankings-empty-note {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px dashed rgba(0, 229, 255, 0.16);
+    background: rgba(3, 10, 21, 0.56);
+}
+
+@media (max-width: 1180px) {
+    .rankings-hero,
+    .rankings-content {
+        flex-direction: column;
+    }
+
+    .rankings-side {
+        flex-basis: auto;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .rankings-screen-shell {
+        padding: 0;
+    }
+
+    .rankings-screen-frame {
+        width: 100%;
+        min-height: 100%;
+        padding: 18px 16px 24px;
+        border: 0;
+    }
+
+    .rankings-screen-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .radar-target-time {
-        margin-left: 50px;
+    .rankings-screen-status {
+        flex-wrap: wrap;
+    }
+
+    .rankings-summary-grid,
+    .rankings-grade-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rankings-hero-panel {
+        min-height: 200px;
+    }
+}
+
+#guidebook-screen {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top, rgba(0, 229, 255, 0.09) 0%, rgba(5, 8, 16, 0.96) 34%, #04070f 100%);
+    overflow: hidden;
+}
+
+.guidebook-shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 28px;
+    color: #d9f8ff;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.guidebook-grid,
+.guidebook-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.guidebook-grid {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+    background-size: 46px 46px;
+    opacity: 0.28;
+}
+
+.guidebook-scanlines {
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 4px);
+    opacity: 0.16;
+}
+
+.guidebook-frame {
+    position: relative;
+    z-index: 1;
+    width: min(1460px, 100%);
+    height: 100%;
+    margin: 0 auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.84));
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 24px 60px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(12px);
+}
+
+.guidebook-header,
+.guidebook-status,
+.guidebook-layout,
+.guidebook-meta {
+    display: flex;
+}
+
+.guidebook-header,
+.guidebook-meta {
+    align-items: center;
+}
+
+.guidebook-header {
+    gap: 20px;
+}
+
+.guidebook-back-btn {
+    align-self: flex-start;
+}
+
+.guidebook-title-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.guidebook-kicker,
+.guidebook-panel-kicker,
+.guidebook-section-title,
+.guidebook-mission-level,
+.guidebook-mission-badge,
+.guidebook-index-level,
+.guidebook-index-copy span {
+    font-family: 'Share Tech Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+}
+
+.guidebook-kicker,
+.guidebook-panel-kicker,
+.guidebook-section-title,
+.guidebook-index-copy span {
+    font-size: 11px;
+    color: rgba(0, 229, 255, 0.74);
+}
+
+.guidebook-title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    line-height: 0.95;
+    letter-spacing: 0.12em;
+    color: #f4fbff;
+}
+
+.guidebook-subtitle,
+.guidebook-panel-copy,
+.guidebook-section p,
+.guidebook-overview-item,
+.guidebook-bullet,
+.guidebook-step p,
+.guidebook-mission-desc {
+    font-family: 'Rajdhani', sans-serif;
+    color: rgba(208, 230, 242, 0.78);
+}
+
+.guidebook-subtitle,
+.guidebook-panel-copy,
+.guidebook-section p,
+.guidebook-overview-item,
+.guidebook-bullet,
+.guidebook-step p,
+.guidebook-mission-desc {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.guidebook-status {
+    gap: 10px;
+    align-self: flex-start;
+}
+
+.guidebook-chip {
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 229, 255, 0.16);
+    background: rgba(0, 229, 255, 0.08);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8fefff;
+}
+
+.guidebook-chip.is-live {
+    color: #00ffae;
+    border-color: rgba(0, 255, 174, 0.26);
+    background: rgba(0, 255, 174, 0.08);
+}
+
+.guidebook-layout {
+    gap: 18px;
+    min-height: 0;
+    flex: 1;
+}
+
+.guidebook-sidebar,
+.guidebook-content {
+    min-height: 0;
+}
+
+.guidebook-sidebar {
+    flex: 0 0 330px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.guidebook-content {
+    flex: 1;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.guidebook-panel,
+.guidebook-mission-card {
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(2, 9, 20, 0.86), rgba(2, 8, 18, 0.72));
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.04);
+}
+
+.guidebook-panel {
+    padding: 18px;
+}
+
+.guidebook-panel-title {
+    margin: 6px 0 0;
+    font-size: 1.24rem;
+    color: #f4fbff;
+}
+
+.guidebook-overview-list,
+.guidebook-level-index,
+.guidebook-mission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.guidebook-overview-item,
+.guidebook-bullet {
+    padding-left: 16px;
+    position: relative;
+}
+
+.guidebook-overview-item::before,
+.guidebook-bullet::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    background: rgba(0, 229, 255, 0.9);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.45);
+}
+
+.guidebook-index-btn {
+    width: 100%;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(3, 10, 21, 0.72);
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.guidebook-index-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 229, 255, 0.3);
+    background: rgba(0, 229, 255, 0.07);
+}
+
+.guidebook-index-btn.is-locked {
+    opacity: 0.6;
+}
+
+.guidebook-index-level {
+    min-width: 34px;
+    color: #00e5ff;
+    font-size: 12px;
+}
+
+.guidebook-index-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.guidebook-index-copy strong {
+    color: #f4fbff;
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.guidebook-intro {
+    margin-bottom: 14px;
+}
+
+.guidebook-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.guidebook-step {
+    padding: 14px;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(4, 12, 24, 0.74);
+}
+
+.guidebook-step span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(0, 229, 255, 0.24);
+    color: #00e5ff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+}
+
+.guidebook-mission-card {
+    padding: 20px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guidebook-mission-card.is-focused {
+    border-color: rgba(0, 229, 255, 0.4);
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.08), 0 0 24px rgba(0, 229, 255, 0.12);
+}
+
+.guidebook-mission-card.is-locked {
+    opacity: 0.82;
+}
+
+.guidebook-mission-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.guidebook-mission-level {
+    font-size: 11px;
+    color: rgba(0, 229, 255, 0.74);
+}
+
+.guidebook-mission-badge {
+    padding: 6px 10px;
+    border: 1px solid rgba(200, 232, 240, 0.14);
+    color: #8fefff;
+    font-size: 10px;
+}
+
+.guidebook-mission-title {
+    margin: 12px 0 8px;
+    font-size: 1.42rem;
+    color: #f4fbff;
+    line-height: 1.15;
+}
+
+.guidebook-meta {
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 0 16px;
+}
+
+.guidebook-meta span {
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(0, 229, 255, 0.05);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(190, 231, 242, 0.82);
+}
+
+.guidebook-section + .guidebook-section {
+    margin-top: 16px;
+}
+
+.guidebook-section-title {
+    margin-bottom: 8px;
+}
+
+.guidebook-bullet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+@media (max-width: 1120px) {
+    .guidebook-layout {
+        flex-direction: column;
+    }
+
+    .guidebook-sidebar {
+        flex-basis: auto;
+    }
+
+    .guidebook-steps {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .guidebook-shell {
+        padding: 0;
+    }
+
+    .guidebook-frame {
+        width: 100%;
+        min-height: 100%;
+        padding: 18px 16px 24px;
+        border: 0;
+    }
+
+    .guidebook-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .guidebook-status {
+        flex-wrap: wrap;
+    }
+
+    .guidebook-sidebar,
+    .guidebook-content {
+        padding-right: 0;
+    }
+
+    .guidebook-title {
+        font-size: 2rem;
+    }
+
+    .guidebook-mission-title {
+        font-size: 1.22rem;
     }
 }
 
