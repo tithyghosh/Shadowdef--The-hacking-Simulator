@@ -827,18 +827,18 @@
     }
 
     #main-menu .holo {
-        width: min(72vw, 240px);
-        height: min(72vw, 240px);
+        width: min(66vw, 220px);
+        height: min(66vw, 220px);
     }
 
     #main-menu .hbeam {
-        border-left-width: 52px;
-        border-right-width: 52px;
-        border-bottom-width: min(72vw, 240px);
+        border-left-width: 46px;
+        border-right-width: 46px;
+        border-bottom-width: min(66vw, 220px);
     }
 
     #main-menu .hbase {
-        width: min(46vw, 150px);
+        width: min(42vw, 132px);
     }
 
     #main-menu .trow {
@@ -881,11 +881,11 @@
     }
 
     #main-menu .hm {
-        font-size: clamp(21px, 10vw, 34px);
+        font-size: clamp(18px, 8.8vw, 30px);
     }
 
     #main-menu .hdfl {
-        font-size: clamp(21px, 10vw, 34px);
+        font-size: clamp(18px, 8.8vw, 30px);
     }
 
     #main-menu .joy {

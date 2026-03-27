@@ -699,44 +699,84 @@
                     const holoRadius = isMobile
                         ? Math.min(width * 0.24, 112)
                         : Math.min(width * 0.3, 146);
-                    const arcRadius = isMobile
-                        ? holoRadius + Math.min(width * 0.17, 54)
-                        : holoRadius + Math.min(width * 0.275, 112);
                     const nodeSize = isMobile ? 38 : 44;
                     const labelHeight = isMobile ? 12 : 18;
                     const positions = [];
                     svg.innerHTML = '';
-                    const leftAngles = (isMobile ? [226, 202, 158, 134] : [222, 198, 164, 138]).map((degrees) => degrees * Math.PI / 180);
-                    const rightAngles = (isMobile ? [314, 338, 22, 46] : [318, 342, 16, 42]).map((degrees) => degrees * Math.PI / 180);
+                    const arcRadius = isMobile
+                        ? holoRadius + Math.min(width * 0.16, 50)
+                        : holoRadius + Math.min(width * 0.275, 112);
+                    const leftAngles = isMobile ? null : [222, 198, 164, 138].map((degrees) => degrees * Math.PI / 180);
+                    const rightAngles = isMobile ? null : [318, 342, 16, 42].map((degrees) => degrees * Math.PI / 180);
 
-                    for (let i = 0; i < 4; i += 1) {
-                        const angle = leftAngles[i];
-                        const x = centerX + arcRadius * Math.cos(angle);
-                        const y = centerY + arcRadius * Math.sin(angle);
-                        const node = document.getElementById(`n${i}`);
-                        if (!node) continue;
-                        node.style.position = 'absolute';
-                        node.style.left = `${x - (nodeSize / 2)}px`;
-                        node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
-                        node.style.animationDelay = `${i * 0.08}s`;
-                        node.style.flexDirection = 'column';
-                        node.style.alignItems = 'center';
-                        positions.push({ x, y, angle, side: 'left' });
-                    }
+                    if (isMobile) {
+                        const mirroredOffsets = [
+                            { x: 108, y: -110 },
+                            { x: 140, y: -14 },
+                            { x: 140, y: 84 },
+                            { x: 108, y: 178 }
+                        ];
 
-                    for (let i = 0; i < 4; i += 1) {
-                        const angle = rightAngles[i];
-                        const x = centerX + arcRadius * Math.cos(angle);
-                        const y = centerY + arcRadius * Math.sin(angle);
-                        const node = document.getElementById(`n${i + 4}`);
-                        if (!node) continue;
-                        node.style.position = 'absolute';
-                        node.style.left = `${x - (nodeSize / 2)}px`;
-                        node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
-                        node.style.animationDelay = `${(i * 0.08) + 0.3}s`;
-                        node.style.flexDirection = 'column';
-                        node.style.alignItems = 'center';
-                        positions.push({ x, y, angle, side: 'right' });
+                        for (let i = 0; i < 4; i += 1) {
+                            const offset = mirroredOffsets[i];
+                            const leftNode = document.getElementById(`n${i}`);
+                            const rightNode = document.getElementById(`n${i + 4}`);
+                            const leftX = centerX - offset.x;
+                            const rightX = centerX + offset.x;
+                            const y = centerY + offset.y;
+                            const leftAngle = Math.atan2(y - centerY, leftX - centerX);
+                            const rightAngle = Math.atan2(y - centerY, rightX - centerX);
+
+                            if (leftNode) {
+                                leftNode.style.position = 'absolute';
+                                leftNode.style.left = `${leftX - (nodeSize / 2)}px`;
+                                leftNode.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                                leftNode.style.animationDelay = `${i * 0.08}s`;
+                                leftNode.style.flexDirection = 'column';
+                                leftNode.style.alignItems = 'center';
+                                positions.push({ x: leftX, y, angle: leftAngle, side: 'left' });
+                            }
+
+                            if (rightNode) {
+                                rightNode.style.position = 'absolute';
+                                rightNode.style.left = `${rightX - (nodeSize / 2)}px`;
+                                rightNode.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                                rightNode.style.animationDelay = `${(i * 0.08) + 0.3}s`;
+                                rightNode.style.flexDirection = 'column';
+                                rightNode.style.alignItems = 'center';
+                                positions.push({ x: rightX, y, angle: rightAngle, side: 'right' });
+                            }
+                        }
+                    } else {
+                        for (let i = 0; i < 4; i += 1) {
+                            const angle = leftAngles[i];
+                            const x = centerX + arcRadius * Math.cos(angle);
+                            const y = centerY + arcRadius * Math.sin(angle);
+                            const node = document.getElementById(`n${i}`);
+                            if (!node) continue;
+                            node.style.position = 'absolute';
+                            node.style.left = `${x - (nodeSize / 2)}px`;
+                            node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                            node.style.animationDelay = `${i * 0.08}s`;
+                            node.style.flexDirection = 'column';
+                            node.style.alignItems = 'center';
+                            positions.push({ x, y, angle, side: 'left' });
+                        }
+
+                        for (let i = 0; i < 4; i += 1) {
+                            const angle = rightAngles[i];
+                            const x = centerX + arcRadius * Math.cos(angle);
+                            const y = centerY + arcRadius * Math.sin(angle);
+                            const node = document.getElementById(`n${i + 4}`);
+                            if (!node) continue;
+                            node.style.position = 'absolute';
+                            node.style.left = `${x - (nodeSize / 2)}px`;
+                            node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                            node.style.animationDelay = `${(i * 0.08) + 0.3}s`;
+                            node.style.flexDirection = 'column';
+                            node.style.alignItems = 'center';
+                            positions.push({ x, y, angle, side: 'right' });
+                        }
                     }
 
                     const ns = 'http://www.w3.org/2000/svg';
@@ -780,19 +820,9 @@
                         svg.appendChild(rail);
                     }
 
-                    drawRail(leftAngles.map((angle) => ({
-                        x: centerX + arcRadius * Math.cos(angle),
-                        y: centerY + arcRadius * Math.sin(angle),
-                        side: 'left'
-                    })));
-                    drawRail(rightAngles.map((angle) => ({
-                        x: centerX + arcRadius * Math.cos(angle),
-                        y: centerY + arcRadius * Math.sin(angle),
-                        side: 'right'
-                    })));
-
-                    for (let i = 0; i < 4; i += 1) drawMainMenuArc(svg, centerX, centerY, holoRadius, { ...positions[i], angle: leftAngles[i] });
-                    for (let i = 0; i < 4; i += 1) drawMainMenuArc(svg, centerX, centerY, holoRadius, { ...positions[i + 4], angle: rightAngles[i] });
+                    drawRail(positions.filter((position) => position.side === 'left'));
+                    drawRail(positions.filter((position) => position.side === 'right'));
+                    positions.forEach((position) => drawMainMenuArc(svg, centerX, centerY, holoRadius, position));
 
                     svg.querySelectorAll('circle[r="2"]').forEach((dot) => {
                         dot.setAttribute('filter', 'url(#main-menu-node-glow)');
