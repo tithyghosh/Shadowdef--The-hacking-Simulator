@@ -11,6 +11,7 @@ import { UIManager } from './ui/UIManager.js';
 import { AudioManager } from './core/AudioManager.js';
 import { LoginScreen } from './screens/LoginScreen.js';
 import { ProfileScreen } from './screens/ProfileScreen.js';
+import { AchievementsScreen } from './screens/AchievementsScreen.js';
 import { updateMainMenuAuthState } from './ui/MainMenuAuthState.js';
 
 // Global game instance
@@ -20,6 +21,7 @@ let loadingManager = null;
 let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
+let achievementsScreen = null;
 let hologramFlickerTimer = null;
 let lastHologramHoverAt = 0;
 
@@ -107,6 +109,7 @@ function initGameSystems() {
         // Initialize screen controllers
         loginScreen = new LoginScreen(game);
         profileScreen = new ProfileScreen(game);
+        achievementsScreen = new AchievementsScreen(game);
 
         // Attach to window for debugging and screen manager access
         window.game = game;
@@ -315,6 +318,10 @@ function handleAction(action, event) {
                 game.screens.showScreen('login-screen');
                 loginScreen.render();
             }
+            break;
+        case 'achievements':
+            game.screens.showScreen('achievements-screen');
+            achievementsScreen.render();
             break;
         case 'credits-store':
             showCreditsStore();

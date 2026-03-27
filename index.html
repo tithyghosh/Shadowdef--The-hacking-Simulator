@@ -68,203 +68,174 @@
 
         <!-- Main Menu -->
         <div id="main-menu" class="screen">
-            <div class="main-menu-shell">
-                <div class="main-menu-grid-bg" aria-hidden="true"></div>
-                <div class="main-menu-particles" id="main-menu-particles" aria-hidden="true"></div>
-                <div class="main-menu-binary main-menu-binary-left" id="main-menu-binary-left" aria-hidden="true"></div>
-                <div class="main-menu-binary main-menu-binary-right" id="main-menu-binary-right" aria-hidden="true"></div>
-                <div class="main-menu-flash" id="main-menu-flash" aria-hidden="true"></div>
+            <div class="main-menu-exact">
+                <div class="gbg"></div>
+                <div class="bin" style="left:7%;--s:19s;--d:0s">10110011</div>
+                <div class="bin" style="left:25%;--s:26s;--d:4s">01001101</div>
+                <div class="bin" style="left:52%;--s:17s;--d:2s">11001001</div>
+                <div class="bin" style="left:76%;--s:23s;--d:6s">00110100</div>
+                <div class="bin" style="left:93%;--s:20s;--d:1s">10011011</div>
+                <div class="pts" id="pts"></div>
+                <div class="flash" id="flash"></div>
 
-                <header class="main-menu-topbar">
-                    <div class="main-menu-brand">
-                        <div class="main-menu-brand-title">
-                            <span class="plain">SHADOW</span><span class="d2">D</span><button class="mission-e-wrap main-menu-brand-e" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Open missions">
-                                <span class="e-spark"></span>
-                                <span class="e-spark2"></span>
-                                <span class="e-letter">E</span>
-                            </button><span class="d2">F</span>
-                        </div>
-                        <div class="main-menu-brand-sub">● DEFEND THE LIGHT &nbsp;·&nbsp; DEFY THE SHADOWS</div>
-                    </div>
-                    <div class="main-menu-top-status">
-                        <span class="main-menu-status-item"><span class="main-menu-status-dot is-green"></span>SYSTEM ONLINE</span>
-                        <span class="main-menu-status-item"><span class="main-menu-status-dot is-red"></span>NODE: ALPHA-7</span>
-                        <span class="main-menu-status-item">THREAT: <span class="main-menu-status-alert">MODERATE</span></span>
-                    </div>
-                    <div class="main-menu-clock" id="main-menu-clock">--:--:--</div>
-                </header>
-
-                <div class="main-menu-content">
-                    <aside class="main-menu-dock main-menu-dock-left">
-                        <div class="main-menu-dock-rail" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon" type="button" data-action="profile" data-dock="profile" data-tooltip="PROFILE" aria-label="Profile">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 13.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"></path><path d="M6.7 18.2c1.3-1.9 3-2.8 5.3-2.8s4 .9 5.3 2.8"></path><path d="M4.5 12c0-5 2.5-7.5 7.5-7.5S19.5 7 19.5 12 17 19.5 12 19.5 4.5 17 4.5 12Z"></path></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">PROFILE</span>
-                            <span class="main-menu-card-meta">
-                                <span class="card-content">
-                                    <span class="card-title">PROFILE</span>
-                                    <span class="card-subtitle">Operator dossier</span>
-                                    <span class="card-stats" id="profile-stats">Login to view profile</span>
-                                </span>
-                            </span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon" type="button" data-action="mission-select" data-dock="mission-select" data-tooltip="MISSIONS" aria-label="Missions">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"></circle><circle cx="12" cy="12" r="2.5"></circle><path d="M12 2.8v3"></path><path d="M12 18.2v3"></path><path d="M2.8 12h3"></path><path d="M18.2 12h3"></path></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">MISSIONS</span>
-                            <span class="main-menu-card-meta">
-                                <span class="card-content">
-                                    <span class="card-title">MISSIONS</span>
-                                    <span class="card-subtitle">Objective pipeline</span>
-                                    <span class="card-progress" id="mission-progress">0/20 Completed</span>
-                                </span>
-                            </span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon is-passive" type="button" data-dock="rankings" data-tooltip="RANKINGS" aria-label="Rankings">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 18.5h12"></path><path d="M8 18.5v-5"></path><path d="M12 18.5v-8"></path><path d="M16 18.5v-11"></path><path d="m7 8 3-3 2.5 2.5L17 4"></path></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">RANKINGS</span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon is-passive" type="button" data-dock="achievements" data-tooltip="ACHIEVEMENTS" aria-label="Achievements">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 3.8 18 6v4.8c0 3.6-2 6.5-6 8.8-4-2.3-6-5.2-6-8.8V6l6-2.2Z"></path><path d="m12 8.3 1.1 2.2 2.4.3-1.7 1.7.4 2.4-2.2-1.2-2.2 1.2.4-2.4-1.7-1.7 2.4-.3Z"></path></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">ACHIEVEMENTS</span>
-                        </button>
-                    </aside>
-
-                    <section class="main-menu-center">
-                        <div class="holo-wrap">
-                            <div class="hbeam"></div>
-                            <div class="hr hr1"></div>
-                            <div class="hr hr2"></div>
-                            <div class="hr hr3"></div>
-                            <div class="hr hr4"></div>
-                            <div class="hr hr5"></div>
-
-                            <div class="dpt" style="top:8%;left:4%;--dd:3.2s;--ds:0s">SYS::OK</div>
-                            <div class="dpt" style="top:16%;right:3%;--dd:4.1s;--ds:1.1s">AUTH::0</div>
-                            <div class="dpt" style="top:50%;left:0%;--dd:5s;--ds:2.2s">LVL::01</div>
-                            <div class="dpt" style="top:65%;right:2%;--dd:3.6s;--ds:0.5s">XP::000</div>
-                            <div class="dpt" style="top:35%;left:-2%;--dd:4.5s;--ds:1.5s">0x4D·B2</div>
-                            <div class="dpt" style="top:42%;right:-1%;--dd:3.9s;--ds:0.9s">NODE:α7</div>
-                            <div class="dpt" style="top:78%;left:6%;--dd:3.4s;--ds:1.8s">ENC::ON</div>
-                            <div class="dpt" style="top:25%;right:1%;--dd:4.8s;--ds:0.3s">THR::MED</div>
-
-                            <div class="hlogo">
-                                <div class="hscan"></div>
-                                <div class="hscanbar"></div>
-                                <div class="hmain">SHADOW</div>
-                                <div class="hdf-row">
-                                    <span class="hdf-letter">D</span>
-                                    <button class="joystick-btn" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Launch missions">
-                                        <div class="joy-glow"></div>
-                                        <span class="joy-spark" style="--jd:2.4s;--jdl:0s"></span>
-                                        <span class="joy-spark" style="--jd:2.4s;--jdl:.8s;width:3px;height:3px;opacity:.6"></span>
-                                        <span class="joy-spark2" style="--jd:1.6s;--jdl:0s"></span>
-                                        <span class="joy-spark2" style="--jd:1.6s;--jdl:.5s;width:2px;height:2px;opacity:.5"></span>
-                                        <div class="joy-wave"></div>
-                                        <span class="joy-icon">&#128377;&#65039;</span>
-                                    </button>
-                                    <span class="hdf-letter">F</span>
-                                </div>
-                                <div class="htag">TAP &#128377;&#65039; TO ENTER MISSIONS</div>
+                <div class="nav">
+                    <div class="nav-brand-mark">
+                            <div class="trow">
+                                <span class="tpl">SHADOW</span><span class="tcy">D</span><button class="mew" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Open missions">
+                                    <span class="esp"></span><span class="esp2"></span>
+                                    <span class="el" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.2" r="2.2"></circle><path d="M12 8.6v5.1"></path><path d="M7 18.5h10l-1.4-4.4H8.4L7 18.5z"></path><path d="M10 16.2h4"></path></svg>
+                                    </span>
+                                </button><span class="tcy">F</span>
                             </div>
-
-                            <div class="hbase"></div>
-                        </div>
-                    </section>
-
-                    <aside class="main-menu-dock main-menu-dock-right">
-                        <div class="main-menu-dock-rail" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon is-passive has-ping" type="button" data-dock="intel" data-tooltip="INTEL FEED" aria-label="Intel feed">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M7.5 16.5a7 7 0 0 1 9 0"></path><path d="M5 13.5a11 11 0 0 1 14 0"></path><path d="M2.8 10.3a14.5 14.5 0 0 1 18.4 0"></path><circle cx="12" cy="18.2" r="1.3"></circle></svg></span>
-                            </span>
-                            <span class="main-menu-dock-ping" aria-hidden="true"></span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">INTEL FEED</span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon is-passive has-ping" type="button" data-dock="radar" data-tooltip="THREAT RADAR" aria-label="Threat radar">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 19a7 7 0 1 0-7-7"></path><path d="M12 15.5a3.5 3.5 0 1 0-3.5-3.5"></path><path d="M12 12 18.2 8.8"></path><circle cx="12" cy="12" r="1.1"></circle></svg></span>
-                            </span>
-                            <span class="main-menu-dock-ping" aria-hidden="true"></span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">THREAT RADAR</span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon" type="button" data-action="settings" data-dock="settings" data-tooltip="SETTINGS" aria-label="Settings">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M7 6.5h10"></path><path d="M7 12h10"></path><path d="M7 17.5h10"></path><circle cx="9.5" cy="6.5" r="1.6"></circle><circle cx="14.5" cy="12" r="1.6"></circle><circle cx="11" cy="17.5" r="1.6"></circle></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">SETTINGS</span>
-                            <span class="main-menu-card-meta">
-                                <span class="card-content">
-                                    <span class="card-title">SETTINGS</span>
-                                    <span class="card-subtitle">Configure core parameters</span>
-                                </span>
-                            </span>
-                        </button>
-
-                        <div class="main-menu-dock-sep" aria-hidden="true"></div>
-
-                        <button class="main-menu-dock-icon login-card" id="login-logout-btn" type="button" data-action="login" data-dock="login" data-tooltip="LOGIN" aria-label="Login">
-                            <span class="main-menu-dock-bg" aria-hidden="true"></span>
-                            <span class="main-menu-dock-glyph" aria-hidden="true">
-                                <span class="card-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 4h7v16h-7"></path><path d="M3 12h10"></path><path d="m9 8 4 4-4 4"></path></svg></span>
-                            </span>
-                            <span class="main-menu-dock-nub" aria-hidden="true"></span>
-                            <span class="main-menu-dock-tip">LOGIN</span>
-                            <span class="main-menu-card-meta">
-                                <span class="card-content">
-                                    <span class="card-title">LOGIN</span>
-                                    <span class="card-subtitle">Terminal access / operator auth</span>
-                                </span>
-                            </span>
-                        </button>
-                    </aside>
+                        <div class="nav-brand-sub">● DEFEND THE LIGHT · DEFY THE SHADOWS</div>
+                    </div>
+                    <div class="nav-r">
+                        <div class="nav-st"><span class="nd g"></span>ONLINE</div>
+                        <div class="nav-clk" id="clock">--:--</div>
+                    </div>
                 </div>
 
-                <footer class="main-menu-statusbar">
-                    <div class="main-menu-statusbar-item"><span class="main-menu-status-square is-green"></span>NETWORK: SECURE</div>
-                    <div class="main-menu-statusbar-item"><span class="main-menu-status-square is-green"></span>AES-256 ACTIVE</div>
-                    <div class="main-menu-statusbar-item"><span class="main-menu-status-square is-red"></span>THREATS: 3 DETECTED</div>
-                    <div class="main-menu-statusbar-item">OPERATOR: <span id="main-menu-operator">GUEST</span></div>
-                    <div class="main-menu-statusbar-utc" id="main-menu-utc">--:--:-- UTC</div>
-                </footer>
+                <div class="stage" id="stage">
+                    <div class="orbit-shell" id="orbitShell">
+                    <svg class="arc-svg" id="arcSvg"></svg>
+
+                    <div class="arc-node arc-node-profile" id="n0">
+                        <button class="anode-btn" type="button" data-action="profile" data-dock="profile" aria-label="Profile">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5.5 19c1.8-3 4.2-4.5 6.5-4.5s4.7 1.5 6.5 4.5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">PROFILE</span>
+                        <span class="anode-meta" id="profile-stats">LOGIN TO VIEW PROFILE</span>
+                    </div>
+
+                    <div class="arc-node arc-node-missions" id="n1">
+                        <button class="anode-btn" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Missions">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3v2.2M21 12h-2.2M12 21v-2.2M3 12h2.2"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">MISSIONS</span>
+                        <span class="anode-meta" id="mission-progress">0/20 COMPLETED</span>
+                    </div>
+
+                    <div class="arc-node arc-node-rankings" id="n2">
+                        <button class="anode-btn" type="button" data-dock="rankings" aria-label="Rankings">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M7 19h10"></path><path d="M8.5 19V9.5"></path><path d="M15.5 19V9.5"></path><path d="M6 7h12"></path><path d="M9 7l1.4-2h3.2L15 7"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">RANKINGS</span>
+                    </div>
+
+                    <div class="arc-node arc-node-badges" id="n3">
+                        <button class="anode-btn" type="button" data-action="achievements" data-dock="achievements" aria-label="Badges">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M12 4l5.5 2.4v4.1c0 4-2.3 6.9-5.5 8.5-3.2-1.6-5.5-4.5-5.5-8.5V6.4L12 4z"></path><path d="M12 8.2v5.8"></path><path d="M9.5 11h5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">BADGES</span>
+                    </div>
+
+                    <div class="arc-node arc-node-intel" id="n4">
+                        <button class="anode-btn" type="button" data-dock="intel" aria-label="Intel">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M12 5l1.8 4.2L18 11l-4.2 1.8L12 17l-1.8-4.2L6 11l4.2-1.8L12 5z"></path><path d="M18.5 5.5l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8z"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">INTEL</span>
+                    </div>
+
+                    <div class="arc-node arc-node-radar" id="n5">
+                        <button class="anode-btn" type="button" data-dock="radar" aria-label="Radar">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M4 19l6-11 6 11"></path><path d="M8.3 11h7.4"></path><path d="M12 8V5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">RADAR</span>
+                    </div>
+
+                    <div class="arc-node arc-node-settings" id="n6">
+                        <button class="anode-btn" type="button" data-action="settings" data-dock="settings" aria-label="Settings">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.8"></circle><path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M6.8 6.8l1.4 1.4M15.8 15.8l1.4 1.4M17.2 6.8l-1.4 1.4M8.2 15.8l-1.4 1.4"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">SETTINGS</span>
+                    </div>
+
+                    <div class="arc-node arc-node-guide" id="n7">
+                        <button class="anode-btn" id="login-logout-btn" type="button" data-action="login" data-dock="login" aria-label="Login">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" id="login-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M7 5.5h10v13H7z"></path><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl" id="login-label">GUIDE</span>
+                    </div>
+
+                    <div class="holo-center">
+                        <div class="holo">
+                            <div class="hbeam"></div>
+                            <div class="hr hr1"></div><div class="hr hr2"></div>
+                            <div class="hr hr3"></div><div class="hr hr4"></div>
+                            <div class="dpt" style="top:8%;left:2%;--dd:3.2s;--ds:0s">SYS::OK</div>
+                            <div class="dpt" style="top:18%;right:0%;--dd:4s;--ds:1s">AUTH::0</div>
+                            <div class="dpt" style="top:56%;left:-1%;--dd:5s;--ds:2s">LVL::01</div>
+                            <div class="dpt" style="top:67%;right:0%;--dd:3.5s;--ds:.5s">XP::000</div>
+                            <div class="hlogo">
+                                <div class="hscan"></div><div class="hbar2"></div>
+                                <div class="hm">SHADOW</div>
+                                <div class="hdf">
+                                    <span class="hdfl">D</span>
+                                    <button class="joy" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Launch missions">
+                                        <div class="jglow"></div>
+                                        <span class="jsp"></span><span class="jsp2"></span>
+                                        <div class="jwave"></div>
+                                        <span class="jicon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24"><circle cx="12" cy="6.2" r="2.2"></circle><path d="M12 8.6v5.1"></path><path d="M7 18.5h10l-1.4-4.4H8.4L7 18.5z"></path><path d="M10 16.2h4"></path></svg>
+                                        </span>
+                                    </button>
+                                    <span class="hdfl">F</span>
+                                </div>
+                            </div>
+                            <div class="hbase"></div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="sbar">
+                    <div class="si"><span class="ok">■</span>SECURE</div>
+                    <div class="si"><span class="wa">■</span>3 THREATS</div>
+                    <div class="si">NODE:α7</div>
+                    <div class="si">OPERATOR: <span id="main-menu-operator">GUEST</span></div>
+                    <div class="sbr" id="utc">--:-- UTC</div>
+                </div>
             </div>
         </div>
 
@@ -272,6 +243,10 @@
         <div id="profile-screen" class="screen">
             <button class="back-btn" data-action="back">â† BACK</button>
             <!-- Profile content will be rendered by ProfileScreen.js -->
+        </div>
+
+        <div id="achievements-screen" class="screen">
+            <!-- Achievements content will be rendered by AchievementsScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
@@ -612,6 +587,7 @@
                 const { AudioManager } = await import('./css/js/core/AudioManager.js');
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
+                const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
                 
                 // Initialize managers
                 const authManager = AuthManager.getInstance();
@@ -622,12 +598,14 @@
                 const game = new Game(ui, audio);
                 const loginScreen = new LoginScreen(game);
                 const profileScreen = new ProfileScreen(game);
+                const achievementsScreen = new AchievementsScreen(game);
                 
                 // Make globally available
                 window.game = game;
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.achievementsScreen = achievementsScreen;
                 window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
@@ -638,71 +616,211 @@
 
                 function updateMainMenuClock() {
                     const now = new Date();
-                    const localClock = document.getElementById('main-menu-clock');
-                    const utcClock = document.getElementById('main-menu-utc');
+                    const localClock = document.getElementById('clock');
+                    const utcClock = document.getElementById('utc');
                     if (localClock) {
-                        localClock.textContent = now.toTimeString().slice(0, 8);
+                        localClock.textContent = now.toTimeString().slice(0, 5);
                     }
                     if (utcClock) {
-                        utcClock.textContent = `${now.toUTCString().slice(17, 25)} UTC`;
+                        utcClock.textContent = `${now.toUTCString().slice(17, 22)} UTC`;
                     }
                 }
 
                 function flashMainMenu() {
-                    const flash = document.getElementById('main-menu-flash');
+                    const flash = document.getElementById('flash');
                     if (!flash) return;
-                    flash.classList.remove('is-active');
+                    flash.classList.remove('pop');
                     void flash.offsetWidth;
-                    flash.classList.add('is-active');
+                    flash.classList.add('pop');
                 }
 
                 function setMainMenuDockState(dockName) {
-                    document.querySelectorAll('#main-menu .main-menu-dock-icon').forEach((button) => {
-                        const isActive = button.dataset.dock === dockName;
-                        button.classList.toggle('is-active', isActive);
+                    document.querySelectorAll('#main-menu .arc-node').forEach((node) => {
+                        const button = node.querySelector('[data-dock]');
+                        node.classList.toggle('active', button?.dataset.dock === dockName);
+                    });
+                }
+
+                function drawMainMenuArc(svg, centerX, centerY, holoRadius, node) {
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const isDesktop = window.innerWidth > 820;
+                    const startX = centerX + (holoRadius + 8) * Math.cos(node.angle);
+                    const startY = centerY + (holoRadius + 8) * Math.sin(node.angle);
+                    const bend = node.side === 'left' ? 16 : -16;
+                    const midX = ((startX + node.x) / 2) + (Math.cos(node.angle + (Math.PI / 2)) * bend);
+                    const midY = ((startY + node.y) / 2) + (Math.sin(node.angle + (Math.PI / 2)) * bend);
+
+                    const path = document.createElementNS(ns, 'path');
+                    const pathId = `main-menu-arc-${Math.random().toString(36).slice(2)}`;
+                    path.setAttribute('id', pathId);
+                    path.setAttribute('d', `M${startX},${startY} Q${midX},${midY} ${node.x},${node.y}`);
+                    path.setAttribute('stroke', 'rgba(0,229,255,.26)');
+                    path.setAttribute('stroke-width', isDesktop ? '1.9' : '1.2');
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke-dasharray', isDesktop ? '7 5' : '5 5');
+                    svg.appendChild(path);
+
+                    const dot = document.createElementNS(ns, 'circle');
+                    dot.setAttribute('cx', node.x);
+                    dot.setAttribute('cy', node.y);
+                    dot.setAttribute('r', '2.5');
+                    dot.setAttribute('fill', 'rgba(0,229,255,.35)');
+                    svg.appendChild(dot);
+
+                    const traveler = document.createElementNS(ns, 'circle');
+                    traveler.setAttribute('r', '2');
+                    traveler.setAttribute('fill', 'rgba(0,229,255,.72)');
+                    svg.appendChild(traveler);
+
+                    const motion = document.createElementNS(ns, 'animateMotion');
+                    motion.setAttribute('dur', `${2.5 + Math.random() * 2}s`);
+                    motion.setAttribute('repeatCount', 'indefinite');
+                    motion.setAttribute('begin', `${Math.random() * 3}s`);
+                    motion.setAttribute('calcMode', 'linear');
+
+                    const mpath = document.createElementNS(ns, 'mpath');
+                    mpath.setAttribute('href', `#${pathId}`);
+                    motion.appendChild(mpath);
+                    traveler.appendChild(motion);
+                }
+
+                function layoutMainMenuStage() {
+                    const stage = document.getElementById('stage');
+                    const svg = document.getElementById('arcSvg');
+                    if (!stage || !svg) return;
+
+                    const width = stage.offsetWidth;
+                    const height = stage.offsetHeight;
+                    const isMobile = width <= 820;
+                    const centerX = width / 2;
+                    const centerY = isMobile
+                        ? (height / 2) - Math.min(height * 0.012, 8)
+                        : (height / 2) - Math.min(height * 0.035, 22);
+                    const holoRadius = isMobile
+                        ? Math.min(width * 0.24, 112)
+                        : Math.min(width * 0.3, 146);
+                    const arcRadius = isMobile
+                        ? holoRadius + Math.min(width * 0.17, 54)
+                        : holoRadius + Math.min(width * 0.275, 112);
+                    const nodeSize = isMobile ? 38 : 44;
+                    const labelHeight = isMobile ? 12 : 18;
+                    const positions = [];
+                    svg.innerHTML = '';
+                    const leftAngles = (isMobile ? [226, 202, 158, 134] : [222, 198, 164, 138]).map((degrees) => degrees * Math.PI / 180);
+                    const rightAngles = (isMobile ? [314, 338, 22, 46] : [318, 342, 16, 42]).map((degrees) => degrees * Math.PI / 180);
+
+                    for (let i = 0; i < 4; i += 1) {
+                        const angle = leftAngles[i];
+                        const x = centerX + arcRadius * Math.cos(angle);
+                        const y = centerY + arcRadius * Math.sin(angle);
+                        const node = document.getElementById(`n${i}`);
+                        if (!node) continue;
+                        node.style.position = 'absolute';
+                        node.style.left = `${x - (nodeSize / 2)}px`;
+                        node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                        node.style.animationDelay = `${i * 0.08}s`;
+                        node.style.flexDirection = 'column';
+                        node.style.alignItems = 'center';
+                        positions.push({ x, y, angle, side: 'left' });
+                    }
+
+                    for (let i = 0; i < 4; i += 1) {
+                        const angle = rightAngles[i];
+                        const x = centerX + arcRadius * Math.cos(angle);
+                        const y = centerY + arcRadius * Math.sin(angle);
+                        const node = document.getElementById(`n${i + 4}`);
+                        if (!node) continue;
+                        node.style.position = 'absolute';
+                        node.style.left = `${x - (nodeSize / 2)}px`;
+                        node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                        node.style.animationDelay = `${(i * 0.08) + 0.3}s`;
+                        node.style.flexDirection = 'column';
+                        node.style.alignItems = 'center';
+                        positions.push({ x, y, angle, side: 'right' });
+                    }
+
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const defs = document.createElementNS(ns, 'defs');
+                    const filter = document.createElementNS(ns, 'filter');
+                    filter.setAttribute('id', 'main-menu-node-glow');
+                    filter.setAttribute('x', '-50%');
+                    filter.setAttribute('y', '-50%');
+                    filter.setAttribute('width', '200%');
+                    filter.setAttribute('height', '200%');
+                    const blur = document.createElementNS(ns, 'feGaussianBlur');
+                    blur.setAttribute('stdDeviation', '2');
+                    blur.setAttribute('result', 'blur');
+                    const merge = document.createElementNS(ns, 'feMerge');
+                    const mergeA = document.createElementNS(ns, 'feMergeNode');
+                    mergeA.setAttribute('in', 'blur');
+                    const mergeB = document.createElementNS(ns, 'feMergeNode');
+                    mergeB.setAttribute('in', 'SourceGraphic');
+                    merge.appendChild(mergeA);
+                    merge.appendChild(mergeB);
+                    filter.appendChild(blur);
+                    filter.appendChild(merge);
+                    defs.appendChild(filter);
+                    svg.appendChild(defs);
+
+                    function drawRail(points) {
+                        if (points.length < 2) return;
+                        const isDesktop = !isMobile;
+                        let d = `M${points[0].x},${points[0].y}`;
+                        for (let i = 1; i < points.length; i += 1) {
+                            const mx = (points[i - 1].x + points[i].x) / 2;
+                            const my = (points[i - 1].y + points[i].y) / 2;
+                            d += ` Q${mx},${my} ${points[i].x},${points[i].y}`;
+                        }
+                        const rail = document.createElementNS(ns, 'path');
+                        rail.setAttribute('d', d);
+                        rail.setAttribute('stroke', 'rgba(0,229,255,.15)');
+                        rail.setAttribute('stroke-width', isDesktop ? '1.55' : '1.1');
+                        rail.setAttribute('fill', 'none');
+                        rail.setAttribute('stroke-dasharray', isDesktop ? '4 6' : '2 6');
+                        svg.appendChild(rail);
+                    }
+
+                    drawRail(leftAngles.map((angle) => ({
+                        x: centerX + arcRadius * Math.cos(angle),
+                        y: centerY + arcRadius * Math.sin(angle),
+                        side: 'left'
+                    })));
+                    drawRail(rightAngles.map((angle) => ({
+                        x: centerX + arcRadius * Math.cos(angle),
+                        y: centerY + arcRadius * Math.sin(angle),
+                        side: 'right'
+                    })));
+
+                    for (let i = 0; i < 4; i += 1) drawMainMenuArc(svg, centerX, centerY, holoRadius, { ...positions[i], angle: leftAngles[i] });
+                    for (let i = 0; i < 4; i += 1) drawMainMenuArc(svg, centerX, centerY, holoRadius, { ...positions[i + 4], angle: rightAngles[i] });
+
+                    svg.querySelectorAll('circle[r="2"]').forEach((dot) => {
+                        dot.setAttribute('filter', 'url(#main-menu-node-glow)');
                     });
                 }
 
                 function buildMainMenuAmbientFx() {
-                    const particleHost = document.getElementById('main-menu-particles');
-                    const leftBinary = document.getElementById('main-menu-binary-left');
-                    const rightBinary = document.getElementById('main-menu-binary-right');
+                    const particleHost = document.getElementById('pts');
+                    if (!particleHost || particleHost.childElementCount) return;
 
-                    if (particleHost && !particleHost.childElementCount) {
-                        for (let i = 0; i < 32; i += 1) {
-                            const dot = document.createElement('span');
-                            dot.className = 'main-menu-particle';
-                            dot.style.left = `${Math.random() * 100}%`;
-                            dot.style.top = `${42 + Math.random() * 54}%`;
-                            dot.style.setProperty('--particle-duration', `${4 + Math.random() * 9}s`);
-                            dot.style.setProperty('--particle-delay', `${Math.random() * 12}s`);
-                            particleHost.appendChild(dot);
-                        }
+                    for (let i = 0; i < 14; i += 1) {
+                        const dot = document.createElement('div');
+                        dot.className = 'pt';
+                        dot.style.left = `${Math.random() * 100}%`;
+                        dot.style.top = `${30 + (Math.random() * 70)}%`;
+                        dot.style.setProperty('--pd', `${4 + (Math.random() * 9)}s`);
+                        dot.style.setProperty('--pp', `${Math.random() * 11}s`);
+                        particleHost.appendChild(dot);
                     }
-
-                    const binaryColumns = [
-                        { host: leftBinary, values: ['10110010011011001001', '01001100110010011011', '11001001011010011001'] },
-                        { host: rightBinary, values: ['00110110100110010011', '10011011001001100110', '01100110010011001101'] }
-                    ];
-
-                    binaryColumns.forEach(({ host, values }) => {
-                        if (!host || host.childElementCount) return;
-                        values.forEach((value, index) => {
-                            const column = document.createElement('span');
-                            column.className = 'main-menu-binary-column';
-                            column.textContent = value;
-                            column.style.left = `${8 + index * 24}%`;
-                            column.style.setProperty('--binary-duration', `${14 + Math.random() * 8}s`);
-                            column.style.setProperty('--binary-delay', `${index * 1.7}s`);
-                            host.appendChild(column);
-                        });
-                    });
                 }
 
                 function initMainMenuUi() {
                     buildMainMenuAmbientFx();
+                    layoutMainMenuStage();
                     updateMainMenuClock();
                     window.setInterval(updateMainMenuClock, 1000);
+                    window.addEventListener('resize', layoutMainMenuStage);
+                    window.layoutMainMenuStage = layoutMainMenuStage;
 
                     document.querySelectorAll('#main-menu [data-dock]').forEach((button) => {
                         button.addEventListener('click', () => {
@@ -756,6 +874,10 @@
                         case 'profile':
                             game.screens.showScreen('profile-screen');
                             profileScreen.render();
+                            break;
+                        case 'achievements':
+                            game.screens.showScreen('achievements-screen');
+                            achievementsScreen.render();
                             break;
                         case 'settings':
                             game.showSettings();
