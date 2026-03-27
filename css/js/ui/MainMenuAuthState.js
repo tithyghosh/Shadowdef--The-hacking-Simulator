@@ -1,23 +1,7 @@
-const LOGIN_ICON_SVG = `
-    <svg class="icon-svg" viewBox="0 0 24 24">
-        <path d="M10 5h7v14h-7"></path>
-        <path d="M3.8 12h9.8"></path>
-        <path d="m9.8 8.4 3.8 3.6-3.8 3.6"></path>
-    </svg>
-`;
-
-const LOGOUT_ICON_SVG = `
-    <svg class="icon-svg" viewBox="0 0 24 24">
-        <path d="M13.8 5h-7v14h7"></path>
-        <path d="M20.2 12h-9.8"></path>
-        <path d="m14.2 8.4-3.8 3.6 3.8 3.6"></path>
-    </svg>
-`;
-
-function setLoginButtonIcon(button, iconSvg) {
-    const iconContainer = button?.querySelector('.card-icon');
+function setLoginButtonIcon(button, markup) {
+    const iconContainer = button?.querySelector('#login-emoji, .anode-emoji');
     if (iconContainer) {
-        iconContainer.innerHTML = iconSvg;
+        iconContainer.innerHTML = markup;
     }
 }
 
@@ -27,28 +11,21 @@ export function updateMainMenuAuthState({ isAuthenticated = false, user = null }
     const profileStats = document.getElementById('profile-stats');
     const missionProgress = document.getElementById('mission-progress');
     const operatorLabel = document.getElementById('main-menu-operator');
+    const loginLabel = document.getElementById('login-label');
 
     if (loginLogoutBtn) {
-        const title = loginLogoutBtn.querySelector('.card-title');
-        const subtitle = loginLogoutBtn.querySelector('.card-subtitle');
-        const tip = loginLogoutBtn.querySelector('.main-menu-dock-tip');
-
         if (isAuthenticated) {
             loginLogoutBtn.dataset.tooltip = 'Logout Module';
             loginLogoutBtn.setAttribute('aria-label', 'Logout');
             loginLogoutBtn.classList.add('is-logout');
-            setLoginButtonIcon(loginLogoutBtn, LOGOUT_ICON_SVG);
-            if (title) title.textContent = 'LOGOUT';
-            if (subtitle) subtitle.textContent = 'End session / secure sign out';
-            if (tip) tip.textContent = 'LOGOUT';
+            setLoginButtonIcon(loginLogoutBtn, '<svg viewBox="0 0 24 24"><path d="M8 6h8v12H8z"></path><path d="M12 9v6M9 12h6"></path></svg>');
+            if (loginLabel) loginLabel.textContent = 'LOGOUT';
         } else {
             loginLogoutBtn.dataset.tooltip = 'Login Module';
             loginLogoutBtn.setAttribute('aria-label', 'Login');
             loginLogoutBtn.classList.remove('is-logout');
-            setLoginButtonIcon(loginLogoutBtn, LOGIN_ICON_SVG);
-            if (title) title.textContent = 'LOGIN';
-            if (subtitle) subtitle.textContent = 'Terminal access / operator auth';
-            if (tip) tip.textContent = 'LOGIN';
+            setLoginButtonIcon(loginLogoutBtn, '<svg viewBox="0 0 24 24"><path d="M7 5.5h10v13H7z"></path><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"></path></svg>');
+            if (loginLabel) loginLabel.textContent = 'GUIDE';
         }
     }
 
