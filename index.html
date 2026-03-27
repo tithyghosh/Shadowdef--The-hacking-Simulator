@@ -163,7 +163,7 @@
                     </div>
 
                     <div class="arc-node arc-node-radar" id="n5">
-                        <button class="anode-btn" type="button" data-action="radar" data-dock="radar" aria-label="Guidebook">
+                        <button class="anode-btn" type="button" data-action="guidebook" data-dock="guidebook" aria-label="Guidebook">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
@@ -253,8 +253,8 @@
             <!-- Maps content will be rendered by MapsScreen.js -->
         </div>
 
-        <div id="radar-screen" class="screen">
-            <!-- Radar content will be rendered by RadarScreen.js -->
+        <div id="guidebook-screen" class="screen">
+            <!-- Guidebook content will be rendered by GuidebookScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
@@ -597,7 +597,7 @@
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
                 const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
                 const { MapsScreen } = await import('./css/js/screens/MapsScreen.js');
-                const { RadarScreen } = await import('./css/js/screens/RadarScreen.js');
+                const { GuidebookScreen } = await import('./css/js/screens/GuidebookScreen.js');
                 
                 // Initialize managers
                 const authManager = AuthManager.getInstance();
@@ -610,7 +610,7 @@
                 const profileScreen = new ProfileScreen(game);
                 const achievementsScreen = new AchievementsScreen(game);
                 const mapsScreen = new MapsScreen(game);
-                const radarScreen = new RadarScreen(game);
+                const guidebookScreen = new GuidebookScreen(game);
                 
                 // Make globally available
                 window.game = game;
@@ -619,7 +619,7 @@
                 window.profileScreen = profileScreen;
                 window.achievementsScreen = achievementsScreen;
                 window.mapsScreen = mapsScreen;
-                window.radarScreen = radarScreen;
+                window.guidebookScreen = guidebookScreen;
                 window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
@@ -930,9 +930,9 @@
                             game.screens.showScreen('maps-screen');
                             mapsScreen.render();
                             break;
-                        case 'radar':
-                            game.screens.showScreen('radar-screen');
-                            radarScreen.render();
+                        case 'guidebook':
+                            game.screens.showScreen('guidebook-screen');
+                            guidebookScreen.render();
                             break;
                         case 'credits':
                             game.showCredits();

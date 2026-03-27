@@ -2296,694 +2296,417 @@
     }
 }
 
-#radar-screen {
+#guidebook-screen {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(circle at center, rgba(0, 229, 255, 0.08) 0%, rgba(5, 8, 16, 0.94) 36%, #04070f 100%);
+        radial-gradient(circle at top, rgba(0, 229, 255, 0.09) 0%, rgba(5, 8, 16, 0.96) 34%, #04070f 100%);
     overflow: hidden;
 }
 
-.radar-screen-shell {
+.guidebook-shell {
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    padding: 32px;
+    padding: 28px;
     color: #d9f8ff;
     font-family: 'Orbitron', sans-serif;
 }
 
-.radar-screen-grid,
-.radar-screen-scanlines {
+.guidebook-grid,
+.guidebook-scanlines {
     position: absolute;
     inset: 0;
     pointer-events: none;
 }
 
-.radar-screen-grid {
+.guidebook-grid {
     background-image:
-        linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
-    background-size: 48px 48px;
-    opacity: 0.24;
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+    background-size: 46px 46px;
+    opacity: 0.28;
 }
 
-.radar-screen-scanlines {
-    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 4px);
-    opacity: 0.14;
+.guidebook-scanlines {
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 4px);
+    opacity: 0.16;
 }
 
-.radar-screen-frame {
+.guidebook-frame {
     position: relative;
     z-index: 1;
-    width: min(1380px, 100%);
+    width: min(1460px, 100%);
+    height: 100%;
+    margin: 0 auto;
+    padding: 28px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    padding: 32px;
+    gap: 20px;
     border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.82));
-    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 22px 60px rgba(0, 0, 0, 0.38);
+    background: linear-gradient(180deg, rgba(3, 10, 20, 0.92), rgba(4, 8, 16, 0.84));
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04) inset, 0 24px 60px rgba(0, 0, 0, 0.38);
     backdrop-filter: blur(12px);
 }
 
-.radar-screen-header,
-.radar-panel-head,
-.radar-hero,
-.radar-content,
-.radar-hero-summary,
-.radar-sector-topline,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-next-actions,
-.radar-inline-actions,
-.radar-target-row {
+.guidebook-header,
+.guidebook-status,
+.guidebook-layout,
+.guidebook-meta {
     display: flex;
 }
 
-.radar-screen-header,
-.radar-panel-head,
-.radar-sector-topline,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-next-actions,
-.radar-target-row {
+.guidebook-header,
+.guidebook-meta {
     align-items: center;
-    justify-content: space-between;
 }
 
-.radar-screen-header {
+.guidebook-header {
     gap: 20px;
 }
 
-.radar-back-btn {
+.guidebook-back-btn {
     align-self: flex-start;
 }
 
-.radar-screen-title-wrap,
-.radar-panel-head > div,
-.radar-next-target,
-.radar-target-copy {
-    display: flex;
-    flex-direction: column;
-}
-
-.radar-screen-title-wrap {
+.guidebook-title-block {
     flex: 1;
-    gap: 6px;
-}
-
-.radar-screen-kicker,
-.radar-panel-kicker,
-.radar-summary-label,
-.radar-sector-progress-meta,
-.radar-chip-label,
-.radar-target-index,
-.radar-scope-core-label {
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-}
-
-.radar-screen-kicker,
-.radar-panel-kicker {
-    font-size: 11px;
-    color: rgba(0, 229, 255, 0.72);
-}
-
-.radar-screen-title {
-    margin: 0;
-    font-size: clamp(2.1rem, 4vw, 3.5rem);
-    line-height: 0.95;
-    letter-spacing: 0.14em;
-    color: #f3fbff;
-    text-shadow: 0 0 22px rgba(0, 229, 255, 0.12);
-}
-
-.radar-screen-subtitle,
-.radar-panel-copy,
-.radar-sector-copy,
-.radar-next-copy,
-.radar-empty-state,
-.radar-scope-core-copy,
-.radar-target-copy span {
-    font-family: 'Rajdhani', sans-serif;
-    color: rgba(208, 230, 242, 0.72);
-}
-
-.radar-screen-subtitle {
-    margin: 0;
-    max-width: 720px;
-    font-size: 1rem;
-    line-height: 1.45;
-}
-
-.radar-screen-status {
-    display: flex;
-    gap: 10px;
-    align-self: flex-start;
-}
-
-.radar-status-chip,
-.radar-sector-threat,
-.radar-next-sector {
-    padding: 8px 12px;
-    border: 1px solid rgba(0, 229, 255, 0.18);
-    background: rgba(0, 229, 255, 0.08);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-}
-
-.radar-status-chip.is-online,
-.radar-chip.is-on {
-    color: #00ffae;
-    border-color: rgba(0, 255, 174, 0.3);
-    background: rgba(0, 255, 174, 0.08);
-}
-
-.radar-status-chip.is-guest,
-.radar-chip.is-off {
-    color: #ffb35d;
-    border-color: rgba(255, 179, 93, 0.24);
-    background: rgba(255, 179, 93, 0.08);
-}
-
-.radar-status-chip.is-live,
-.radar-chip.is-neutral {
-    color: #00e5ff;
-}
-
-.radar-hero {
-    gap: 18px;
-    align-items: stretch;
-}
-
-.radar-hero-panel,
-.radar-panel {
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(2, 9, 20, 0.84), rgba(2, 8, 18, 0.68));
-    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.04);
-}
-
-.radar-hero-panel {
-    flex: 1.45;
-    min-height: 272px;
-    padding: 20px;
-}
-
-.radar-hero-summary {
-    flex: 0.85;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.radar-summary-card {
-    flex: 1 1 calc(50% - 8px);
-    min-height: 128px;
-    padding: 16px 18px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(3, 12, 26, 0.88), rgba(2, 8, 18, 0.7));
-}
-
-.radar-summary-label {
-    font-size: 11px;
-    color: rgba(0, 229, 255, 0.74);
-}
-
-.radar-summary-value {
-    margin-top: 14px;
-    font-size: clamp(2rem, 4vw, 3rem);
-    line-height: 0.95;
-    color: #f4fbff;
-}
-
-.radar-summary-value span {
-    margin-left: 4px;
-    font-size: 0.42em;
-    color: rgba(208, 230, 242, 0.7);
-}
-
-.radar-summary-value--tight {
-    font-size: clamp(1.25rem, 2vw, 1.75rem);
-    line-height: 1.15;
-}
-
-.radar-hero-scope {
-    position: relative;
-    width: min(100%, 640px);
-    height: 228px;
-    margin: 0 auto;
-    border-radius: 24px;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at center, rgba(0, 229, 255, 0.12) 0%, rgba(0, 229, 255, 0.05) 18%, transparent 54%),
-        linear-gradient(180deg, rgba(0, 229, 255, 0.05), rgba(0, 0, 0, 0));
-}
-
-.radar-scope-ring,
-.radar-scope-core,
-.radar-scope-node,
-.radar-scope-sweep {
-    position: absolute;
-}
-
-.radar-scope-ring {
-    inset: 50%;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    transform: translate(-50%, -50%);
-}
-
-.radar-scope-ring--outer {
-    width: 80%;
-    height: 80%;
-}
-
-.radar-scope-ring--mid {
-    width: 58%;
-    height: 58%;
-    border-style: dashed;
-}
-
-.radar-scope-ring--inner {
-    width: 34%;
-    height: 34%;
-    border-color: rgba(255, 215, 0, 0.18);
-}
-
-.radar-scope-sweep {
-    inset: 6% 10%;
-    background: conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(0, 229, 255, 0.18) 35deg, transparent 70deg);
-    mix-blend-mode: screen;
-    animation: radarSweep 5.2s linear infinite;
-}
-
-.radar-scope-core {
-    top: 50%;
-    left: 50%;
-    width: min(320px, 74%);
-    padding: 18px 20px;
-    border: 1px solid rgba(0, 229, 255, 0.16);
-    background: rgba(2, 9, 20, 0.88);
-    transform: translate(-50%, -50%);
-    text-align: center;
-    box-shadow: 0 0 36px rgba(0, 229, 255, 0.08), inset 0 0 20px rgba(0, 229, 255, 0.05);
-}
-
-.radar-scope-core-label {
-    font-size: 10px;
-    color: rgba(0, 229, 255, 0.7);
-}
-
-.radar-scope-core-title {
-    margin-top: 10px;
-    font-size: clamp(1.1rem, 1.7vw, 1.55rem);
-    line-height: 1.05;
-    color: #f4fbff;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-}
-
-.radar-scope-core-title--multiline {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    min-height: 88px;
-}
-
-.radar-scope-core-title--multiline span {
-    display: block;
-}
-
-.radar-scope-core-copy {
-    margin-top: 8px;
-    font-size: 0.88rem;
-    line-height: 1.4;
-    max-width: 30ch;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.radar-scope-core-tags {
-    display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    justify-content: center;
-    margin-top: 12px;
 }
 
-.radar-scope-core-tags span {
-    padding: 6px 8px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(0, 229, 255, 0.06);
-    color: rgba(208, 230, 242, 0.8);
+.guidebook-kicker,
+.guidebook-panel-kicker,
+.guidebook-section-title,
+.guidebook-mission-level,
+.guidebook-mission-badge,
+.guidebook-index-level,
+.guidebook-index-copy span {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
 }
 
-.radar-scope-node {
-    top: var(--node-y);
-    left: var(--node-x);
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.28);
-    background: rgba(3, 12, 28, 0.9);
-    color: #e8fdff;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 18px rgba(0, 229, 255, 0.12);
-    animation: radarNodePulse 2.8s ease-in-out infinite;
-    animation-delay: var(--node-delay);
-    cursor: pointer;
-    appearance: none;
-}
-
-.radar-scope-node span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 0.12em;
-}
-
-.radar-scope-node,
-.radar-sector-card,
-.radar-target-row {
-    font: inherit;
-}
-
-.radar-content {
-    gap: 18px;
-    min-height: 0;
-}
-
-.radar-panel {
-    flex: 1;
-    padding: 18px;
-}
-
-.radar-panel-title {
-    margin: 4px 0 0;
-    font-size: 1.35rem;
-    color: #f4fbff;
-}
-
-.radar-panel-copy {
-    font-size: 0.95rem;
-}
-
-.radar-side {
-    flex: 0.96;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.radar-sector-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin-top: 14px;
-}
-
-.radar-sector-card {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-    text-align: left;
-    color: inherit;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: linear-gradient(180deg, rgba(5, 14, 28, 0.86), rgba(2, 8, 18, 0.76));
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-    appearance: none;
-}
-
-.radar-sector-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(0, 229, 255, 0.36);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
-}
-
-.radar-sector-index {
+.guidebook-kicker,
+.guidebook-panel-kicker,
+.guidebook-section-title,
+.guidebook-index-copy span {
+    font-size: 11px;
     color: rgba(0, 229, 255, 0.74);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.14em;
 }
 
-.radar-sector-title,
-.radar-next-title {
-    font-size: 1.18rem;
+.guidebook-title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    line-height: 0.95;
+    letter-spacing: 0.12em;
     color: #f4fbff;
-    line-height: 1.18;
-    max-width: 24ch;
 }
 
-.radar-sector-progress-track {
-    height: 8px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(0, 0, 0, 0.28);
+.guidebook-subtitle,
+.guidebook-panel-copy,
+.guidebook-section p,
+.guidebook-overview-item,
+.guidebook-bullet,
+.guidebook-step p,
+.guidebook-mission-desc {
+    font-family: 'Rajdhani', sans-serif;
+    color: rgba(208, 230, 242, 0.78);
 }
 
-.radar-sector-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, rgba(0, 229, 255, 0.34), rgba(0, 229, 255, 0.88));
-}
-
-.radar-sector-progress-meta,
-.radar-sector-stats,
-.radar-next-meta,
-.radar-chip-value,
-.radar-target-time {
-    font-size: 0.92rem;
-}
-
-.radar-sector-stats,
-.radar-next-meta,
-.radar-target-copy span,
-.radar-target-time {
-    font-family: 'Share Tech Mono', monospace;
-    color: rgba(181, 213, 225, 0.72);
-    letter-spacing: 0.08em;
-}
-
-.radar-next-target {
-    margin-top: 14px;
-    gap: 12px;
-}
-
-.radar-next-copy {
-    max-width: 46ch;
+.guidebook-subtitle,
+.guidebook-panel-copy,
+.guidebook-section p,
+.guidebook-overview-item,
+.guidebook-bullet,
+.guidebook-step p,
+.guidebook-mission-desc {
+    margin: 0;
     line-height: 1.5;
 }
 
-.radar-next-actions {
-    gap: 12px;
-    justify-content: flex-start;
-}
-
-.radar-chip-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.guidebook-status {
     gap: 10px;
-    margin-top: 14px;
+    align-self: flex-start;
 }
 
-.radar-chip {
+.guidebook-chip {
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 229, 255, 0.16);
+    background: rgba(0, 229, 255, 0.08);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8fefff;
+}
+
+.guidebook-chip.is-live {
+    color: #00ffae;
+    border-color: rgba(0, 255, 174, 0.26);
+    background: rgba(0, 255, 174, 0.08);
+}
+
+.guidebook-layout {
+    gap: 18px;
+    min-height: 0;
+    flex: 1;
+}
+
+.guidebook-sidebar,
+.guidebook-content {
+    min-height: 0;
+}
+
+.guidebook-sidebar {
+    flex: 0 0 330px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 14px;
-    border: 1px solid rgba(0, 229, 255, 0.14);
-    background: rgba(4, 12, 24, 0.72);
+    gap: 16px;
+    overflow: auto;
+    padding-right: 6px;
 }
 
-.radar-chip-value {
+.guidebook-content {
+    flex: 1;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.guidebook-panel,
+.guidebook-mission-card {
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(2, 9, 20, 0.86), rgba(2, 8, 18, 0.72));
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.04);
+}
+
+.guidebook-panel {
+    padding: 18px;
+}
+
+.guidebook-panel-title {
+    margin: 6px 0 0;
+    font-size: 1.24rem;
     color: #f4fbff;
 }
 
-.radar-inline-actions {
-    margin-top: 16px;
-    justify-content: flex-start;
-}
-
-.radar-target-list {
+.guidebook-overview-list,
+.guidebook-level-index,
+.guidebook-mission-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 10px;
 }
 
-.radar-target-row {
-    gap: 16px;
+.guidebook-overview-item,
+.guidebook-bullet {
+    padding-left: 16px;
+    position: relative;
+}
+
+.guidebook-overview-item::before,
+.guidebook-bullet::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    background: rgba(0, 229, 255, 0.9);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.45);
+}
+
+.guidebook-index-btn {
     width: 100%;
-    padding: 14px 16px;
     border: 1px solid rgba(0, 229, 255, 0.12);
-    background: rgba(3, 10, 21, 0.68);
-    text-align: left;
+    background: rgba(3, 10, 21, 0.72);
     color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
     cursor: pointer;
-    appearance: none;
+    text-align: left;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-.radar-target-row:hover {
-    border-color: rgba(0, 229, 255, 0.34);
+.guidebook-index-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 229, 255, 0.3);
+    background: rgba(0, 229, 255, 0.07);
 }
 
-.radar-target-index {
+.guidebook-index-btn.is-locked {
+    opacity: 0.6;
+}
+
+.guidebook-index-level {
     min-width: 34px;
-    color: rgba(0, 229, 255, 0.8);
+    color: #00e5ff;
     font-size: 12px;
 }
 
-.radar-target-copy {
-    flex: 1;
-    gap: 4px;
+.guidebook-index-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
-.radar-target-copy strong {
-    font-size: 1rem;
+.guidebook-index-copy strong {
     color: #f4fbff;
+    font-size: 0.98rem;
+    font-weight: 700;
 }
 
-.radar-empty-state {
-    margin-top: 18px;
-    padding: 16px;
-    border: 1px dashed rgba(0, 229, 255, 0.14);
-    background: rgba(3, 10, 21, 0.56);
+.guidebook-intro {
+    margin-bottom: 14px;
 }
 
-.radar-sector-card.tone-red .radar-sector-progress-bar {
-    background: linear-gradient(90deg, rgba(255, 94, 122, 0.34), rgba(255, 94, 122, 0.94));
+.guidebook-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
 }
 
-.radar-sector-card.tone-gold .radar-sector-progress-bar {
-    background: linear-gradient(90deg, rgba(255, 204, 92, 0.34), rgba(255, 204, 92, 0.94));
+.guidebook-step {
+    padding: 14px;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(4, 12, 24, 0.74);
 }
 
-.radar-scope-node.tone-red,
-.radar-next-target.tone-red .radar-next-sector {
-    border-color: rgba(255, 94, 122, 0.35);
-    color: #ff839a;
+.guidebook-step span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(0, 229, 255, 0.24);
+    color: #00e5ff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
 }
 
-.radar-scope-node.tone-gold,
-.radar-next-target.tone-gold .radar-next-sector {
-    border-color: rgba(255, 204, 92, 0.35);
-    color: #ffd36a;
+.guidebook-mission-card {
+    padding: 20px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.radar-sector-card.is-high .radar-sector-threat,
-.radar-scope-node.is-high {
-    border-color: rgba(255, 94, 122, 0.38);
-    color: #ff839a;
+.guidebook-mission-card.is-focused {
+    border-color: rgba(0, 229, 255, 0.4);
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.08), 0 0 24px rgba(0, 229, 255, 0.12);
 }
 
-.radar-sector-card.is-elevated .radar-sector-threat,
-.radar-scope-node.is-elevated {
-    border-color: rgba(255, 204, 92, 0.34);
-    color: #ffd36a;
+.guidebook-mission-card.is-locked {
+    opacity: 0.82;
 }
 
-.radar-sector-card.is-stable .radar-sector-threat,
-.radar-scope-node.is-stable,
-.radar-sector-card.is-secured .radar-sector-threat,
-.radar-scope-node.is-secured {
-    color: #00ffae;
-    border-color: rgba(0, 255, 174, 0.32);
+.guidebook-mission-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-@keyframes radarSweep {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.guidebook-mission-level {
+    font-size: 11px;
+    color: rgba(0, 229, 255, 0.74);
 }
 
-@keyframes radarNodePulse {
-    0%, 100% { box-shadow: 0 0 14px rgba(0, 229, 255, 0.08); }
-    50% { box-shadow: 0 0 26px rgba(0, 229, 255, 0.2); }
+.guidebook-mission-badge {
+    padding: 6px 10px;
+    border: 1px solid rgba(200, 232, 240, 0.14);
+    color: #8fefff;
+    font-size: 10px;
 }
 
-@media (max-width: 1100px) {
-    .radar-screen-shell {
-        padding: 18px;
-    }
+.guidebook-mission-title {
+    margin: 12px 0 8px;
+    font-size: 1.42rem;
+    color: #f4fbff;
+    line-height: 1.15;
+}
 
-    .radar-screen-frame {
-        padding: 22px;
-    }
+.guidebook-meta {
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 0 16px;
+}
 
-    .radar-hero,
-    .radar-content {
+.guidebook-meta span {
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    background: rgba(0, 229, 255, 0.05);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(190, 231, 242, 0.82);
+}
+
+.guidebook-section + .guidebook-section {
+    margin-top: 16px;
+}
+
+.guidebook-section-title {
+    margin-bottom: 8px;
+}
+
+.guidebook-bullet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+@media (max-width: 1120px) {
+    .guidebook-layout {
         flex-direction: column;
     }
 
-    .radar-sector-grid {
-        grid-template-columns: 1fr;
+    .guidebook-sidebar {
+        flex-basis: auto;
     }
 
-    .radar-hero-summary {
-        width: 100%;
+    .guidebook-steps {
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 760px) {
-    .radar-screen-shell {
+    .guidebook-shell {
         padding: 0;
     }
 
-    .radar-screen-frame {
+    .guidebook-frame {
         width: 100%;
         min-height: 100%;
         padding: 18px 16px 24px;
         border: 0;
     }
 
-    .radar-screen-header {
+    .guidebook-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .radar-screen-status {
+    .guidebook-status {
         flex-wrap: wrap;
     }
 
-    .radar-hero-panel {
-        min-height: 280px;
-        padding: 16px;
+    .guidebook-sidebar,
+    .guidebook-content {
+        padding-right: 0;
     }
 
-    .radar-hero-scope {
-        height: 240px;
+    .guidebook-title {
+        font-size: 2rem;
     }
 
-    .radar-summary-card {
-        min-height: 116px;
-    }
-
-    .radar-chip-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .radar-next-actions,
-    .radar-target-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .radar-target-time {
-        margin-left: 50px;
+    .guidebook-mission-title {
+        font-size: 1.22rem;
     }
 }
 

@@ -13,7 +13,7 @@ import { LoginScreen } from './screens/LoginScreen.js';
 import { ProfileScreen } from './screens/ProfileScreen.js';
 import { AchievementsScreen } from './screens/AchievementsScreen.js';
 import { MapsScreen } from './screens/MapsScreen.js';
-import { RadarScreen } from './screens/RadarScreen.js';
+import { GuidebookScreen } from './screens/GuidebookScreen.js';
 import { updateMainMenuAuthState } from './ui/MainMenuAuthState.js';
 
 // Global game instance
@@ -25,7 +25,7 @@ let loginScreen = null;
 let profileScreen = null;
 let achievementsScreen = null;
 let mapsScreen = null;
-let radarScreen = null;
+let guidebookScreen = null;
 let hologramFlickerTimer = null;
 let lastHologramHoverAt = 0;
 
@@ -115,7 +115,7 @@ function initGameSystems() {
         profileScreen = new ProfileScreen(game);
         achievementsScreen = new AchievementsScreen(game);
         mapsScreen = new MapsScreen(game);
-        radarScreen = new RadarScreen(game);
+        guidebookScreen = new GuidebookScreen(game);
 
         // Attach to window for debugging and screen manager access
         window.game = game;
@@ -123,7 +123,7 @@ function initGameSystems() {
         window.loadingManager = loadingManager;
         window.updateMainMenuStatus = updateMainMenuStatus;
         window.mapsScreen = mapsScreen;
-        window.radarScreen = radarScreen;
+        window.guidebookScreen = guidebookScreen;
 
         // Setup event listeners
         setupEventListeners();
@@ -335,9 +335,9 @@ function handleAction(action, event) {
             game.screens.showScreen('maps-screen');
             mapsScreen.render();
             break;
-        case 'radar':
-            game.screens.showScreen('radar-screen');
-            radarScreen.render();
+        case 'guidebook':
+            game.screens.showScreen('guidebook-screen');
+            guidebookScreen.render();
             break;
         case 'credits-store':
             showCreditsStore();

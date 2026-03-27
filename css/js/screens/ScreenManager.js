@@ -140,7 +140,7 @@ export class ScreenManager {
             case 'mission-select':
             case 'achievements-screen':
             case 'maps-screen':
-            case 'radar-screen':
+            case 'guidebook-screen':
                 // Keep current music or play menu music
                 if (!this.audio.currentMusic || this.audio.currentMusic === 'loading') {
                     this.audio.playMusic('menu');
