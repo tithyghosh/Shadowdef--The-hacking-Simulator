@@ -235,10 +235,21 @@
     background: transparent;
     cursor: pointer;
     transition: transform 0.2s;
+    outline: none;
 }
 
 #main-menu .anode-btn:active {
     transform: scale(0.87);
+}
+
+#main-menu .anode-btn:focus,
+#main-menu .anode-btn:focus-visible,
+#main-menu .joy:focus,
+#main-menu .joy:focus-visible,
+#main-menu .mew:focus,
+#main-menu .mew:focus-visible {
+    outline: none;
+    box-shadow: none;
 }
 
 #main-menu .anode-ring,
