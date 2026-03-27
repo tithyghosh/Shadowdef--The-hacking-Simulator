@@ -12,6 +12,8 @@ import { AudioManager } from './core/AudioManager.js';
 import { LoginScreen } from './screens/LoginScreen.js';
 import { ProfileScreen } from './screens/ProfileScreen.js';
 import { AchievementsScreen } from './screens/AchievementsScreen.js';
+import { MapsScreen } from './screens/MapsScreen.js';
+import { RadarScreen } from './screens/RadarScreen.js';
 import { updateMainMenuAuthState } from './ui/MainMenuAuthState.js';
 
 // Global game instance
@@ -22,6 +24,8 @@ let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
 let achievementsScreen = null;
+let mapsScreen = null;
+let radarScreen = null;
 let hologramFlickerTimer = null;
 let lastHologramHoverAt = 0;
 
@@ -110,12 +114,16 @@ function initGameSystems() {
         loginScreen = new LoginScreen(game);
         profileScreen = new ProfileScreen(game);
         achievementsScreen = new AchievementsScreen(game);
+        mapsScreen = new MapsScreen(game);
+        radarScreen = new RadarScreen(game);
 
         // Attach to window for debugging and screen manager access
         window.game = game;
         window.authManager = authManager;
         window.loadingManager = loadingManager;
         window.updateMainMenuStatus = updateMainMenuStatus;
+        window.mapsScreen = mapsScreen;
+        window.radarScreen = radarScreen;
 
         // Setup event listeners
         setupEventListeners();
@@ -322,6 +330,14 @@ function handleAction(action, event) {
         case 'achievements':
             game.screens.showScreen('achievements-screen');
             achievementsScreen.render();
+            break;
+        case 'maps':
+            game.screens.showScreen('maps-screen');
+            mapsScreen.render();
+            break;
+        case 'radar':
+            game.screens.showScreen('radar-screen');
+            radarScreen.render();
             break;
         case 'credits-store':
             showCreditsStore();
