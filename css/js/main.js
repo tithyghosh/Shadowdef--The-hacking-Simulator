@@ -11,6 +11,7 @@ import { UIManager } from './ui/UIManager.js';
 import { AudioManager } from './core/AudioManager.js';
 import { LoginScreen } from './screens/LoginScreen.js';
 import { ProfileScreen } from './screens/ProfileScreen.js';
+import { RankingsScreen } from './screens/RankingsScreen.js';
 import { AchievementsScreen } from './screens/AchievementsScreen.js';
 import { MapsScreen } from './screens/MapsScreen.js';
 import { GuidebookScreen } from './screens/GuidebookScreen.js';
@@ -23,6 +24,7 @@ let loadingManager = null;
 let authManager = null;
 let loginScreen = null;
 let profileScreen = null;
+let rankingsScreen = null;
 let achievementsScreen = null;
 let mapsScreen = null;
 let guidebookScreen = null;
@@ -113,6 +115,7 @@ function initGameSystems() {
         // Initialize screen controllers
         loginScreen = new LoginScreen(game);
         profileScreen = new ProfileScreen(game);
+        rankingsScreen = new RankingsScreen(game);
         achievementsScreen = new AchievementsScreen(game);
         mapsScreen = new MapsScreen(game);
         guidebookScreen = new GuidebookScreen(game);
@@ -122,6 +125,7 @@ function initGameSystems() {
         window.authManager = authManager;
         window.loadingManager = loadingManager;
         window.updateMainMenuStatus = updateMainMenuStatus;
+        window.rankingsScreen = rankingsScreen;
         window.mapsScreen = mapsScreen;
         window.guidebookScreen = guidebookScreen;
 
@@ -326,6 +330,10 @@ function handleAction(action, event) {
                 game.screens.showScreen('login-screen');
                 loginScreen.render();
             }
+            break;
+        case 'rankings':
+            game.screens.showScreen('rankings-screen');
+            rankingsScreen.render();
             break;
         case 'achievements':
             game.screens.showScreen('achievements-screen');

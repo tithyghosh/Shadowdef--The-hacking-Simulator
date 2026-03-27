@@ -138,6 +138,7 @@ export class ScreenManager {
                 this.initializeMusicControlPanel();
                 break;
             case 'mission-select':
+            case 'rankings-screen':
             case 'achievements-screen':
             case 'maps-screen':
             case 'guidebook-screen':

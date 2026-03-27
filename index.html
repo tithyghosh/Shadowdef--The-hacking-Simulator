@@ -127,7 +127,7 @@
                     </div>
 
                     <div class="arc-node arc-node-rankings" id="n2">
-                        <button class="anode-btn" type="button" data-dock="rankings" aria-label="Rankings">
+                        <button class="anode-btn" type="button" data-action="rankings" data-dock="rankings" aria-label="Rankings">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
@@ -247,6 +247,10 @@
 
         <div id="achievements-screen" class="screen">
             <!-- Achievements content will be rendered by AchievementsScreen.js -->
+        </div>
+
+        <div id="rankings-screen" class="screen">
+            <!-- Rankings content will be rendered by RankingsScreen.js -->
         </div>
 
         <div id="maps-screen" class="screen">
@@ -595,6 +599,7 @@
                 const { AudioManager } = await import('./css/js/core/AudioManager.js');
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
+                const { RankingsScreen } = await import('./css/js/screens/RankingsScreen.js');
                 const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
                 const { MapsScreen } = await import('./css/js/screens/MapsScreen.js');
                 const { GuidebookScreen } = await import('./css/js/screens/GuidebookScreen.js');
@@ -608,6 +613,7 @@
                 const game = new Game(ui, audio);
                 const loginScreen = new LoginScreen(game);
                 const profileScreen = new ProfileScreen(game);
+                const rankingsScreen = new RankingsScreen(game);
                 const achievementsScreen = new AchievementsScreen(game);
                 const mapsScreen = new MapsScreen(game);
                 const guidebookScreen = new GuidebookScreen(game);
@@ -617,6 +623,7 @@
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.rankingsScreen = rankingsScreen;
                 window.achievementsScreen = achievementsScreen;
                 window.mapsScreen = mapsScreen;
                 window.guidebookScreen = guidebookScreen;
@@ -922,6 +929,10 @@
                         case 'achievements':
                             game.screens.showScreen('achievements-screen');
                             achievementsScreen.render();
+                            break;
+                        case 'rankings':
+                            game.screens.showScreen('rankings-screen');
+                            rankingsScreen.render();
                             break;
                         case 'settings':
                             game.showSettings();
