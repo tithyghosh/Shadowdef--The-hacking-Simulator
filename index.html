@@ -151,27 +151,27 @@
                     </div>
 
                     <div class="arc-node arc-node-intel" id="n4">
-                        <button class="anode-btn" type="button" data-dock="intel" aria-label="Intel">
+                        <button class="anode-btn" type="button" data-action="maps" data-dock="maps" aria-label="Maps">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
                             <span class="anode-emoji" aria-hidden="true">
-                                <svg viewBox="0 0 24 24"><path d="M12 5l1.8 4.2L18 11l-4.2 1.8L12 17l-1.8-4.2L6 11l4.2-1.8L12 5z"></path><path d="M18.5 5.5l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8z"></path></svg>
+                                <svg viewBox="0 0 24 24"><path d="M4.5 6.5l4.8-2 5.4 2 4.8-2v13l-4.8 2-5.4-2-4.8 2z"></path><path d="M9.3 4.5v13"></path><path d="M14.7 6.5v13"></path></svg>
                             </span>
                         </button>
-                        <span class="anode-lbl">INTEL</span>
+                        <span class="anode-lbl">MAPS</span>
                     </div>
 
                     <div class="arc-node arc-node-radar" id="n5">
-                        <button class="anode-btn" type="button" data-dock="radar" aria-label="Radar">
+                        <button class="anode-btn" type="button" data-action="radar" data-dock="radar" aria-label="Guidebook">
                             <div class="anode-ring"></div>
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
                             <span class="anode-emoji" aria-hidden="true">
-                                <svg viewBox="0 0 24 24"><path d="M4 19l6-11 6 11"></path><path d="M8.3 11h7.4"></path><path d="M12 8V5"></path></svg>
+                                <svg viewBox="0 0 24 24"><path d="M6.5 5.5h9a2 2 0 0 1 2 2v11h-9a2 2 0 0 0-2 2z"></path><path d="M6.5 5.5a2 2 0 0 0-2 2v11a2 2 0 0 1 2-2h9"></path><path d="M9 9.5h6"></path><path d="M9 12.5h6"></path></svg>
                             </span>
                         </button>
-                        <span class="anode-lbl">RADAR</span>
+                        <span class="anode-lbl">GUIDEBOOK</span>
                     </div>
 
                     <div class="arc-node arc-node-settings" id="n6">
@@ -247,6 +247,14 @@
 
         <div id="achievements-screen" class="screen">
             <!-- Achievements content will be rendered by AchievementsScreen.js -->
+        </div>
+
+        <div id="maps-screen" class="screen">
+            <!-- Maps content will be rendered by MapsScreen.js -->
+        </div>
+
+        <div id="radar-screen" class="screen">
+            <!-- Radar content will be rendered by RadarScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
@@ -588,6 +596,8 @@
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
                 const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
+                const { MapsScreen } = await import('./css/js/screens/MapsScreen.js');
+                const { RadarScreen } = await import('./css/js/screens/RadarScreen.js');
                 
                 // Initialize managers
                 const authManager = AuthManager.getInstance();
@@ -599,6 +609,8 @@
                 const loginScreen = new LoginScreen(game);
                 const profileScreen = new ProfileScreen(game);
                 const achievementsScreen = new AchievementsScreen(game);
+                const mapsScreen = new MapsScreen(game);
+                const radarScreen = new RadarScreen(game);
                 
                 // Make globally available
                 window.game = game;
@@ -606,6 +618,8 @@
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
                 window.achievementsScreen = achievementsScreen;
+                window.mapsScreen = mapsScreen;
+                window.radarScreen = radarScreen;
                 window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
@@ -911,6 +925,14 @@
                             break;
                         case 'settings':
                             game.showSettings();
+                            break;
+                        case 'maps':
+                            game.screens.showScreen('maps-screen');
+                            mapsScreen.render();
+                            break;
+                        case 'radar':
+                            game.screens.showScreen('radar-screen');
+                            radarScreen.render();
                             break;
                         case 'credits':
                             game.showCredits();
