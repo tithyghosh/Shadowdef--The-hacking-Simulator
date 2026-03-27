@@ -41,8 +41,14 @@ export class GameScreen {
         this.syncEmbeddedMissionHUD();
     }
 
+    isTimerEnabled() {
+        const settings = this.game?.state?.loadSettings?.() || {};
+        return settings.timerEnabled !== false;
+    }
+
     resetUI() {
-        document.getElementById('timer').textContent = '00:00';
+        const timerEnabled = this.isTimerEnabled();
+        document.getElementById('timer').textContent = timerEnabled ? '00:00' : '--:--';
         document.getElementById('score').textContent = '0';
         document.getElementById('attempts').textContent = '0';
         document.getElementById('ai-progress').style.width = '0%';
@@ -68,6 +74,12 @@ export class GameScreen {
     }
 
     startTimer() {
+        if (!this.isTimerEnabled()) {
+            this.timer = null;
+            this.updateTimerDisplay(null);
+            return;
+        }
+
         const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
         this.timer = new Timer(targetTime, {
             onTick: (time) => this.updateTimerDisplay(time),
@@ -78,6 +90,21 @@ export class GameScreen {
     }
 
     updateTimerDisplay(seconds) {
+        if (seconds == null) {
+            const timerElement = document.getElementById('timer');
+            if (timerElement) {
+                timerElement.textContent = '--:--';
+                timerElement.style.color = 'var(--text-secondary)';
+            }
+
+            const embeddedTimer = document.getElementById('l1-timer');
+            if (embeddedTimer) {
+                embeddedTimer.textContent = '--:--';
+                embeddedTimer.classList.remove('danger');
+            }
+            return;
+        }
+
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
