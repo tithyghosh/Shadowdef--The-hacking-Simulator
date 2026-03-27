@@ -1861,7 +1861,7 @@
     align-items: center;
     gap: 12px;
     font-family: 'Orbitron', sans-serif;
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 900;
     color: #ffffff;
     letter-spacing: 0.1em;
@@ -1953,7 +1953,7 @@
 
 #maps-screen .sm-tab-name {
     font-family: 'Orbitron', sans-serif;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #ffffff;
     letter-spacing: 0.06em;
@@ -2052,7 +2052,7 @@
 #maps-screen .sm-canvas-title {
     margin-top: 8px;
     font-family: 'Orbitron', sans-serif;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
     color: #ffffff;
     letter-spacing: 0.18em;
@@ -2280,7 +2280,7 @@
     }
 
     #maps-screen .sector-map-sidebar-title {
-        font-size: 28px;
+        font-size: 24px;
     }
 
     #maps-screen .sector-map-sidebar-stats {
