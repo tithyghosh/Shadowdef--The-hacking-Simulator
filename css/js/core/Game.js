@@ -597,12 +597,11 @@ export class Game {
                                     <div class="settings-card-title">Timer</div>
                                     <div class="settings-card-subtitle">Countdown clock on each level</div>
                                 </div>
-                                <div class="settings-select">
-                                    <select id="timer-setting">
-                                        <option value="on" ${settings.timerEnabled ? 'selected' : ''}>ENABLED</option>
-                                        <option value="off" ${!settings.timerEnabled ? 'selected' : ''}>DISABLED</option>
-                                    </select>
+                                <div class="settings-segmented" id="timer-setting-group" role="group" aria-label="Timer setting">
+                                    <button class="settings-segmented-btn ${settings.timerEnabled ? 'active' : ''}" type="button" data-timer-value="on">ENABLED</button>
+                                    <button class="settings-segmented-btn ${!settings.timerEnabled ? 'active' : ''}" type="button" data-timer-value="off">DISABLED</button>
                                 </div>
+                                <input type="hidden" id="timer-setting" value="${settings.timerEnabled ? 'on' : 'off'}">
                             </div>
 
                             <div class="settings-card">
@@ -687,6 +686,7 @@ export class Game {
         const sfxToggle = document.getElementById('sfx-toggle');
         const hintsToggle = document.getElementById('hints-toggle');
         const timerSetting = document.getElementById('timer-setting');
+        const timerSettingGroup = document.getElementById('timer-setting-group');
         const musicVolume = document.getElementById('music-volume');
         const sfxVolume = document.getElementById('sfx-volume');
         const musicVolumeDisplay = document.getElementById('music-volume-display');
@@ -755,6 +755,18 @@ export class Game {
         navItems.forEach((item) => {
             item.addEventListener('click', () => switchPage(item.dataset.settingsPage));
         });
+
+        if (timerSettingGroup && timerSetting) {
+            timerSettingGroup.querySelectorAll('[data-timer-value]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const value = button.dataset.timerValue;
+                    timerSetting.value = value;
+                    timerSettingGroup.querySelectorAll('[data-timer-value]').forEach((item) => {
+                        item.classList.toggle('active', item.dataset.timerValue === value);
+                    });
+                });
+            });
+        }
 
         // Music toggle
         if (musicToggle) {

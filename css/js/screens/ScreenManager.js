@@ -125,6 +125,12 @@ export class ScreenManager {
                 if (window.updateMainMenuStatus) {
                     window.updateMainMenuStatus();
                 }
+                if (window.layoutMainMenuStage) {
+                    requestAnimationFrame(() => {
+                        window.layoutMainMenuStage();
+                        requestAnimationFrame(() => window.layoutMainMenuStage());
+                    });
+                }
                 break;
             case 'game-screen':
                 this.audio.crossfade('gameplay');
@@ -132,6 +138,10 @@ export class ScreenManager {
                 this.initializeMusicControlPanel();
                 break;
             case 'mission-select':
+            case 'rankings-screen':
+            case 'achievements-screen':
+            case 'maps-screen':
+            case 'guidebook-screen':
                 // Keep current music or play menu music
                 if (!this.audio.currentMusic || this.audio.currentMusic === 'loading') {
                     this.audio.playMusic('menu');

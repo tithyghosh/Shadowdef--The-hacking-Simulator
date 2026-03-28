@@ -40,8 +40,14 @@ export class GameScreen {
         this.syncEmbeddedMissionHUD();
     }
 
+    isTimerEnabled() {
+        const settings = this.game?.state?.loadSettings?.() || {};
+        return settings.timerEnabled !== false;
+    }
+
     resetUI() {
-        document.getElementById('timer').textContent = '00:00';
+        const timerEnabled = this.isTimerEnabled();
+        document.getElementById('timer').textContent = timerEnabled ? '00:00' : '--:--';
         document.getElementById('score').textContent = '0';
         document.getElementById('attempts').textContent = '0';
         document.getElementById('ai-name').textContent = 'CYBER-THREAT';
@@ -112,13 +118,7 @@ export class GameScreen {
     }
 
     startTimer() {
-        if (this.hasNoTimerPressure()) {
-            this.timer = null;
-            this.setTimerDisplay('FREE');
-            return;
-        }
-
-        const targetTime = this.getMissionTargetTime();
+        const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
         this.timer = new Timer(targetTime, {
             onTick: (time) => this.updateTimerDisplay(time),
             onWarning: () => { this.ui.showNotification('Time running low!', 'warning'); this.audio.playTimerWarning(); },
@@ -128,11 +128,6 @@ export class GameScreen {
     }
 
     updateTimerDisplay(seconds) {
-        if (this.hasNoTimerPressure() || !Number.isFinite(seconds)) {
-            this.setTimerDisplay('FREE');
-            return;
-        }
-
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;

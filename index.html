@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="css/loading.css">
     <link rel="stylesheet" href="css/ui-components.css">
     <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/main-menu-refit.css">
     <link rel="stylesheet" href="css/puzzles.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/auth.css">
@@ -67,64 +68,173 @@
 
         <!-- Main Menu -->
         <div id="main-menu" class="screen">
-            <div class="main-menu-header">
-                <div class="logo">SHADOWDEF</div>
-                <div class="logo-subtitle">Cybersecurity Training Hub</div>
-            </div>
-            <div class="hub-core" aria-hidden="true">
-                <div class="hub-core-ring hub-core-ring--outer"></div>
-                <div class="hub-core-ring hub-core-ring--mid"></div>
-                <div class="hub-core-ring hub-core-ring--inner"></div>
-                <div class="hub-core-core"></div>
-                <div class="hub-core-scan"></div>
-            </div>
-            <canvas id="logo-3d-canvas" aria-hidden="true"></canvas>
-            <div class="menu-grid">
-                <div class="menu-category">
-<div class="menu-cards">
-                        
-                            <div class="mission-logo holo-logo">
-                                <img src="assets/file.svg" alt="Shadowdef Logo">
+            <div class="main-menu-exact">
+                <div class="gbg"></div>
+                <div class="bin" style="left:7%;--s:19s;--d:0s">10110011</div>
+                <div class="bin" style="left:25%;--s:26s;--d:4s">01001101</div>
+                <div class="bin" style="left:52%;--s:17s;--d:2s">11001001</div>
+                <div class="bin" style="left:76%;--s:23s;--d:6s">00110100</div>
+                <div class="bin" style="left:93%;--s:20s;--d:1s">10011011</div>
+                <div class="pts" id="pts"></div>
+                <div class="flash" id="flash"></div>
+
+                <div class="nav">
+                    <div class="nav-brand-mark">
+                            <div class="trow">
+                                <span class="tpl">SHADOW</span><span class="tcy">D</span><button class="mew" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Open missions">
+                                    <span class="esp"></span><span class="esp2"></span>
+                                    <span class="el" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.2" r="2.2"></circle><path d="M12 8.6v5.1"></path><path d="M7 18.5h10l-1.4-4.4H8.4L7 18.5z"></path><path d="M10 16.2h4"></path></svg>
+                                    </span>
+                                </button><span class="tcy">F</span>
                             </div>
-                        
+                        <div class="nav-brand-sub">● DEFEND THE LIGHT · DEFY THE SHADOWS</div>
+                    </div>
+                    <div class="nav-r">
+                        <div class="nav-st"><span class="nd g"></span>ONLINE</div>
+                        <div class="nav-clk" id="clock">--:--</div>
                     </div>
                 </div>
 
-                <div class="menu-category">
-                    <h3 class="category-title">Player Hub</h3>
-                    <div class="menu-cards">
-                        <button class="menu-card profile-card nav-icon" data-action="profile" data-tooltip="Profile Module">
-                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><circle cx="12" cy="10" r="2.5"></circle><path d="M8.5 16c.9-1.5 2-2.2 3.5-2.2s2.6.7 3.5 2.2"></path></svg></div>
-                            <div class="card-content">
-                                <div class="card-title">PROFILE</div>
-                                <div class="card-subtitle">ID badge / operator dossier</div>
-                                <div class="card-stats" id="profile-stats">Level 1 ? 0 Credits</div>
-                            </div>
-                        </button>
+                <div class="stage" id="stage">
+                    <div class="orbit-shell" id="orbitShell">
+                    <svg class="arc-svg" id="arcSvg"></svg>
 
-                        <button class="menu-card mission-link-card nav-icon" data-action="mission-select" data-tooltip="Mission Module">
-                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><path d="m4 18 3.2-10.8L20 4l-3.2 10.8z"></path><path d="m11.8 12.2 3.4 3.4"></path><path d="M5 19h4"></path></svg></div>
-                            <div class="card-content">
-                                <div class="card-title">MISSION</div>
-                                <div class="card-subtitle">Deploy objective pipeline</div>
-                                <div class="card-progress" id="mission-progress">0/20 Completed</div>
-                            </div>
+                    <div class="arc-node arc-node-profile" id="n0">
+                        <button class="anode-btn" type="button" data-action="profile" data-dock="profile" aria-label="Profile">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5.5 19c1.8-3 4.2-4.5 6.5-4.5s4.7 1.5 6.5 4.5"></path></svg>
+                            </span>
                         </button>
+                        <span class="anode-lbl">PROFILE</span>
+                        <span class="anode-meta" id="profile-stats">LOGIN TO VIEW PROFILE</span>
+                    </div>
+
+                    <div class="arc-node arc-node-missions" id="n1">
+                        <button class="anode-btn" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Missions">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3v2.2M21 12h-2.2M12 21v-2.2M3 12h2.2"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">MISSIONS</span>
+                        <span class="anode-meta" id="mission-progress">0/20 COMPLETED</span>
+                    </div>
+
+                    <div class="arc-node arc-node-rankings" id="n2">
+                        <button class="anode-btn" type="button" data-action="rankings" data-dock="rankings" aria-label="Rankings">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M7 19h10"></path><path d="M8.5 19V9.5"></path><path d="M15.5 19V9.5"></path><path d="M6 7h12"></path><path d="M9 7l1.4-2h3.2L15 7"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">RANKINGS</span>
+                    </div>
+
+                    <div class="arc-node arc-node-badges" id="n3">
+                        <button class="anode-btn" type="button" data-action="achievements" data-dock="achievements" aria-label="Badges">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M12 4l5.5 2.4v4.1c0 4-2.3 6.9-5.5 8.5-3.2-1.6-5.5-4.5-5.5-8.5V6.4L12 4z"></path><path d="M12 8.2v5.8"></path><path d="M9.5 11h5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">BADGES</span>
+                    </div>
+
+                    <div class="arc-node arc-node-intel" id="n4">
+                        <button class="anode-btn" type="button" data-action="maps" data-dock="maps" aria-label="Maps">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M4.5 6.5l4.8-2 5.4 2 4.8-2v13l-4.8 2-5.4-2-4.8 2z"></path><path d="M9.3 4.5v13"></path><path d="M14.7 6.5v13"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">MAPS</span>
+                    </div>
+
+                    <div class="arc-node arc-node-radar" id="n5">
+                        <button class="anode-btn" type="button" data-action="guidebook" data-dock="guidebook" aria-label="Guidebook">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M6.5 5.5h9a2 2 0 0 1 2 2v11h-9a2 2 0 0 0-2 2z"></path><path d="M6.5 5.5a2 2 0 0 0-2 2v11a2 2 0 0 1 2-2h9"></path><path d="M9 9.5h6"></path><path d="M9 12.5h6"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">GUIDEBOOK</span>
+                    </div>
+
+                    <div class="arc-node arc-node-settings" id="n6">
+                        <button class="anode-btn" type="button" data-action="settings" data-dock="settings" aria-label="Settings">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.8"></circle><path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M6.8 6.8l1.4 1.4M15.8 15.8l1.4 1.4M17.2 6.8l-1.4 1.4M8.2 15.8l-1.4 1.4"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl">SETTINGS</span>
+                    </div>
+
+                    <div class="arc-node arc-node-guide" id="n7">
+                        <button class="anode-btn" id="login-logout-btn" type="button" data-action="login" data-dock="login" aria-label="Login">
+                            <div class="anode-ring"></div>
+                            <div class="anode-inner"></div>
+                            <div class="anode-arc"></div>
+                            <span class="anode-emoji" id="login-emoji" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M7 5.5h10v13H7z"></path><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"></path></svg>
+                            </span>
+                        </button>
+                        <span class="anode-lbl" id="login-label">GUIDE</span>
+                    </div>
+
+                    <div class="holo-center">
+                        <div class="holo">
+                            <div class="hbeam"></div>
+                            <div class="hr hr1"></div><div class="hr hr2"></div>
+                            <div class="hr hr3"></div><div class="hr hr4"></div>
+                            <div class="dpt" style="top:8%;left:2%;--dd:3.2s;--ds:0s">SYS::OK</div>
+                            <div class="dpt" style="top:18%;right:0%;--dd:4s;--ds:1s">AUTH::0</div>
+                            <div class="dpt" style="top:56%;left:-1%;--dd:5s;--ds:2s">LVL::01</div>
+                            <div class="dpt" style="top:67%;right:0%;--dd:3.5s;--ds:.5s">XP::000</div>
+                            <div class="hlogo">
+                                <div class="hscan"></div><div class="hbar2"></div>
+                                <div class="hm">SHADOW</div>
+                                <div class="hdf">
+                                    <span class="hdfl">D</span>
+                                    <button class="joy" type="button" data-action="mission-select" data-dock="mission-select" aria-label="Launch missions">
+                                        <div class="jglow"></div>
+                                        <span class="jsp"></span><span class="jsp2"></span>
+                                        <div class="jwave"></div>
+                                        <span class="jicon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24"><circle cx="12" cy="6.2" r="2.2"></circle><path d="M12 8.6v5.1"></path><path d="M7 18.5h10l-1.4-4.4H8.4L7 18.5z"></path><path d="M10 16.2h4"></path></svg>
+                                        </span>
+                                    </button>
+                                    <span class="hdfl">F</span>
+                                </div>
+                            </div>
+                            <div class="hbase"></div>
+                        </div>
+                    </div>
                     </div>
                 </div>
 
-                <div class="menu-category">
-                    <h3 class="category-title">System</h3>
-                    <div class="menu-cards">
-                        <button class="menu-card settings-card nav-icon" data-action="settings" data-tooltip="Settings Module">
-                            <div class="card-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"></circle><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.8 1.8 0 1 1-3.6 0v-.1a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.8 1.8 0 1 1 0-3.6h.1a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a1.8 1.8 0 1 1 3.6 0v.1a1 1 0 0 0 .6.9h.1a1 1 0 0 0 1.1-.2l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6H20a1.8 1.8 0 1 1 0 3.6h-.1a1 1 0 0 0-.9.6Z"></path></svg></div>
-                            <div class="card-content">
-                                <div class="card-title">SETTINGS</div>
-                                <div class="card-subtitle">Configure core system parameters</div>
-                            </div>
-                        </button>
-
-                    </div>
+                <div class="sbar">
+                    <div class="si"><span class="ok">■</span>SECURE</div>
+                    <div class="si"><span class="wa">■</span>3 THREATS</div>
+                    <div class="si">NODE:α7</div>
+                    <div class="si">OPERATOR: <span id="main-menu-operator">GUEST</span></div>
+                    <div class="sbr" id="utc">--:-- UTC</div>
                 </div>
             </div>
         </div>
@@ -133,6 +243,22 @@
         <div id="profile-screen" class="screen">
             <button class="back-btn" data-action="back">â† BACK</button>
             <!-- Profile content will be rendered by ProfileScreen.js -->
+        </div>
+
+        <div id="achievements-screen" class="screen">
+            <!-- Achievements content will be rendered by AchievementsScreen.js -->
+        </div>
+
+        <div id="rankings-screen" class="screen">
+            <!-- Rankings content will be rendered by RankingsScreen.js -->
+        </div>
+
+        <div id="maps-screen" class="screen">
+            <!-- Maps content will be rendered by MapsScreen.js -->
+        </div>
+
+        <div id="guidebook-screen" class="screen">
+            <!-- Guidebook content will be rendered by GuidebookScreen.js -->
         </div>
 
         <!-- Mission Categories Screen -->
@@ -459,6 +585,10 @@
                 const { AudioManager } = await import('./css/js/core/AudioManager.js');
                 const { LoginScreen } = await import('./css/js/screens/LoginScreen.js');
                 const { ProfileScreen } = await import('./css/js/screens/ProfileScreen.js');
+                const { RankingsScreen } = await import('./css/js/screens/RankingsScreen.js');
+                const { AchievementsScreen } = await import('./css/js/screens/AchievementsScreen.js');
+                const { MapsScreen } = await import('./css/js/screens/MapsScreen.js');
+                const { GuidebookScreen } = await import('./css/js/screens/GuidebookScreen.js');
                 
                 // Initialize managers
                 const authManager = AuthManager.getInstance();
@@ -469,12 +599,20 @@
                 const game = new Game(ui, audio);
                 const loginScreen = new LoginScreen(game);
                 const profileScreen = new ProfileScreen(game);
+                const rankingsScreen = new RankingsScreen(game);
+                const achievementsScreen = new AchievementsScreen(game);
+                const mapsScreen = new MapsScreen(game);
+                const guidebookScreen = new GuidebookScreen(game);
                 
                 // Make globally available
                 window.game = game;
                 window.authManager = authManager;
                 window.loginScreen = loginScreen;
                 window.profileScreen = profileScreen;
+                window.rankingsScreen = rankingsScreen;
+                window.achievementsScreen = achievementsScreen;
+                window.mapsScreen = mapsScreen;
+                window.guidebookScreen = guidebookScreen;
                 window.AudioManager = AudioManager;
 
                 function updateMainMenuStatus() {
@@ -483,7 +621,263 @@
                     updateMainMenuAuthState({ isAuthenticated, user });
                 }
 
+                function updateMainMenuClock() {
+                    const now = new Date();
+                    const localClock = document.getElementById('clock');
+                    const utcClock = document.getElementById('utc');
+                    if (localClock) {
+                        localClock.textContent = now.toTimeString().slice(0, 5);
+                    }
+                    if (utcClock) {
+                        utcClock.textContent = `${now.toUTCString().slice(17, 22)} UTC`;
+                    }
+                }
+
+                function flashMainMenu() {
+                    const flash = document.getElementById('flash');
+                    if (!flash) return;
+                    flash.classList.remove('pop');
+                    void flash.offsetWidth;
+                    flash.classList.add('pop');
+                }
+
+                function setMainMenuDockState(dockName) {
+                    document.querySelectorAll('#main-menu .arc-node').forEach((node) => {
+                        const button = node.querySelector('[data-dock]');
+                        node.classList.toggle('active', button?.dataset.dock === dockName);
+                    });
+                }
+
+                function drawMainMenuArc(svg, centerX, centerY, holoRadius, node) {
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const isDesktop = window.innerWidth > 820;
+                    const startX = centerX + (holoRadius + 8) * Math.cos(node.angle);
+                    const startY = centerY + (holoRadius + 8) * Math.sin(node.angle);
+                    const bend = node.side === 'left' ? 16 : -16;
+                    const midX = ((startX + node.x) / 2) + (Math.cos(node.angle + (Math.PI / 2)) * bend);
+                    const midY = ((startY + node.y) / 2) + (Math.sin(node.angle + (Math.PI / 2)) * bend);
+
+                    const path = document.createElementNS(ns, 'path');
+                    const pathId = `main-menu-arc-${Math.random().toString(36).slice(2)}`;
+                    path.setAttribute('id', pathId);
+                    path.setAttribute('d', `M${startX},${startY} Q${midX},${midY} ${node.x},${node.y}`);
+                    path.setAttribute('stroke', 'rgba(0,229,255,.26)');
+                    path.setAttribute('stroke-width', isDesktop ? '1.9' : '1.2');
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke-dasharray', isDesktop ? '7 5' : '5 5');
+                    svg.appendChild(path);
+
+                    const dot = document.createElementNS(ns, 'circle');
+                    dot.setAttribute('cx', node.x);
+                    dot.setAttribute('cy', node.y);
+                    dot.setAttribute('r', '2.5');
+                    dot.setAttribute('fill', 'rgba(0,229,255,.35)');
+                    svg.appendChild(dot);
+
+                    const traveler = document.createElementNS(ns, 'circle');
+                    traveler.setAttribute('r', '2');
+                    traveler.setAttribute('fill', 'rgba(0,229,255,.72)');
+                    svg.appendChild(traveler);
+
+                    const motion = document.createElementNS(ns, 'animateMotion');
+                    motion.setAttribute('dur', `${2.5 + Math.random() * 2}s`);
+                    motion.setAttribute('repeatCount', 'indefinite');
+                    motion.setAttribute('begin', `${Math.random() * 3}s`);
+                    motion.setAttribute('calcMode', 'linear');
+
+                    const mpath = document.createElementNS(ns, 'mpath');
+                    mpath.setAttribute('href', `#${pathId}`);
+                    motion.appendChild(mpath);
+                    traveler.appendChild(motion);
+                }
+
+                function layoutMainMenuStage() {
+                    const stage = document.getElementById('stage');
+                    const svg = document.getElementById('arcSvg');
+                    if (!stage || !svg) return;
+
+                    const width = stage.offsetWidth;
+                    const height = stage.offsetHeight;
+                    const isMobile = width <= 820;
+                    const centerX = width / 2;
+                    const centerY = isMobile
+                        ? (height / 2) - Math.min(height * 0.012, 8)
+                        : (height / 2) - Math.min(height * 0.035, 22);
+                    const holoRadius = isMobile
+                        ? Math.min(width * 0.24, 112)
+                        : Math.min(width * 0.3, 146);
+                    const nodeSize = isMobile ? 38 : 44;
+                    const labelHeight = isMobile ? 12 : 18;
+                    const positions = [];
+                    svg.innerHTML = '';
+                    const arcRadius = isMobile
+                        ? holoRadius + Math.min(width * 0.16, 50)
+                        : holoRadius + Math.min(width * 0.275, 112);
+                    const leftAngles = isMobile ? null : [222, 198, 164, 138].map((degrees) => degrees * Math.PI / 180);
+                    const rightAngles = isMobile ? null : [318, 342, 16, 42].map((degrees) => degrees * Math.PI / 180);
+
+                    if (isMobile) {
+                        const mirroredOffsets = [
+                            { x: 108, y: -110 },
+                            { x: 140, y: -14 },
+                            { x: 140, y: 84 },
+                            { x: 108, y: 178 }
+                        ];
+
+                        for (let i = 0; i < 4; i += 1) {
+                            const offset = mirroredOffsets[i];
+                            const leftNode = document.getElementById(`n${i}`);
+                            const rightNode = document.getElementById(`n${i + 4}`);
+                            const leftX = centerX - offset.x;
+                            const rightX = centerX + offset.x;
+                            const y = centerY + offset.y;
+                            const leftAngle = Math.atan2(y - centerY, leftX - centerX);
+                            const rightAngle = Math.atan2(y - centerY, rightX - centerX);
+
+                            if (leftNode) {
+                                leftNode.style.position = 'absolute';
+                                leftNode.style.left = `${leftX - (nodeSize / 2)}px`;
+                                leftNode.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                                leftNode.style.animationDelay = `${i * 0.08}s`;
+                                leftNode.style.flexDirection = 'column';
+                                leftNode.style.alignItems = 'center';
+                                positions.push({ x: leftX, y, angle: leftAngle, side: 'left' });
+                            }
+
+                            if (rightNode) {
+                                rightNode.style.position = 'absolute';
+                                rightNode.style.left = `${rightX - (nodeSize / 2)}px`;
+                                rightNode.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                                rightNode.style.animationDelay = `${(i * 0.08) + 0.3}s`;
+                                rightNode.style.flexDirection = 'column';
+                                rightNode.style.alignItems = 'center';
+                                positions.push({ x: rightX, y, angle: rightAngle, side: 'right' });
+                            }
+                        }
+                    } else {
+                        for (let i = 0; i < 4; i += 1) {
+                            const angle = leftAngles[i];
+                            const x = centerX + arcRadius * Math.cos(angle);
+                            const y = centerY + arcRadius * Math.sin(angle);
+                            const node = document.getElementById(`n${i}`);
+                            if (!node) continue;
+                            node.style.position = 'absolute';
+                            node.style.left = `${x - (nodeSize / 2)}px`;
+                            node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                            node.style.animationDelay = `${i * 0.08}s`;
+                            node.style.flexDirection = 'column';
+                            node.style.alignItems = 'center';
+                            positions.push({ x, y, angle, side: 'left' });
+                        }
+
+                        for (let i = 0; i < 4; i += 1) {
+                            const angle = rightAngles[i];
+                            const x = centerX + arcRadius * Math.cos(angle);
+                            const y = centerY + arcRadius * Math.sin(angle);
+                            const node = document.getElementById(`n${i + 4}`);
+                            if (!node) continue;
+                            node.style.position = 'absolute';
+                            node.style.left = `${x - (nodeSize / 2)}px`;
+                            node.style.top = `${y - (nodeSize / 2) - (labelHeight / 2)}px`;
+                            node.style.animationDelay = `${(i * 0.08) + 0.3}s`;
+                            node.style.flexDirection = 'column';
+                            node.style.alignItems = 'center';
+                            positions.push({ x, y, angle, side: 'right' });
+                        }
+                    }
+
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const defs = document.createElementNS(ns, 'defs');
+                    const filter = document.createElementNS(ns, 'filter');
+                    filter.setAttribute('id', 'main-menu-node-glow');
+                    filter.setAttribute('x', '-50%');
+                    filter.setAttribute('y', '-50%');
+                    filter.setAttribute('width', '200%');
+                    filter.setAttribute('height', '200%');
+                    const blur = document.createElementNS(ns, 'feGaussianBlur');
+                    blur.setAttribute('stdDeviation', '2');
+                    blur.setAttribute('result', 'blur');
+                    const merge = document.createElementNS(ns, 'feMerge');
+                    const mergeA = document.createElementNS(ns, 'feMergeNode');
+                    mergeA.setAttribute('in', 'blur');
+                    const mergeB = document.createElementNS(ns, 'feMergeNode');
+                    mergeB.setAttribute('in', 'SourceGraphic');
+                    merge.appendChild(mergeA);
+                    merge.appendChild(mergeB);
+                    filter.appendChild(blur);
+                    filter.appendChild(merge);
+                    defs.appendChild(filter);
+                    svg.appendChild(defs);
+
+                    function drawRail(points) {
+                        if (points.length < 2) return;
+                        const isDesktop = !isMobile;
+                        let d = `M${points[0].x},${points[0].y}`;
+                        for (let i = 1; i < points.length; i += 1) {
+                            const mx = (points[i - 1].x + points[i].x) / 2;
+                            const my = (points[i - 1].y + points[i].y) / 2;
+                            d += ` Q${mx},${my} ${points[i].x},${points[i].y}`;
+                        }
+                        const rail = document.createElementNS(ns, 'path');
+                        rail.setAttribute('d', d);
+                        rail.setAttribute('stroke', 'rgba(0,229,255,.15)');
+                        rail.setAttribute('stroke-width', isDesktop ? '1.55' : '1.1');
+                        rail.setAttribute('fill', 'none');
+                        rail.setAttribute('stroke-dasharray', isDesktop ? '4 6' : '2 6');
+                        svg.appendChild(rail);
+                    }
+
+                    drawRail(positions.filter((position) => position.side === 'left'));
+                    drawRail(positions.filter((position) => position.side === 'right'));
+                    positions.forEach((position) => drawMainMenuArc(svg, centerX, centerY, holoRadius, position));
+
+                    svg.querySelectorAll('circle[r="2"]').forEach((dot) => {
+                        dot.setAttribute('filter', 'url(#main-menu-node-glow)');
+                    });
+                }
+
+                function buildMainMenuAmbientFx() {
+                    const particleHost = document.getElementById('pts');
+                    if (!particleHost || particleHost.childElementCount) return;
+
+                    for (let i = 0; i < 14; i += 1) {
+                        const dot = document.createElement('div');
+                        dot.className = 'pt';
+                        dot.style.left = `${Math.random() * 100}%`;
+                        dot.style.top = `${30 + (Math.random() * 70)}%`;
+                        dot.style.setProperty('--pd', `${4 + (Math.random() * 9)}s`);
+                        dot.style.setProperty('--pp', `${Math.random() * 11}s`);
+                        particleHost.appendChild(dot);
+                    }
+                }
+
+                function initMainMenuUi() {
+                    buildMainMenuAmbientFx();
+                    layoutMainMenuStage();
+                    updateMainMenuClock();
+                    window.setInterval(updateMainMenuClock, 1000);
+                    window.addEventListener('resize', layoutMainMenuStage);
+                    window.layoutMainMenuStage = layoutMainMenuStage;
+
+                    document.querySelectorAll('#main-menu [data-dock]').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            if (button.classList.contains('is-passive')) {
+                                flashMainMenu();
+                                setMainMenuDockState(button.dataset.dock);
+                                return;
+                            }
+
+                            setMainMenuDockState(button.dataset.dock);
+
+                            if (button.dataset.dock === 'mission-select') {
+                                flashMainMenu();
+                            }
+                        });
+                    });
+                }
+
                 window.updateMainMenuStatus = updateMainMenuStatus;
+                window.flashMainMenu = flashMainMenu;
                 
                 // Setup event listeners
                 document.addEventListener('click', (e) => {
@@ -521,8 +915,24 @@
                             game.screens.showScreen('profile-screen');
                             profileScreen.render();
                             break;
+                        case 'achievements':
+                            game.screens.showScreen('achievements-screen');
+                            achievementsScreen.render();
+                            break;
+                        case 'rankings':
+                            game.screens.showScreen('rankings-screen');
+                            rankingsScreen.render();
+                            break;
                         case 'settings':
                             game.showSettings();
+                            break;
+                        case 'maps':
+                            game.screens.showScreen('maps-screen');
+                            mapsScreen.render();
+                            break;
+                        case 'guidebook':
+                            game.screens.showScreen('guidebook-screen');
+                            guidebookScreen.render();
                             break;
                         case 'credits':
                             game.showCredits();
@@ -551,6 +961,7 @@
                 });
 
                 updateMainMenuStatus();
+                initMainMenuUi();
 
                 if (document.getElementById('main-menu')?.classList.contains('active')) {
                     game.screens.onScreenShow('main-menu');
