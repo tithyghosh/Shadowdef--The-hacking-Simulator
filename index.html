@@ -158,29 +158,15 @@
                 </div>
 
                 <div class="category-card" data-category="malware">
-                    <div class="category-icon">ðŸ¦ </div>
+                    <div class="category-icon">0D</div>
                     <div class="category-content">
-                        <div class="category-title">MALWARE DETECTION</div>
-                        <div class="category-subtitle">Identify and neutralize malicious software threats</div>
-                        <div class="category-progress" id="malware-progress">0/2 Completed</div>
+                        <div class="category-title">ZERO-DAY COUNTDOWN</div>
+                        <div class="category-subtitle">Decode hostile transmissions and neutralize a live exploit chain</div>
+                        <div class="category-progress" id="malware-progress">0/10 Completed</div>
                         <div class="category-skills">
-                            <span class="skill-tag">Threat Analysis</span>
-                            <span class="skill-tag">System Scanning</span>
+                            <span class="skill-tag">Binary Decode</span>
+                            <span class="skill-tag">Cipher Analysis</span>
                             <span class="skill-tag">Incident Response</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="category-card" data-category="network">
-                    <div class="category-icon">ðŸŒ</div>
-                    <div class="category-content">
-                        <div class="category-title">NETWORK & PHISHING</div>
-                        <div class="category-subtitle">Navigate networks and detect social engineering</div>
-                        <div class="category-progress" id="network-progress">0/7 Completed</div>
-                        <div class="category-skills">
-                            <span class="skill-tag">Network Analysis</span>
-                            <span class="skill-tag">Phishing Detection</span>
-                            <span class="skill-tag">Firewall Bypass</span>
                         </div>
                     </div>
                 </div>
@@ -197,22 +183,22 @@
             <div class="mission-grid" id="password-mission-grid"></div>
         </div>
 
-        <!-- Malware Detection Missions -->
+        <!-- Zero-Day Countdown Missions -->
         <div id="malware-missions" class="screen">
             <button class="back-btn" data-action="back-to-categories">â† BACK TO CATEGORIES</button>
             <div class="mission-header">
-                <h2>MALWARE DETECTION</h2>
-                <p class="subtitle">Identify and neutralize malicious software threats</p>
+                <h2>ZERO-DAY COUNTDOWN</h2>
+                <p class="subtitle">Decode hostile payloads, classify threats, and stop the exploit chain mission by mission</p>
             </div>
             <div class="mission-grid" id="malware-mission-grid"></div>
         </div>
 
-        <!-- Network & Phishing Missions -->
+        <!-- Legacy Network Missions -->
         <div id="network-missions" class="screen">
             <button class="back-btn" data-action="back-to-categories">â† BACK TO CATEGORIES</button>
             <div class="mission-header">
-                <h2>NETWORK & PHISHING</h2>
-                <p class="subtitle">Navigate networks and detect social engineering attacks</p>
+                <h2>NETWORK OPERATIONS ARCHIVE</h2>
+                <p class="subtitle">Legacy placeholder for future network-focused missions</p>
             </div>
             <div class="mission-grid" id="network-mission-grid"></div>
         </div>
@@ -527,6 +513,9 @@
                             break;
                         case 'pause':
                             game.pauseGame();
+                            break;
+                        case 'hint':
+                            game.requestHint();
                             break;
                         case 'profile':
                             game.screens.showScreen('profile-screen');

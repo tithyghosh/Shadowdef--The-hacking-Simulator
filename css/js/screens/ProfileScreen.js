@@ -16,6 +16,54 @@ export class ProfileScreen {
         this.setupEventListeners();
     }
 
+    getMissionSections() {
+        const sections = [
+            {
+                name: 'Password Cracking',
+                subtitle: 'MISSION 1 - 10 LEVELS',
+                roadmapTitle: 'MISSION 1 - PASSWORD CRACKING',
+                emoji: '&#128273;',
+                colorKey: 'c',
+                lvl5Icon: '&#9889;',
+                lvl10Icon: '&#127942;',
+                lvl5Name: 'CIPHER BREAKER',
+                lvl10Name: 'FIRST BREACH',
+                badges: ['&#128274; CIPHER BREAKER', '&#128274; FIRST BREACH'],
+                missions: Array.isArray(this.game?.passwordMissions) ? this.game.passwordMissions : []
+            },
+            {
+                name: 'Zero-Day Countdown',
+                subtitle: 'MISSION 2 - 10 LEVELS',
+                roadmapTitle: 'MISSION 2 - ZERO-DAY COUNTDOWN',
+                emoji: '&#9888;',
+                colorKey: 'r',
+                lvl5Icon: '&#128293;',
+                lvl10Icon: '&#9760;',
+                lvl5Name: 'PHANTOM STRIKE',
+                lvl10Name: 'DARK NET LEGEND',
+                badges: ['&#128274; PHANTOM STRIKE', '&#128274; DARK NET LEGEND'],
+                missions: Array.isArray(this.game?.malwareMissions) ? this.game.malwareMissions : []
+            }
+        ];
+
+        return sections.filter((section) => section.missions.length > 0);
+    }
+
+    getCompletedMissionCount() {
+        return this.getMissionSections().reduce(
+            (sum, section) => sum + section.missions.filter((mission) => mission.completed).length,
+            0
+        );
+    }
+
+    getTotalMissionCount() {
+        return this.getMissionSections().reduce((sum, section) => sum + section.missions.length, 0);
+    }
+
+    getBestScoreForSection(missions) {
+        return missions.reduce((best, mission) => Math.max(best, mission.bestScore || 0), 0);
+    }
+
     /**
      * Render profile screen
      */
@@ -35,7 +83,9 @@ export class ProfileScreen {
         const level = stats.level || 1;
         const experience = stats.experience || 0;
         const levelProgress = Math.max(0, Math.min(100, ((experience % 1000) / 1000) * 100));
-        const missionProgress = Math.max(0, Math.min(100, ((stats.missionsCompleted || 0) / 10) * 100));
+        const totalMissionCount = Math.max(1, this.getTotalMissionCount());
+        const completedMissionCount = this.getCompletedMissionCount();
+        const missionProgress = Math.max(0, Math.min(100, (completedMissionCount / totalMissionCount) * 100));
         const credits = stats.credits || 0;
         const rank = this.calculateRank(stats);
         const rankIndex = this.getRankIndex(rank);
@@ -52,6 +102,8 @@ export class ProfileScreen {
                 experience,
                 levelProgress,
                 missionProgress,
+                totalMissionCount,
+                completedMissionCount,
                 credits,
                 rank,
                 rankIndex,
@@ -116,7 +168,7 @@ export class ProfileScreen {
                                 <div class="ps-prog-bar-wrap"><div class="ps-prog-bar c" style="width:${levelProgress.toFixed(1)}%"></div></div>
                             </div>
                             <div class="ps-prog-item">
-                                <div class="ps-prog-header"><span class="ps-prog-label">MISSION PROGRESS</span><span class="ps-prog-val">${stats.missionsCompleted || 0} / 10</span></div>
+                                <div class="ps-prog-header"><span class="ps-prog-label">MISSION PROGRESS</span><span class="ps-prog-val">${completedMissionCount} / ${totalMissionCount}</span></div>
                                 <div class="ps-prog-bar-wrap"><div class="ps-prog-bar r" style="width:${missionProgress.toFixed(1)}%"></div></div>
                             </div>
                         </div>
@@ -189,6 +241,8 @@ export class ProfileScreen {
             experience,
             levelProgress,
             missionProgress,
+            totalMissionCount,
+            completedMissionCount,
             credits,
             rank,
             rankIndex,
@@ -249,7 +303,7 @@ export class ProfileScreen {
                                 <div class="pm-prog-wrap"><div class="pm-prog-fill c" style="width:${levelProgress.toFixed(1)}%"></div></div>
                             </div>
                             <div class="pm-prog-item">
-                                <div class="pm-prog-hdr"><span class="pm-prog-lbl">MISSION PROGRESS</span><span class="pm-prog-v">${stats.missionsCompleted || 0} / 10</span></div>
+                                <div class="pm-prog-hdr"><span class="pm-prog-lbl">MISSION PROGRESS</span><span class="pm-prog-v">${completedMissionCount} / ${totalMissionCount}</span></div>
                                 <div class="pm-prog-wrap"><div class="pm-prog-fill r" style="width:${missionProgress.toFixed(1)}%"></div></div>
                             </div>
                         </div>
@@ -307,10 +361,11 @@ export class ProfileScreen {
     }
 
     renderCyberStats(stats) {
+        const completedMissionCount = this.getCompletedMissionCount();
         const rows = [
             { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
             { cls: 'ya', icon: '&#127942;', value: this.formatNumber(stats.highScore || 0), label: 'HIGH SCORE' },
-            { cls: 'ga', icon: '&#10003;', value: stats.missionsCompleted || 0, label: 'MISSIONS DONE' },
+            { cls: 'ga', icon: '&#10003;', value: completedMissionCount, label: 'MISSIONS DONE' },
             { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' },
             { cls: 'ca', icon: '&#128202;', value: this.calculateSuccessRate(stats), label: 'SUCCESS RATE' },
             { cls: 'ra', icon: '&#128640;', value: this.calculateRank(stats), label: 'RANK' }
@@ -326,7 +381,7 @@ export class ProfileScreen {
     }
 
     renderCyberAchievements(achievements, stats) {
-        const completed = stats.missionsCompleted || 0;
+        const completed = this.getCompletedMissionCount();
         const level = stats.level || 1;
         const earned = new Set(achievements || []);
         const badgeDefs = [
@@ -350,17 +405,23 @@ export class ProfileScreen {
     }
 
     renderMissionRoadmap() {
-        return `
-            <div class="ps-mission-roadmap">
-                ${this.renderMissionRoadmapBlock('MISSION 1 — PASSWORD CRACKING', '&#128273;', 'c', '&#9889;', '&#127942;', 'CIPHER BREAKER', 'FIRST BREACH')}
-                ${this.renderMissionRoadmapBlock('MISSION 2 — MALWARE DETECTION', '&#129440;', 'r', '&#128293;', '&#9760;', 'PHANTOM STRIKE', 'DARK NET LEGEND')}
-                ${this.renderMissionRoadmapBlock('MISSION 3 — NETWORK & PHISHING', '&#127760;', 'g', '&#128737;', '&#128081;', 'GHOST PROTOCOL', 'SHADOW MASTER')}
-            </div>
-        `;
+        const blocks = this.getMissionSections()
+            .map((section) => this.renderMissionRoadmapBlock(
+                section.roadmapTitle,
+                section.emoji,
+                section.colorKey,
+                section.lvl5Icon,
+                section.lvl10Icon,
+                section.lvl5Name,
+                section.lvl10Name
+            ))
+            .join('');
+
+        return `<div class="ps-mission-roadmap">${blocks}</div>`;
     }
 
     renderAvatarBadge(stats) {
-        const completed = stats.missionsCompleted || 0;
+        const completed = this.getCompletedMissionCount();
         const level = stats.level || 1;
         const earned = new Set(stats.achievements || []);
         const badgePriority = [
@@ -451,10 +512,21 @@ export class ProfileScreen {
     }
 
     renderMissionLog(stats) {
-        const completedCount = Math.max(0, Math.min(10, stats.missionsCompleted || 0));
-        const row1 = this.renderMissionLogRow('Password Cracking', completedCount, stats.highScore || 0, completedCount >= 10 ? 'done' : 'prog', completedCount >= 10 ? 'DONE' : 'ACTIVE');
-        const row2 = this.renderMissionLogRow('Malware Detection', 0, 0, 'lock', 'LOCKED');
-        const row3 = this.renderMissionLogRow('Network & Phishing', 0, 0, 'lock', 'LOCKED');
+        const rows = this.getMissionSections().map((section) => {
+            const completed = section.missions.filter((mission) => mission.completed).length;
+            const bestScore = this.getBestScoreForSection(section.missions);
+            const hasUnlockedMission = section.missions.some((mission) => !mission.locked);
+            const statusClass = completed >= section.missions.length ? 'done' : hasUnlockedMission ? 'prog' : 'lock';
+            const statusText = completed >= section.missions.length ? 'DONE' : hasUnlockedMission ? 'ACTIVE' : 'LOCKED';
+
+            return this.renderMissionLogRow(
+                section.name,
+                completed,
+                bestScore,
+                statusClass,
+                statusText
+            );
+        }).join('');
 
         return `
             <table class="ps-mission-table">
@@ -469,9 +541,7 @@ export class ProfileScreen {
                     </tr>
                 </thead>
                 <tbody>
-                    ${row1}
-                    ${row2}
-                    ${row3}
+                    ${rows}
                 </tbody>
             </table>
         `;
@@ -519,10 +589,11 @@ export class ProfileScreen {
     }
 
     renderMobileStats(stats) {
+        const completedMissionCount = this.getCompletedMissionCount();
         const rows = [
             { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
             { cls: 'ya', icon: '&#127942;', value: this.formatNumber(stats.highScore || 0), label: 'HIGH SCORE' },
-            { cls: 'ga', icon: '&#10003;', value: stats.missionsCompleted || 0, label: 'MISSIONS' },
+            { cls: 'ga', icon: '&#10003;', value: completedMissionCount, label: 'MISSIONS' },
             { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' },
             { cls: 'ca', icon: '&#128202;', value: this.calculateSuccessRate(stats), label: 'SUCCESS' },
             { cls: 'ra', icon: '&#128640;', value: this.calculateRank(stats), label: 'RANK' }
@@ -542,39 +613,20 @@ export class ProfileScreen {
     }
 
     renderMobileMissionCards(stats) {
-        const completedCount = Math.max(0, Math.min(10, stats.missionsCompleted || 0));
-        const cards = [
-            {
-                name: 'PASSWORD CRACKING',
-                sub: 'MISSION 1 - 10 LEVELS',
-                emoji: '&#128273;',
-                statusClass: completedCount >= 10 ? 'done' : 'prog',
-                statusText: completedCount >= 10 ? 'DONE' : 'ACTIVE',
-                done: completedCount,
-                bestScore: stats.highScore || 0,
-                badges: ['&#128274; CIPHER BREAKER', '&#128274; FIRST BREACH']
-            },
-            {
-                name: 'MALWARE DETECTION',
-                sub: 'MISSION 2 - 10 LEVELS',
-                emoji: '&#129440;',
-                statusClass: 'lock',
-                statusText: 'LOCKED',
-                done: 0,
-                bestScore: 0,
-                badges: ['&#128274; PHANTOM STRIKE', '&#128274; DARK NET LEGEND']
-            },
-            {
-                name: 'NETWORK & PHISHING',
-                sub: 'MISSION 3 - 10 LEVELS',
-                emoji: '&#127760;',
-                statusClass: 'lock',
-                statusText: 'LOCKED',
-                done: 0,
-                bestScore: 0,
-                badges: ['&#128274; GHOST PROTOCOL', '&#128274; SHADOW MASTER']
-            }
-        ];
+        const cards = this.getMissionSections().map((section) => {
+            const completed = section.missions.filter((mission) => mission.completed).length;
+            const hasUnlockedMission = section.missions.some((mission) => !mission.locked);
+            return {
+                name: section.name.toUpperCase(),
+                sub: section.subtitle,
+                emoji: section.emoji,
+                statusClass: completed >= section.missions.length ? 'done' : hasUnlockedMission ? 'prog' : 'lock',
+                statusText: completed >= section.missions.length ? 'DONE' : hasUnlockedMission ? 'ACTIVE' : 'LOCKED',
+                done: completed,
+                bestScore: this.getBestScoreForSection(section.missions),
+                badges: section.badges
+            };
+        });
 
         return cards.map((card) => `
             <div class="pm-mission-card">

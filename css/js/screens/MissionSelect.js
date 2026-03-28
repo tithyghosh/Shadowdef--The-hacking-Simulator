@@ -238,7 +238,8 @@ export class MissionSelect {
             password: '🔐 Password Cracking',
             firewall: '🛡️ Firewall Bypass',
             network: '🌐 Network Navigation',
-            malware: '🦠 Malware Detection',
+            malware: '🦠 Threat Analysis',
+            zeroday: '⚠️ Zero-Day Countdown',
             phishing: '📧 Phishing Analysis',
             mixed: '⚡ Multi-Stage'
         };
