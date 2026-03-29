@@ -349,14 +349,14 @@
 }
 
 #main-menu .anode-lbl {
-    color: var(--dim);
+    color: rgba(255, 255, 255, 0.88);
     font-size: 6.5px;
     letter-spacing: 0.12em;
     transition: color 0.3s;
 }
 
 #main-menu .arc-node.active .anode-lbl {
-    color: var(--cyan);
+    color: #ffffff;
 }
 
 #main-menu .anode-meta {
