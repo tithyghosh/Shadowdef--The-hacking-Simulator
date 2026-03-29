@@ -2,7 +2,7 @@
  * PasswordCrack - Password cracking puzzle
  * IMPROVED v2 — fixes applied:
  *  - Level 2: second attempt on wrong choice (costs vault, not instant fail)
- *  - Level 6: saltDemoPanel rendered before multiSelect grid
+ *  - Level 6: level 1 shell can power mission-specific breach triage boards
  *  - Level 7: tutorialOverlay + rampUpAfterSeconds spawn rate
  *  - Level 9: tiered win condition (tiers array)
  *  - Level 10: live rating preview on every dropdown change
@@ -58,6 +58,10 @@ export class PasswordCrack {
         this.liveRemainingTime = 60;
         this.liveActiveAttack = null;
         this.liveDefenseCooldowns = {};
+        this.liveWaveIndex = 0;
+        this.liveAttackIndex = 0;
+        this.liveTotalAttacks = 0;
+        this.liveIntelState = null;
         this.liveSuccessfulBlocks = 0;
         this.liveMissedWaves = 0;
         this.liveAttackTimeoutId = null;
@@ -96,10 +100,14 @@ export class PasswordCrack {
         this.enterpriseScores = null;
         this.enterpriseRating = '';
         this.enterpriseBadgeUnlocked = false;
+        this.breachTriageSelectedId = null;
+        this.breachTriageAssignments = new Map();
+        this.breachTriageInspectedIds = new Set();
 
         // FIX L6: salt demo state
         this.saltDemoCompleted = false;
         this.saltReuseState = null;
+        this.saltReuseCompletionTimerId = null;
 
         // FIX L7: ramp-up tracking
         this.liveSimulationElapsed = 0;
@@ -110,6 +118,13 @@ export class PasswordCrack {
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = 'Select all weak passwords and avoid selecting strong ones.';
+            this.dynamicScenario = this.session.storyHint || null;
+            this.dynamicUserTask = this.mission.userTask || null;
+        } else if (this.interactionMode === 'breachTriageLab') {
+            this.session = this.createMultiSelectSession();
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
             this.dynamicScenario = this.session.storyHint || null;
             this.dynamicUserTask = this.mission.userTask || null;
         } else if (this.interactionMode === 'saltReuseLab') {
@@ -150,6 +165,14 @@ export class PasswordCrack {
             this.liveVaultHealth = Number(simConfig.vaultHealth || 100);
             this.liveEnergy = Number(simConfig.playerEnergy || 100);
             this.liveRemainingTime = Number(simConfig.simulationDuration || 60);
+            this.liveWaveIndex = 0;
+            this.liveAttackIndex = 0;
+            this.liveTotalAttacks = 0;
+            this.liveDefenseCooldowns = {};
+            (Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : []).forEach(defense => {
+                const key = defense?.id || defense?.name;
+                if (key) this.liveDefenseCooldowns[key] = 0;
+            });
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = null;
@@ -231,6 +254,10 @@ export class PasswordCrack {
         return { caseId: 'default', options, correctAnswer: this.puzzleData.correctAnswer || options[0] || '', breakTimeSeconds: {}, simpleExplanation: this.puzzleData.simpleExplanation || '' };
     }
 
+    isHumanLabShellMode() {
+        return this.interactionMode === 'humanPsychologyLab' || this.interactionMode === 'breachTriageLab';
+    }
+
     getSaltReuseLabConfig() {
         return this.puzzleData.saltReuseLab || {};
     }
@@ -244,7 +271,136 @@ export class PasswordCrack {
         return copy;
     }
 
+    captureRenderScrollState({ primarySelector = '', anchorSelector = '', extraSelectors = [] } = {}) {
+        if (!this.visualizerElement) return null;
+        const root = this.visualizerElement;
+        const primary = primarySelector === '__root__'
+            ? root
+            : primarySelector
+                ? root.querySelector(primarySelector)
+                : null;
+        const state = {
+            primarySelector,
+            primaryScrollTop: primary ? primary.scrollTop : 0,
+            anchorSelector,
+            anchorOffset: null,
+            extra: []
+        };
+
+        if (primary && anchorSelector) {
+            const anchor = root.querySelector(anchorSelector);
+            if (anchor) {
+                state.anchorOffset = anchor.getBoundingClientRect().top - primary.getBoundingClientRect().top;
+            }
+        }
+
+        extraSelectors.forEach(selector => {
+            const elements = Array.from(root.querySelectorAll(selector));
+            state.extra.push({
+                selector,
+                scrollTops: elements.map(element => element.scrollTop)
+            });
+        });
+
+        return state;
+    }
+
+    restoreRenderScrollState(state) {
+        if (!state || !this.visualizerElement) return;
+        const applyScrollState = () => {
+            const root = this.visualizerElement;
+            const primary = state.primarySelector === '__root__'
+                ? root
+                : state.primarySelector
+                    ? root.querySelector(state.primarySelector)
+                    : null;
+            if (primary) primary.scrollTop = state.primaryScrollTop || 0;
+
+            (state.extra || []).forEach(group => {
+                const elements = Array.from(root.querySelectorAll(group.selector));
+                elements.forEach((element, index) => {
+                    if (typeof group.scrollTops[index] === 'number') {
+                        element.scrollTop = group.scrollTops[index];
+                    }
+                });
+            });
+
+            if (primary && state.anchorSelector && typeof state.anchorOffset === 'number') {
+                const anchor = root.querySelector(state.anchorSelector);
+                if (anchor) {
+                    const nextOffset = anchor.getBoundingClientRect().top - primary.getBoundingClientRect().top;
+                    primary.scrollTop += nextOffset - state.anchorOffset;
+                }
+            }
+        };
+
+        applyScrollState();
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                applyScrollState();
+            });
+        });
+    }
+
+    rerenderWithPreservedScroll(renderCallback, options = {}) {
+        const state = this.captureRenderScrollState(options);
+        renderCallback();
+        this.restoreRenderScrollState(state);
+    }
+
+    clearSaltReuseCompletionTimer() {
+        if (this.saltReuseCompletionTimerId) {
+            clearTimeout(this.saltReuseCompletionTimerId);
+            this.saltReuseCompletionTimerId = null;
+        }
+    }
+
+    rerenderSaltReuseLab(options = {}) {
+        const extraSelectors = Array.from(new Set([
+            '.srl-shell',
+            '.srl-phase-screen',
+            '.srl-panel',
+            '.srl-password-grid',
+            ...(options.extraSelectors || [])
+        ]));
+
+        this.rerenderWithPreservedScroll(
+            () => this.renderSaltReuseLab(this.visualizerElement),
+            {
+                primarySelector: options.primarySelector || '__root__',
+                anchorSelector: options.anchorSelector || '',
+                extraSelectors
+            }
+        );
+    }
+
+    rerenderPredictionChoicePuzzle(options = {}) {
+        const extraSelectors = Array.from(new Set([
+            '.l3-arena-scroll',
+            '.l3-console-panel--fill',
+            ...(options.extraSelectors || [])
+        ]));
+
+        this.rerenderWithPreservedScroll(
+            () => this.renderPredictionChoicePuzzle(this.visualizerElement),
+            {
+                primarySelector: options.primarySelector || '__root__',
+                anchorSelector: options.anchorSelector || '',
+                extraSelectors
+            }
+        );
+    }
+
+    queueSaltReuseCompletion(success, delay = 1800) {
+        this.clearSaltReuseCompletionTimer();
+        this.saltReuseCompletionTimerId = setTimeout(() => {
+            this.saltReuseCompletionTimerId = null;
+            this.startSaltReuseCompletion(success);
+        }, delay);
+    }
+
     initializeSaltReuseLabState() {
+        this.clearSaltReuseCompletionTimer();
         const config = this.getSaltReuseLabConfig();
         const classifier = config.classifier || {};
         const weakPool = Array.isArray(classifier.weakPool) && classifier.weakPool.length
@@ -322,9 +478,10 @@ export class PasswordCrack {
 
     // ─── risk helpers ────────────────────────────────────────────────────────
 
-    increaseRisk() {
+    increaseRisk(amount = null) {
         if (!this.riskSystem) return;
-        this.riskValue = Math.min(this.riskSystem.max || 100, this.riskValue + (this.riskSystem.wrongAdd || 0));
+        const delta = Number.isFinite(Number(amount)) ? Number(amount) : Number(this.riskSystem.wrongAdd || 0);
+        this.riskValue = Math.min(this.riskSystem.max || 100, this.riskValue + delta);
         this.updateRiskDisplay();
     }
 
@@ -349,6 +506,7 @@ export class PasswordCrack {
         switch (this.interactionMode) {
             case 'multiSelect':               return this.renderMultiSelectPuzzle(container);
             case 'humanPsychologyLab':        return this.renderHumanPsychologyLab(container);
+            case 'breachTriageLab':          return this.renderBreachTriageLab(container);
             case 'saltReuseLab':              return this.renderSaltReuseLab(container);
             case 'singleChoice':              return this.renderSingleChoicePuzzle(container);
             case 'predictionChoice':          return this.renderPredictionChoicePuzzle(container);
@@ -384,7 +542,7 @@ export class PasswordCrack {
         this.setupEventListeners();
     }
 
-    // ─── LEVEL 6: multiSelect with salt demo panel ───────────────────────────
+    // ─── multiSelect with optional pre-brief panel ───────────────────────────
 
     renderMultiSelectPuzzle(container) {
         const hasSaltDemo = this.puzzleData.saltDemoPanel && this.puzzleData.saltDemoPanel.enabled && !this.saltDemoCompleted;
@@ -405,6 +563,7 @@ export class PasswordCrack {
         const threatBars = this.getHumanPsychologyThreatBars(options);
         const selectedCount = this.selectedOptions.size;
         const preview = this.getHumanLabPreviewMetrics(options);
+        const shellConfig = this.getHumanLabShellConfig(options, weakCount);
         const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
         const feedbackEl = document.getElementById('guess-feedback');
         const previousFeedback = feedbackEl ? feedbackEl.innerHTML : '';
@@ -455,6 +614,10 @@ export class PasswordCrack {
                 <div class="l1-objective__icon">${index < 2 ? '▸' : ''}</div>
                 <div class="l1-objective__text">${objective}</div>
             </div>`).join('');
+        const phaseMarkup = shellConfig.phases.map((phase, index) => `
+                    ${index > 0 ? '<div class="l1-phase-sep">//</div>' : ''}
+                    <div class="l1-phase ${index === 0 ? 'active' : ''}"><span class="l1-phase__dot"></span><strong>${String(index + 1).padStart(2, '0')}</strong>${phase}</div>
+                `).join('');
         container.innerHTML = `
             ${this.renderHumanPsychologyLabStyles()}
             <div class="l1-shell">
@@ -468,8 +631,8 @@ export class PasswordCrack {
                         <div class="l1-logo-text">SHADOWDEF</div>
                     </div>
                     <div class="l1-hud-mission">
-                        <div class="l1-hud-kicker">// LEVEL 01 - CAMPAIGN ALPHA</div>
-                        <div class="l1-hud-title">HUMAN PASSWORD<br>PSYCHOLOGY</div>
+                        <div class="l1-hud-kicker">${shellConfig.kicker}</div>
+                        <div class="l1-hud-title">${shellConfig.titleHtml}</div>
                     </div>
                     <div class="l1-hud-stats">
                         <div class="l1-hud-stat">
@@ -498,14 +661,10 @@ export class PasswordCrack {
                 </header>
 
                 <div class="l1-mission-strip">
-                    <div class="l1-phase active"><span class="l1-phase__dot"></span><strong>01</strong>RECOVERED SET</div>
-                    <div class="l1-phase-sep">//</div>
-                    <div class="l1-phase"><span class="l1-phase__dot"></span><strong>02</strong>BEHAVIORAL FILTER</div>
-                    <div class="l1-phase-sep">//</div>
-                    <div class="l1-phase"><span class="l1-phase__dot"></span><strong>03</strong>WEAKNESS CLASSIFIER</div>
+                    ${phaseMarkup}
                     <div class="l1-mission-status">
                         <span class="l1-mission-status__dot"></span>
-                        ANALYST LAB ACTIVE
+                        ${shellConfig.missionStatus}
                     </div>
                 </div>
 
@@ -513,11 +672,11 @@ export class PasswordCrack {
                     <section class="l1-arena">
                         <div class="l1-arena-header">
                             <div>
-                                <div class="l1-arena-title">SELECT<br>EVERY<br><span>WEAK</span>PASSWORD</div>
-                                <div class="l1-arena-sub">// ${options.length} credentials recovered · identify ${weakCount} vulnerabilities</div>
+                                <div class="l1-arena-title">${shellConfig.arenaTitleHtml}</div>
+                                <div class="l1-arena-sub">${shellConfig.arenaSub}</div>
                             </div>
                             <div class="l1-arena-hint">
-                                Flag passwords predictable via <b>breach lists</b>, <b>common patterns</b>, or <b>public info</b>
+                                ${shellConfig.arenaHintHtml}
                             </div>
                         </div>
 
@@ -527,7 +686,7 @@ export class PasswordCrack {
 
                         <div class="l1-submit-dock">
                             <div class="l1-submit-cluster">
-                                <span class="l1-submit-label">Flagged</span>
+                                <span class="l1-submit-label">${shellConfig.flaggedLabel}</span>
                                 <div class="l1-flag-slots" id="l1-flag-slots"></div>
                             </div>
                             <div class="l1-submit-cluster l1-submit-cluster--summary">
@@ -537,13 +696,13 @@ export class PasswordCrack {
                             <div class="l1-submit-meta">
                                 <div class="l1-attempts" id="attempt-counter">Submissions: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
                             </div>
-                            <button class="l1-btn l1-btn-primary l1-fire-btn" id="submit-selection" type="button" ${selectedCount === 0 ? 'disabled' : ''}>BREACH REPORT</button>
+                            <button class="l1-btn l1-btn-primary l1-fire-btn" id="submit-selection" type="button" ${selectedCount === 0 ? 'disabled' : ''}>${shellConfig.submitLabel}</button>
                         </div>
                     </section>
 
                     <aside class="l1-console">
                         <section class="l1-console-panel">
-                            <div class="l1-console-title">Threat Exposure Index</div>
+                            <div class="l1-console-title">${shellConfig.threatTitle}</div>
                             <div class="l1-dial-wrap">
                                 <svg class="l1-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
                                     <circle class="l1-dial-bg" cx="70" cy="70" r="65"></circle>
@@ -551,24 +710,24 @@ export class PasswordCrack {
                                 </svg>
                                 <div class="l1-dial-inner">
                                     <div class="l1-dial-num" id="l1-dial-num">${selectedCount}</div>
-                                    <div class="l1-dial-sub">FLAGGED</div>
+                                    <div class="l1-dial-sub">${shellConfig.dialSub}</div>
                                 </div>
                             </div>
                             <div class="l1-threat-bars">${threatMarkup}</div>
                         </section>
 
                         <section class="l1-console-panel">
-                            <div class="l1-console-title">Mission Objectives</div>
+                            <div class="l1-console-title">${shellConfig.objectivesTitle}</div>
                             <div class="l1-objective-list">${objectivesMarkup}</div>
                         </section>
 
                         <section class="l1-console-panel l1-console-panel--fill">
                             <div class="l1-console-head">
-                                <div class="l1-console-title">System Terminal</div>
+                                <div class="l1-console-title">${shellConfig.consoleTitle}</div>
                                 <div class="l1-console-chip">HINTS <span id="l1-hints-remaining">${hintsRemaining}</span>/3</div>
                             </div>
                             <div class="l1-risk-row">
-                                <span>Risk Meter</span>
+                                <span>${shellConfig.riskLabel}</span>
                                 <div class="l1-risk-track">
                                     <div class="l1-risk-fill" id="risk-fill" style="width:${Math.max(0, Math.min(100, this.riskValue))}%;"></div>
                                 </div>
@@ -590,8 +749,478 @@ export class PasswordCrack {
         this.gameScreen.syncEmbeddedMissionHUD();
     }
 
+    renderBreachTriageLab(container) {
+        this.visualizerElement = container;
+        this.stopHumanLabMatrixAnimation();
+        const options = this.session?.options || [];
+        const cfg = this.getBreachTriageConfig();
+        const shellConfig = this.getHumanLabShellConfig(options, cfg.resetBudget);
+        const metrics = this.getBreachTriageMetrics(options);
+        const threatBars = this.getBreachTriageThreatBars(metrics);
+        const selected = this.getBreachTriageSelectedOption();
+        const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
+        const feedbackEl = document.getElementById('guess-feedback');
+        const previousFeedback = feedbackEl ? feedbackEl.innerHTML : '';
+        const objectives = Array.isArray(this.mission.objectives) && this.mission.objectives.length
+            ? this.mission.objectives
+            : [
+                'Inspect the breached credentials',
+                'Queue the first reset wave',
+                'Watchlist the second-wave suspects'
+            ];
+        const timeDisplay = this.gameScreen?.timer ? this.gameScreen.timer.getFormattedTime() : '00:00';
+        const scoreDisplay = String(this.gameScreen?.game?.score?.getScore?.() || 0).padStart(3, '0');
+        this.initializeHumanLabLog(options);
+
+        const cardMarkup = options.map(option => {
+            const profile = this.getHumanPsychologyProfile(option);
+            const triage = option.triage || {};
+            const decision = this.breachTriageAssignments.get(option.id) || 'pending';
+            const isSelected = this.breachTriageSelectedId === option.id;
+            const inspected = this.breachTriageInspectedIds.has(option.id);
+            const stateLabel = decision === 'reset'
+                ? 'P1 RESET'
+                : decision === 'monitor'
+                    ? 'WATCHLIST'
+                    : inspected
+                        ? 'REVIEWED'
+                        : 'READY';
+
+            return `
+                <button class="l1-card bt-card ${isSelected ? 'selected' : ''} ${inspected ? 'reviewed' : ''} ${decision !== 'pending' ? `triage-${decision}` : ''}" data-triage-card="${option.id}" type="button">
+                    <div class="l1-card__accent c-accent"></div>
+                    <div class="l1-card__body c-body">
+                        <div class="l1-card__top c-top">
+                            <div class="l1-card__id c-user">${profile.sourceLabel}</div>
+                            <div class="l1-card__state c-indicator">${stateLabel}</div>
+                        </div>
+                        <div class="l1-card__value c-password">${option.value}</div>
+                        <div class="l1-card__tags c-tags">${profile.tagsMarkup}</div>
+                        <div class="l1-card__entropy c-entropy">
+                            <div class="l1-card__entropy-track c-bar">
+                                <div class="l1-card__entropy-fill c-fill ${profile.entropyClass}" style="width:${profile.strengthScore}%"></div>
+                            </div>
+                            <div class="l1-card__entropy-value c-pct">${profile.strengthScore}%</div>
+                        </div>
+                        <div class="bt-card__meta">
+                            <span>${triage.observedReuse || triage.reuseLabel || 'Reuse unknown'}</span>
+                            <span>${triage.privilegeTier || 'Mixed access'}</span>
+                        </div>
+                        <div class="bt-card__footer">${triage.priorityCue || profile.note}</div>
+                    </div>
+                </button>`;
+        }).join('');
+
+        const threatMarkup = threatBars.map(bar => `
+            <div class="l1-threat-row">
+                <div class="l1-threat-top">
+                    <span>${bar.label}</span>
+                    <span class="tone-${bar.tone}">${bar.value}%</span>
+                </div>
+                <div class="l1-threat-track">
+                    <div class="l1-threat-fill tone-${bar.tone}" style="width:${bar.value}%"></div>
+                </div>
+            </div>`).join('');
+
+        const objectivesMarkup = objectives.map((objective, index) => `
+            <div class="l1-objective ${index === 0 ? 'on' : ''}" data-triage-objective="${index}">
+                <div class="l1-objective__icon">${index === 0 ? '▸' : ''}</div>
+                <div class="l1-objective__text">${objective}</div>
+            </div>`).join('');
+
+        const phaseMarkup = shellConfig.phases.map((phase, index) => `
+                    ${index > 0 ? '<div class="l1-phase-sep">//</div>' : ''}
+                    <div class="l1-phase ${index === 0 ? 'active' : ''}"><span class="l1-phase__dot"></span><strong>${String(index + 1).padStart(2, '0')}</strong>${phase}</div>
+                `).join('');
+
+        container.innerHTML = `
+            ${this.renderHumanPsychologyLabStyles()}
+            ${this.renderBreachTriageStyles()}
+            <div class="l1-shell">
+                <canvas class="l1-matrix" id="l1-matrix" aria-hidden="true"></canvas>
+                <div class="l1-crt" aria-hidden="true"></div>
+                <div class="l1-scanline" aria-hidden="true"></div>
+
+                <header class="l1-top-hud">
+                    <div class="l1-hud-logo">
+                        <div class="l1-logo-badge">⬡</div>
+                        <div class="l1-logo-text">SHADOWDEF</div>
+                    </div>
+                    <div class="l1-hud-mission">
+                        <div class="l1-hud-kicker">${shellConfig.kicker}</div>
+                        <div class="l1-hud-title">${shellConfig.titleHtml}</div>
+                    </div>
+                    <div class="l1-hud-stats">
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Time</div>
+                            <div class="l1-hud-value" id="l1-timer">${timeDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Score</div>
+                            <div class="l1-hud-value l1-hud-value--cyan" id="l1-score">${scoreDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Inspects</div>
+                            <div class="l1-hud-value l1-hud-value--red" id="l1-combo">${metrics.inspectedCount}/${cfg.inspectGoal}</div>
+                        </div>
+                        <div class="l1-hud-meter">
+                            <div class="l1-hud-label">Plan</div>
+                            <div class="l1-hud-track">
+                                <div class="l1-hud-fill" id="l1-xp-fill" style="width:${metrics.planReadiness}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="l1-hud-actions">
+                        <button class="l1-hud-btn" data-action="pause" type="button">[ PAUSE ]</button>
+                        <button class="l1-hud-btn" data-action="back-to-levels" type="button">[ BACK ]</button>
+                    </div>
+                </header>
+
+                <div class="l1-mission-strip">
+                    ${phaseMarkup}
+                    <div class="l1-mission-status">
+                        <span class="l1-mission-status__dot"></span>
+                        ${shellConfig.missionStatus}
+                    </div>
+                </div>
+
+                <div class="l1-body">
+                    <section class="l1-arena">
+                        <div class="l1-arena-header">
+                            <div>
+                                <div class="l1-arena-title">${shellConfig.arenaTitleHtml}</div>
+                                <div class="l1-arena-sub">${shellConfig.arenaSub}</div>
+                            </div>
+                            <div class="l1-arena-hint">${shellConfig.arenaHintHtml}</div>
+                        </div>
+
+                        <div class="l1-arena-scroll">
+                            <div class="l1-grid" id="password-options-grid">${cardMarkup}</div>
+                        </div>
+
+                        <div class="l1-submit-dock bt-submit-dock">
+                            <div class="l1-submit-cluster">
+                                <span class="l1-submit-label">P1 Reset</span>
+                                <div class="l1-flag-slots" id="bt-reset-slots"></div>
+                            </div>
+                            <div class="l1-submit-cluster">
+                                <span class="l1-submit-label">Watchlist</span>
+                                <div class="l1-flag-slots" id="bt-monitor-slots"></div>
+                            </div>
+                            <div class="l1-submit-cluster l1-submit-cluster--summary">
+                                <div class="l1-submit-value ${metrics.planReadiness < 60 ? 'neg' : ''}" id="bt-plan-score">${metrics.planReadiness}%</div>
+                                <div class="l1-submit-points-label">Plan readiness</div>
+                            </div>
+                            <div class="l1-submit-meta">
+                                <div class="l1-attempts" id="attempt-counter">Reset waves: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
+                            </div>
+                            <button class="bt-clear-btn" id="bt-clear-plan" type="button">CLEAR PLAN</button>
+                            <button class="l1-btn l1-btn-primary l1-fire-btn" id="submit-selection" type="button">EXECUTE RESET WAVE</button>
+                        </div>
+                    </section>
+
+                    <aside class="l1-console">
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">${shellConfig.threatTitle}</div>
+                            <div class="l1-dial-wrap">
+                                <svg class="l1-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
+                                    <circle class="l1-dial-bg" cx="70" cy="70" r="65"></circle>
+                                    <circle class="l1-dial-ring" cx="70" cy="70" r="65" id="l1-dial-ring"></circle>
+                                </svg>
+                                <div class="l1-dial-inner">
+                                    <div class="l1-dial-num" id="l1-dial-num">${metrics.selectedReset.length}</div>
+                                    <div class="l1-dial-sub">${shellConfig.dialSub}</div>
+                                </div>
+                            </div>
+                            <div class="l1-threat-bars">${threatMarkup}</div>
+                        </section>
+
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">${shellConfig.objectivesTitle}</div>
+                            <div class="l1-objective-list">${objectivesMarkup}</div>
+                        </section>
+
+                        <section class="l1-console-panel l1-console-panel--fill">
+                            <div class="l1-console-head">
+                                <div class="l1-console-title">${shellConfig.consoleTitle}</div>
+                                <div class="l1-console-chip">HINTS <span id="l1-hints-remaining">${hintsRemaining}</span>/3</div>
+                            </div>
+                            <div class="bt-selected-panel" id="bt-selected-panel">${this.renderBreachTriageSelectedPanel(selected, metrics)}</div>
+                            <div class="l1-risk-row">
+                                <span>${shellConfig.riskLabel}</span>
+                                <div class="l1-risk-track">
+                                    <div class="l1-risk-fill" id="risk-fill" style="width:${Math.max(0, Math.min(100, this.riskValue))}%;"></div>
+                                </div>
+                                <span class="l1-risk-text" id="risk-text">${Math.floor(this.riskValue)}%</span>
+                            </div>
+                            <div class="l1-feedback guess-feedback" id="guess-feedback">${previousFeedback || `<div><strong>Objective:</strong> ${this.mission.objective || 'Triages the breached credentials.'}</div><div><strong>Scenario:</strong> ${this.dynamicScenario || this.mission.scenario || ''}</div><div><strong>Execution rule:</strong> Inspect at least ${cfg.inspectGoal} credentials, queue ${cfg.resetBudget} immediate resets, and watchlist ${cfg.monitorGoal} second-wave suspects.</div>`}</div>
+                            <div class="l1-hint-stack" id="password-hints"></div>
+                            <div class="l1-log-body" id="l1-log-body">${this.renderHumanLabLogMarkup()}</div>
+                        </section>
+                    </aside>
+                </div>
+            </div>`;
+
+        this.setupBreachTriageEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.updateBreachTriageLiveUI();
+        this.updateRiskDisplay();
+        this.updateAttemptCounter();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    renderBreachTriageSelectedPanel(selected, metrics) {
+        const cfg = this.getBreachTriageConfig();
+        const copy = this.getBreachTriageCopyConfig();
+        if (!selected) {
+            return `<div class="bt-selected-empty">Select a recovered credential to inspect its reuse spread, privilege reach, and reset priority.</div>`;
+        }
+
+        const triage = selected.triage || {};
+        const currentDecision = this.breachTriageAssignments.get(selected.id) || 'pending';
+        const decisionLabel = currentDecision === 'reset'
+            ? 'P1 RESET'
+            : currentDecision === 'monitor'
+                ? 'WATCHLIST'
+                : 'UNASSIGNED';
+        const resetLocked = metrics.selectedReset.length >= cfg.resetBudget && currentDecision !== 'reset';
+        const monitorLocked = cfg.monitorBudget > 0 && metrics.selectedMonitor.length >= cfg.monitorBudget && currentDecision !== 'monitor';
+
+        return `
+            <div class="bt-selected-card">
+                <div class="bt-selected-head">
+                    <div>
+                        <div class="bt-selected-kicker">Selected Credential</div>
+                        <div class="bt-selected-title">${selected.value}</div>
+                    </div>
+                    <div class="bt-selected-state bt-selected-state--${currentDecision}">${decisionLabel}</div>
+                </div>
+                <div class="bt-selected-grid">
+                    <div class="bt-selected-metric"><span>Observed Reuse</span><strong>${triage.observedReuse || 'Unknown'}</strong></div>
+                    <div class="bt-selected-metric"><span>Privilege Spread</span><strong>${triage.privilegeSpread || triage.privilegeTier || 'Unknown'}</strong></div>
+                    <div class="bt-selected-metric"><span>Department Spread</span><strong>${triage.departmentSpread || 'Mixed'}</strong></div>
+                    <div class="bt-selected-metric"><span>Attack Velocity</span><strong>${triage.attackVelocity || 'Under review'}</strong></div>
+                </div>
+                <div class="bt-selected-list">
+                    <div><strong>Priority cue:</strong> ${triage.priorityCue || 'Investigate reuse evidence before assigning a reset action.'}</div>
+                    <div><strong>Analyst note:</strong> ${triage.analystNote || triage.priorityCue || 'No analyst note attached.'}</div>
+                    <div><strong>Operational guidance:</strong> ${triage.guidance || 'Use P1 only for the credentials with the widest compromise radius.'}</div>
+                </div>
+                <div class="bt-action-row">
+                    <button class="bt-action bt-action--reset" data-triage-action="reset" type="button" ${this.isComplete || resetLocked ? 'disabled' : ''}>QUEUE P1 RESET</button>
+                    <button class="bt-action bt-action--monitor" data-triage-action="monitor" type="button" ${this.isComplete || monitorLocked ? 'disabled' : ''}>WATCHLIST</button>
+                    <button class="bt-action bt-action--clear" data-triage-action="clear" type="button" ${this.isComplete || currentDecision === 'pending' ? 'disabled' : ''}>CLEAR TAG</button>
+                </div>
+                <div class="bt-selected-note">${copy.correctResetLabel}: ${metrics.expectedReset.length} total · ${copy.correctMonitorLabel}: ${cfg.monitorGoal} required</div>
+            </div>`;
+    }
+
+    renderBreachTriageStyles() {
+        return `
+            <style>
+                .bt-card{transform:none}
+                .bt-card.reviewed{border-color:rgba(23,216,255,.24)}
+                .bt-card.selected{border-color:var(--l1-cyan)!important;box-shadow:-4px 0 0 rgba(23,216,255,.48),0 0 28px rgba(23,216,255,.12)!important}
+                .bt-card.triage-reset{border-color:var(--l1-red);background:rgba(22,4,14,.96);box-shadow:0 0 0 1px rgba(255,63,120,.22) inset,0 0 28px rgba(255,63,120,.14)}
+                .bt-card.triage-monitor{border-color:var(--l1-gold);background:rgba(22,16,3,.96);box-shadow:0 0 0 1px rgba(255,204,0,.18) inset,0 0 24px rgba(255,204,0,.08)}
+                .bt-card.triage-reset .l1-card__accent{background:var(--l1-red);box-shadow:0 0 10px rgba(255,63,120,.42)}
+                .bt-card.triage-monitor .l1-card__accent{background:var(--l1-gold)}
+                .bt-card__meta{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:9px;letter-spacing:1px;color:var(--l1-text-mid);text-transform:uppercase}
+                .bt-card__footer{margin-top:10px;font-size:10px;line-height:1.5;color:var(--l1-text-mid)}
+                .bt-submit-dock{row-gap:12px}
+                .bt-clear-btn{border:1px solid var(--l1-rim2);background:transparent;color:var(--l1-text);font-family:'Courier Prime','Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:12px 18px;cursor:pointer;transition:all .2s ease}
+                .bt-clear-btn:hover{border-color:var(--l1-cyan);color:var(--l1-cyan);box-shadow:0 0 18px rgba(23,216,255,.12)}
+                .bt-selected-panel{margin-bottom:14px}
+                .bt-selected-empty{padding:14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.82);color:var(--l1-text-mid);line-height:1.6;font-size:11px}
+                .bt-selected-card{padding:14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.82);display:grid;gap:12px}
+                .bt-selected-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+                .bt-selected-kicker{font-size:9px;letter-spacing:2px;color:var(--l1-text-low);text-transform:uppercase}
+                .bt-selected-title{font-family:'Teko',sans-serif;font-size:32px;line-height:1;color:var(--l1-cyan);letter-spacing:2px;word-break:break-all;text-shadow:0 0 10px rgba(23,216,255,.18)}
+                .bt-selected-state{padding:6px 10px;border:1px solid rgba(23,216,255,.2);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--l1-text-mid)}
+                .bt-selected-state--reset{border-color:rgba(255,63,120,.32);color:#ffd5e2;background:rgba(255,63,120,.08)}
+                .bt-selected-state--monitor{border-color:rgba(255,204,0,.32);color:#ffedb2;background:rgba(255,204,0,.08)}
+                .bt-selected-state--pending,.bt-selected-state--clear{border-color:rgba(23,216,255,.18);color:var(--l1-text-mid)}
+                .bt-selected-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+                .bt-selected-metric{padding:10px;border:1px solid rgba(23,216,255,.08);background:rgba(23,216,255,.03)}
+                .bt-selected-metric span{display:block;font-size:9px;letter-spacing:2px;color:var(--l1-text-low);text-transform:uppercase}
+                .bt-selected-metric strong{display:block;margin-top:6px;color:var(--l1-white);font-size:13px;line-height:1.45}
+                .bt-selected-list{display:grid;gap:8px;font-size:11px;line-height:1.6;color:var(--l1-text)}
+                .bt-selected-list strong{color:var(--l1-cyan)}
+                .bt-selected-note{font-size:9px;letter-spacing:1px;color:var(--l1-text-low);text-transform:uppercase}
+                .bt-action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+                .bt-action{padding:11px 10px;border:1px solid rgba(23,216,255,.16);background:rgba(23,216,255,.03);color:var(--l1-white);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s ease}
+                .bt-action:hover{transform:translateY(-1px)}
+                .bt-action:disabled{opacity:.38;cursor:not-allowed;transform:none}
+                .bt-action--reset{border-color:rgba(255,63,120,.3);background:rgba(255,63,120,.08)}
+                .bt-action--monitor{border-color:rgba(255,204,0,.3);background:rgba(255,204,0,.08)}
+                .bt-action--clear{border-color:rgba(23,216,255,.18)}
+                .l1-flag-slot.slot-reset{border-color:rgba(255,63,120,.36);background:rgba(255,63,120,.08);color:#ffd4e1}
+                .l1-flag-slot.slot-monitor{border-color:rgba(255,204,0,.36);background:rgba(255,204,0,.08);color:#ffedb2}
+                @media (max-width:760px){.bt-action-row,.bt-selected-grid{grid-template-columns:1fr}.bt-clear-btn{width:100%}}
+            </style>`;
+    }
+
+    getHumanLabShellConfig(options = [], weakCount = 0) {
+        const missionLevel = String(this.mission?.level || 1).padStart(2, '0');
+        const shell = this.puzzleData.labShell || {};
+
+        return {
+            kicker: shell.kicker || `// LEVEL ${missionLevel} - CAMPAIGN ALPHA`,
+            titleHtml: shell.titleHtml || 'HUMAN PASSWORD<br>PSYCHOLOGY',
+            phases: Array.isArray(shell.phases) && shell.phases.length
+                ? shell.phases.slice(0, 3)
+                : ['RECOVERED SET', 'BEHAVIORAL FILTER', 'WEAKNESS CLASSIFIER'],
+            missionStatus: shell.missionStatus || 'ANALYST LAB ACTIVE',
+            arenaTitleHtml: shell.arenaTitleHtml || 'SELECT<br>EVERY<br><span>WEAK</span>PASSWORD',
+            arenaSub: shell.arenaSub || `// ${options.length} credentials recovered · identify ${weakCount} vulnerabilities`,
+            arenaHintHtml: shell.arenaHintHtml || 'Flag passwords predictable via <b>breach lists</b>, <b>common patterns</b>, or <b>public info</b>',
+            flaggedLabel: shell.flaggedLabel || 'Flagged',
+            submitLabel: shell.submitLabel || 'BREACH REPORT',
+            threatTitle: shell.threatTitle || 'Threat Exposure Index',
+            objectivesTitle: shell.objectivesTitle || 'Mission Objectives',
+            consoleTitle: shell.consoleTitle || 'System Terminal',
+            riskLabel: shell.riskLabel || 'Risk Meter',
+            dialSub: shell.dialSub || 'FLAGGED'
+        };
+    }
+
+    getHumanLabCopyConfig() {
+        const copy = this.puzzleData.multiSelectCopy || {};
+
+        return {
+            reviewTitle: copy.reviewTitle || 'Analyst Review',
+            reviewSummary: copy.reviewSummary || 'The board is not classified correctly yet.',
+            targetCountLabel: copy.targetCountLabel || 'Weak passwords in this set',
+            yourFlaggedCountLabel: copy.yourFlaggedCountLabel || 'Your flagged count',
+            missedLabel: copy.missedLabel || 'Missed predictable passwords',
+            falsePositiveLabel: copy.falsePositiveLabel || 'Strong passwords incorrectly flagged',
+            genericMismatchFeedback: copy.genericMismatchFeedback || 'Selection pattern does not fully align with observed human-risk behaviors.',
+            genericNotification: copy.genericNotification || 'Classification mismatch detected. Reassess behavioral indicators.',
+            correctSelectionLabel: copy.correctSelectionLabel || 'Correct weak passwords',
+            successTitle: copy.successTitle || 'Weak credential set identified',
+            failureTitle: copy.failureTitle || 'Attacker shortcut missed',
+            successLog: copy.successLog || 'Weak credential set isolated. Containment report ready for command review.',
+            failureLog: copy.failureLog || 'Attacker shortcut preserved. Analyst board closed with unresolved exposure.'
+        };
+    }
+
+    getBreachTriageConfig() {
+        const cfg = this.puzzleData.breachTriageLab || {};
+        const resetBudget = Math.max(1, Number(cfg.resetBudget || 4));
+        const monitorBudget = Math.max(0, Number(cfg.monitorBudget ?? 3));
+        const monitorGoal = Math.max(0, Math.min(monitorBudget, Number(cfg.monitorGoal ?? Math.min(2, monitorBudget))));
+        const inspectGoal = Math.max(1, Number(cfg.inspectGoal || 6));
+
+        return { resetBudget, monitorBudget, monitorGoal, inspectGoal };
+    }
+
+    getBreachTriageCopyConfig() {
+        const copy = this.puzzleData.triageCopy || {};
+
+        return {
+            inspectGate: copy.inspectGate || 'Inspect more credentials before executing the reset wave.',
+            resetGate: copy.resetGate || 'Use every P1 reset slot before executing the first wave.',
+            reviewTitle: copy.reviewTitle || 'IR Review',
+            reviewSummary: copy.reviewSummary || 'The current triage plan still leaves high-blast passwords exposed.',
+            resetMissedLabel: copy.resetMissedLabel || 'Critical reset targets missed',
+            resetFalsePositiveLabel: copy.resetFalsePositiveLabel || 'Low-priority credentials escalated',
+            monitorCoveredLabel: copy.monitorCoveredLabel || 'Watchlist coverage',
+            inspectCoverageLabel: copy.inspectCoverageLabel || 'Credentials inspected',
+            successTitle: copy.successTitle || 'Reset wave approved',
+            failureTitle: copy.failureTitle || 'Reset wave failed',
+            genericNotification: copy.genericNotification || 'Reset wave mismatch detected. Reassess blast-radius indicators.',
+            successLog: copy.successLog || 'Reset wave approved. Highest blast-radius credentials isolated for emergency rotation.',
+            failureLog: copy.failureLog || 'Reset wave failed. Shared-risk credentials remained available to the attacker.',
+            correctResetLabel: copy.correctResetLabel || 'Correct P1 reset targets',
+            correctMonitorLabel: copy.correctMonitorLabel || 'Correct watchlist targets'
+        };
+    }
+
+    getBreachTriageSelectedOption() {
+        return (this.session?.options || []).find(option => option.id === this.breachTriageSelectedId) || null;
+    }
+
+    getBreachTriageMetrics(options = []) {
+        const cfg = this.getBreachTriageConfig();
+        const selectedReset = options.filter(option => this.breachTriageAssignments.get(option.id) === 'reset');
+        const selectedMonitor = options.filter(option => this.breachTriageAssignments.get(option.id) === 'monitor');
+        const expectedReset = options.filter(option => option.expectedAction === 'reset');
+        const expectedMonitor = options.filter(option => option.expectedAction === 'monitor');
+        const correctReset = selectedReset.filter(option => option.expectedAction === 'reset');
+        const falseReset = selectedReset.filter(option => option.expectedAction !== 'reset');
+        const correctMonitor = selectedMonitor.filter(option => option.expectedAction === 'monitor');
+        const falseMonitor = selectedMonitor.filter(option => option.expectedAction !== 'monitor');
+        const missedReset = expectedReset.filter(option => this.breachTriageAssignments.get(option.id) !== 'reset');
+        const missedMonitor = expectedMonitor.filter(option => this.breachTriageAssignments.get(option.id) !== 'monitor');
+        const inspectedCount = this.breachTriageInspectedIds.size;
+        const inspectProgress = Math.round(Math.min(100, (inspectedCount / Math.max(1, cfg.inspectGoal)) * 100));
+        const resetProgress = Math.round(Math.min(100, (selectedReset.length / Math.max(1, cfg.resetBudget)) * 100));
+        const monitorProgress = cfg.monitorBudget > 0
+            ? Math.round(Math.min(100, (selectedMonitor.length / Math.max(1, cfg.monitorBudget)) * 100))
+            : 100;
+        const planReadiness = Math.round((inspectProgress * 0.35) + (resetProgress * 0.45) + (monitorProgress * 0.20));
+        const accuracyScore = Math.max(
+            0,
+            100
+                - (falseReset.length * 28)
+                - (missedReset.length * 24)
+                - (falseMonitor.length * 12)
+                - (Math.max(0, cfg.monitorGoal - correctMonitor.length) * 8)
+        );
+
+        return {
+            selectedReset,
+            selectedMonitor,
+            expectedReset,
+            expectedMonitor,
+            correctReset,
+            falseReset,
+            correctMonitor,
+            falseMonitor,
+            missedReset,
+            missedMonitor,
+            inspectedCount,
+            inspectProgress,
+            resetProgress,
+            monitorProgress,
+            planReadiness,
+            accuracyScore
+        };
+    }
+
+    getBreachTriageThreatBars(metrics) {
+        const cfg = this.getBreachTriageConfig();
+        const monitorCoverage = cfg.monitorGoal > 0
+            ? Math.round(Math.min(100, (metrics.correctMonitor.length / cfg.monitorGoal) * 100))
+            : 100;
+
+        return [
+            {
+                label: 'P1 Reset Queue',
+                value: Math.min(100, metrics.resetProgress),
+                tone: metrics.falseReset.length ? 'danger' : metrics.selectedReset.length >= cfg.resetBudget ? 'safe' : 'warn'
+            },
+            {
+                label: 'Watch Coverage',
+                value: monitorCoverage,
+                tone: metrics.falseMonitor.length ? 'danger' : metrics.correctMonitor.length >= cfg.monitorGoal ? 'safe' : 'warn'
+            },
+            {
+                label: 'Inspection Coverage',
+                value: Math.min(100, metrics.inspectProgress),
+                tone: metrics.inspectedCount >= cfg.inspectGoal ? 'safe' : 'warn'
+            },
+            {
+                label: 'Queue Accuracy',
+                value: Math.min(100, metrics.accuracyScore),
+                tone: metrics.accuracyScore >= 85 ? 'safe' : metrics.accuracyScore >= 60 ? 'warn' : 'danger'
+            }
+        ];
+    }
+
     getHumanPsychologyProfile(option) {
         const tags = Array.isArray(option?.tags) ? option.tags : [];
+        const profile = option?.profile || {};
         const has = tag => tags.includes(tag);
         let riskLabel = 'RESILIENT';
         let riskClass = 'low';
@@ -599,7 +1228,7 @@ export class PasswordCrack {
         let crackWindow = 'days to years';
         let attackerLens = 'No immediate shortcut';
         let strengthScore = 84;
-        let sourceLabel = 'Recovered signal';
+        let sourceLabel = profile.sourceLabel || option?.sourceLabel || 'Recovered signal';
 
         if (option?.isWeak && (has('name_year') || has('osint'))) {
             riskLabel = 'OSINT RISK';
@@ -643,16 +1272,31 @@ export class PasswordCrack {
             sourceLabel = 'Passphrase lane';
         }
 
+        if (option?.sourceLabel) sourceLabel = option.sourceLabel;
+        if (profile.sourceLabel) sourceLabel = profile.sourceLabel;
+        if (option?.riskLabel || profile.riskLabel) riskLabel = profile.riskLabel || option.riskLabel;
+        if (option?.riskClass || profile.riskClass) riskClass = profile.riskClass || option.riskClass;
+        if (option?.profileNote || profile.note) note = profile.note || option.profileNote;
+        if (option?.crackWindow || profile.crackWindow) crackWindow = profile.crackWindow || option.crackWindow;
+        if (option?.attackerLens || profile.attackerLens) attackerLens = profile.attackerLens || option.attackerLens;
+        if (Number.isFinite(Number(profile.strengthScore ?? option?.strengthScore))) {
+            strengthScore = Math.max(4, Math.min(99, Number(profile.strengthScore ?? option.strengthScore)));
+        }
+
         const entropyClass = strengthScore < 40 ? 'low' : strengthScore < 70 ? 'mid' : 'high';
         const tagTone = {
             leaked: 'danger',
             common: 'danger',
             name_year: 'danger',
             osint: 'danger',
+            shared_reset: 'danger',
+            privileged: 'danger',
             pattern: 'warn',
             company_number: 'warn',
             keyboard: 'warn',
             sequence: 'warn',
+            seasonal: 'warn',
+            role: 'warn',
             passphrase: 'safe',
             random: 'safe',
             strong: 'safe'
@@ -678,6 +1322,29 @@ export class PasswordCrack {
 
     getHumanPsychologyThreatBars(options = []) {
         const total = Math.max(1, options.length);
+        const customBars = Array.isArray(this.puzzleData.humanLabThreatBars) ? this.puzzleData.humanLabThreatBars : [];
+
+        if (customBars.length) {
+            return customBars.map(bar => {
+                const matches = options.filter(option => {
+                    const tags = Array.isArray(option?.tags) ? option.tags : [];
+                    const tagMatch = Array.isArray(bar.tagsAny) && bar.tagsAny.length
+                        ? bar.tagsAny.some(tag => tags.includes(tag))
+                        : false;
+                    if (!tagMatch) return false;
+                    if (bar.matchWeakOnly && !option?.isWeak) return false;
+                    if (bar.matchStrongOnly && option?.isWeak) return false;
+                    return true;
+                }).length;
+
+                return {
+                    label: bar.label || 'Threat Surface',
+                    value: Math.round((matches / total) * 100),
+                    tone: bar.tone || 'warn'
+                };
+            });
+        }
+
         const count = matcher => options.filter(option => matcher(Array.isArray(option?.tags) ? option.tags : [])).length;
 
         return [
@@ -726,6 +1393,18 @@ export class PasswordCrack {
     initializeHumanLabLog(options = []) {
         if (this.humanLabLogEntries.length) return;
 
+        const customLogs = Array.isArray(this.puzzleData.humanLabInitialLogs) ? this.puzzleData.humanLabInitialLogs : [];
+        if (customLogs.length) {
+            const labels = { sys: 'SYS', warn: 'WARN', ok: 'OK', danger: 'ALERT' };
+            this.humanLabLogEntries = customLogs.map(entry => ({
+                time: entry.time || '[00:00]',
+                tone: entry.tone || 'sys',
+                label: labels[entry.tone] || 'SYS',
+                message: entry.message || ''
+            }));
+            return;
+        }
+
         const weakCount = options.filter(option => option.isWeak).length;
         this.humanLabLogEntries = [
             { time: '[00:00]', tone: 'sys', label: 'SYS', message: 'Session initialized. Analyst HUD synced with recovered credential board.' },
@@ -742,7 +1421,7 @@ export class PasswordCrack {
     }
 
     pushHumanLabLog(tone, message) {
-        if (this.interactionMode !== 'humanPsychologyLab') return;
+        if (!this.isHumanLabShellMode()) return;
 
         const labels = {
             sys: 'SYS',
@@ -786,41 +1465,35 @@ export class PasswordCrack {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const binaryDigits = ['0', '1'];
-        const baseSpacing = 18;
-        const chunkSize = 3;
-        const makeBinaryChunk = () => Array.from({ length: chunkSize }, () => binaryDigits[Math.floor(Math.random() * binaryDigits.length)]).join('');
-        const createStream = (width, height, index, count) => {
-            const laneWidth = width / Math.max(count, 1);
-            const depth = 0.32 + Math.random() * 0.68;
-            const fontSize = 9 + depth * 12;
-            const lineHeight = fontSize * 0.92;
-            const trail = 5 + Math.floor(depth * 5);
-
-            return {
-                baseX: laneWidth * index + laneWidth * 0.18 + Math.random() * Math.max(10, laneWidth * 0.45),
-                y: -Math.random() * Math.max(height, lineHeight * 10),
-                depth,
-                fontSize,
-                lineHeight,
-                speed: 70 + depth * 165,
-                swayAmplitude: 3 + depth * 14,
-                swaySpeed: 0.85 + depth * 1.5,
-                phase: Math.random() * Math.PI * 2,
-                tilt: (Math.random() - 0.5) * 0.16,
-                trail,
-                stepCarry: 0,
-                chunks: Array.from({ length: trail + 2 }, () => makeBinaryChunk())
-            };
+        const levelSpeedMultiplier = Number(this.mission?.level === 1 ? 1.25 : 1);
+        const makeBinaryText = () => {
+            const len = 2 + Math.floor(Math.random() * 5);
+            let text = '';
+            for (let i = 0; i < len; i += 1) {
+                text += Math.random() > 0.5 ? '1' : '0';
+            }
+            return text;
         };
+        const createSprite = (width, height, spawnAbove = false) => ({
+            x: Math.random() * Math.max(width, 1),
+            y: spawnAbove
+                ? (-20 - Math.random() * Math.max(height * 0.35, 120))
+                : (-20 + Math.random() * Math.max(height + 20, 40)),
+            drift: (Math.random() - 0.5) * 0.18,
+            fall: (0.3 + Math.random() * 0.34) * levelSpeedMultiplier,
+            wobble: Math.random() * Math.PI * 2,
+            size: 16 + Math.random() * 12,
+            opacity: 0.26 + Math.random() * 0.2,
+            text: makeBinaryText()
+        });
         const resize = () => {
             const parent = canvas.parentElement;
             const width = parent?.clientWidth || canvas.clientWidth || 0;
             const height = parent?.clientHeight || canvas.clientHeight || 0;
             canvas.width = width;
             canvas.height = height;
-            const columns = Math.max(1, Math.floor(width / baseSpacing));
-            this.humanLabMatrixDrops = Array.from({ length: columns }, (_, index) => createStream(width, height, index, columns));
+            const spriteCount = Math.max(28, Math.min(80, Math.floor(width / 22)));
+            this.humanLabMatrixDrops = Array.from({ length: spriteCount }, () => createSprite(width, height, false));
         };
 
         resize();
@@ -838,51 +1511,24 @@ export class PasswordCrack {
             const delta = Math.min(40, timestamp - lastFrame);
             lastFrame = timestamp;
 
-            ctx.fillStyle = 'rgba(2, 6, 16, 0.07)';
+            ctx.fillStyle = 'rgba(2, 6, 16, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.textBaseline = 'top';
             ctx.textAlign = 'left';
 
-            this.humanLabMatrixDrops.forEach((stream, index) => {
-                const travel = (stream.speed * delta) / 1000;
-                stream.y += travel;
-                stream.stepCarry += travel;
+            this.humanLabMatrixDrops.forEach((sprite, index) => {
+                const step = delta * 0.06;
+                sprite.y += sprite.fall * step * 60;
+                sprite.x += Math.sin(timestamp * 0.00055 + sprite.wobble) * sprite.drift;
 
-                while (stream.stepCarry >= stream.lineHeight) {
-                    stream.stepCarry -= stream.lineHeight;
-                    stream.chunks.unshift(makeBinaryChunk());
-                    stream.chunks.pop();
-                }
+                ctx.font = `bold ${sprite.size}px Consolas, "Courier New", monospace`;
+                ctx.fillStyle = `rgba(150, 236, 255, ${sprite.opacity})`;
+                ctx.shadowColor = 'rgba(31, 215, 255, 0.34)';
+                ctx.shadowBlur = 10;
+                ctx.fillText(sprite.text, sprite.x, sprite.y);
 
-                const time = timestamp * 0.001;
-                const centerPull = ((canvas.width / 2) - stream.baseX) * (1 - stream.depth) * 0.16;
-                const sway = Math.sin(time * stream.swaySpeed + stream.phase) * stream.swayAmplitude;
-                const drawX = stream.baseX + centerPull + sway;
-
-                for (let offset = 0; offset < stream.trail; offset += 1) {
-                    const drawY = stream.y - offset * stream.lineHeight;
-                    if (drawY < -stream.lineHeight || drawY > canvas.height + stream.lineHeight) continue;
-
-                    const fade = 1 - offset / (stream.trail + 1);
-                    const alpha = fade * (0.2 + stream.depth * 0.75);
-                    const isLead = offset === 0;
-
-                    ctx.save();
-                    ctx.translate(drawX, drawY);
-                    ctx.transform(1, 0, stream.tilt * stream.depth, 1, 0, 0);
-                    ctx.font = `${stream.fontSize}px "Courier Prime"`;
-                    ctx.fillStyle = isLead
-                        ? `rgba(237, 247, 255, ${Math.min(1, alpha + 0.12)})`
-                        : `rgba(23, 216, 255, ${alpha})`;
-                    ctx.shadowColor = isLead ? 'rgba(237, 247, 255, 0.34)' : 'rgba(23, 216, 255, 0.22)';
-                    ctx.shadowBlur = (isLead ? 10 : 6) * stream.depth;
-                    ctx.fillText(stream.chunks[offset] || '000', 0, 0);
-                    ctx.restore();
-                }
-
-                if (stream.y - stream.trail * stream.lineHeight > canvas.height + stream.lineHeight) {
-                    this.humanLabMatrixDrops[index] = createStream(canvas.width, canvas.height, index, this.humanLabMatrixDrops.length);
-                    return;
+                if (sprite.y > canvas.height + sprite.size + 16) {
+                    this.humanLabMatrixDrops[index] = createSprite(canvas.width, canvas.height, true);
                 }
             });
 
@@ -1003,6 +1649,328 @@ export class PasswordCrack {
         });
     }
 
+    setupBreachTriageEventListeners() {
+        document.querySelectorAll('[data-triage-card]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = Number(btn.dataset.triageCard || btn.dataset.optionId);
+                if (!Number.isNaN(id)) this.selectBreachTriageCredential(id);
+            });
+        });
+        document.getElementById('bt-clear-plan')?.addEventListener('click', () => this.clearBreachTriagePlan());
+        document.getElementById('submit-selection')?.addEventListener('click', () => this.submitBreachTriagePlan());
+        this.bindBreachTriageActionButtons();
+    }
+
+    bindBreachTriageActionButtons() {
+        document.querySelectorAll('[data-triage-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.triageAction;
+                if (action) this.assignBreachTriageDecision(action);
+            });
+        });
+    }
+
+    selectBreachTriageCredential(id) {
+        if (this.isComplete) return;
+        const option = (this.session?.options || []).find(entry => entry.id === id);
+        if (!option) return;
+        const firstInspection = !this.breachTriageInspectedIds.has(id);
+        this.breachTriageSelectedId = id;
+        this.breachTriageInspectedIds.add(id);
+        this.audio.playButtonClick();
+        if (firstInspection) {
+            this.pushHumanLabLog('sys', `Credential ${option.value} inspected. ${option.triage?.priorityCue || 'Blast-radius evidence loaded.'}`);
+        }
+        this.updateBreachTriageLiveUI();
+    }
+
+    assignBreachTriageDecision(action) {
+        if (this.isComplete) return;
+        const option = this.getBreachTriageSelectedOption();
+        if (!option) {
+            this.gameScreen.ui.showNotification('Select a credential before assigning an action.', 'warning');
+            return;
+        }
+
+        const cfg = this.getBreachTriageConfig();
+        const metrics = this.getBreachTriageMetrics(this.session?.options || []);
+        const currentDecision = this.breachTriageAssignments.get(option.id) || 'pending';
+
+        if (action === 'reset' && currentDecision !== 'reset' && metrics.selectedReset.length >= cfg.resetBudget) {
+            this.gameScreen.ui.showNotification('No P1 reset slots left. Clear a slot or reassign an entry.', 'warning');
+            return;
+        }
+        if (action === 'monitor' && currentDecision !== 'monitor' && cfg.monitorBudget > 0 && metrics.selectedMonitor.length >= cfg.monitorBudget) {
+            this.gameScreen.ui.showNotification('Watchlist capacity reached. Clear a watch slot first.', 'warning');
+            return;
+        }
+
+        if (action === 'clear') this.breachTriageAssignments.delete(option.id);
+        else this.breachTriageAssignments.set(option.id, action);
+
+        this.audio.playButtonClick();
+        const actionLabel = action === 'reset' ? 'queued for P1 reset' : action === 'monitor' ? 'moved to watchlist' : 'cleared from the current plan';
+        this.pushHumanLabLog(action === 'reset' ? 'warn' : 'sys', `${option.value} ${actionLabel}.`);
+        this.updateBreachTriageLiveUI();
+    }
+
+    clearBreachTriagePlan() {
+        if (this.isComplete) return;
+        this.breachTriageAssignments.clear();
+        this.audio.playButtonClick();
+        this.pushHumanLabLog('sys', 'Reset plan cleared. Awaiting rebuilt wave assignment.');
+        this.updateBreachTriageLiveUI();
+    }
+
+    submitBreachTriagePlan() {
+        if (this.isComplete) return;
+        const cfg = this.getBreachTriageConfig();
+        const copy = this.getBreachTriageCopyConfig();
+        const metrics = this.getBreachTriageMetrics(this.session?.options || []);
+
+        if (metrics.inspectedCount < cfg.inspectGoal) {
+            this.gameScreen.ui.showNotification(copy.inspectGate, 'warning');
+            return;
+        }
+        if (metrics.selectedReset.length !== cfg.resetBudget) {
+            this.gameScreen.ui.showNotification(copy.resetGate, 'warning');
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const success =
+            metrics.falseReset.length === 0 &&
+            metrics.missedReset.length === 0 &&
+            metrics.falseMonitor.length === 0 &&
+            metrics.correctMonitor.length >= cfg.monitorGoal;
+
+        if (success) {
+            this.finishBreachTriage(true, metrics);
+            return;
+        }
+
+        this.showBreachTriageFeedback(metrics);
+        const penaltyWeight =
+            (metrics.falseReset.length * 2) +
+            (metrics.missedReset.length * 2) +
+            metrics.falseMonitor.length +
+            Math.max(0, cfg.monitorGoal - metrics.correctMonitor.length);
+        this.increaseRisk((this.riskSystem?.wrongAdd || 18) + (Math.max(0, penaltyWeight - 1) * 4));
+        this.revealSecondaryClue();
+
+        if (this.hasRiskBreached()) {
+            this.gameScreen.ui.showNotification(this.riskSystem?.breachMessage || 'Breach simulated.', 'error');
+            this.finishBreachTriage(false, metrics);
+            return;
+        }
+
+        if (this.attempts >= this.maxAttempts) {
+            this.finishBreachTriage(false, metrics);
+            return;
+        }
+
+        this.gameScreen.ui.showNotification(copy.genericNotification, 'error');
+    }
+
+    showBreachTriageFeedback(metrics) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const cfg = this.getBreachTriageConfig();
+        const copy = this.getBreachTriageCopyConfig();
+
+        feedback.innerHTML = `
+            <div><strong>${copy.reviewTitle}:</strong> ${copy.reviewSummary}</div>
+            <div>${copy.resetMissedLabel}: ${metrics.missedReset.length}</div>
+            <div>${copy.resetFalsePositiveLabel}: ${metrics.falseReset.length}</div>
+            <div>${copy.monitorCoveredLabel}: ${metrics.correctMonitor.length} / ${cfg.monitorGoal}</div>
+            <div>${copy.inspectCoverageLabel}: ${metrics.inspectedCount} / ${cfg.inspectGoal}</div>`;
+
+        this.pushHumanLabLog(
+            'danger',
+            `Reset wave mismatch. Missed ${metrics.missedReset.length} critical target(s), escalated ${metrics.falseReset.length} low-priority credential(s), and covered ${metrics.correctMonitor.length}/${cfg.monitorGoal} watchlist target(s).`
+        );
+    }
+
+    renderBreachTriageInsight(success, metrics) {
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+        const copy = this.getBreachTriageCopyConfig();
+        const insights = Array.isArray(this.session?.securityInsight) ? this.session.securityInsight : [];
+        const resetTargets = metrics.expectedReset.map(option => option.value);
+        const monitorTargets = metrics.expectedMonitor.map(option => option.value);
+
+        feedback.innerHTML += `
+            <div style="margin-top:14px;"><strong>${copy.correctResetLabel}:</strong> ${resetTargets.join(', ')}</div>
+            <div><strong>${copy.correctMonitorLabel}:</strong> ${monitorTargets.join(', ')}</div>
+            <div style="margin-top:10px;"><strong>Incident Debrief:</strong></div>
+            <div>• ${insights.join('</div><div>• ')}</div>`;
+    }
+
+    finishBreachTriage(success, metrics) {
+        const copy = this.getBreachTriageCopyConfig();
+        const cfg = this.getBreachTriageConfig();
+        this.isComplete = true;
+        if (success) this.audio.playSuccess();
+        else this.audio.playFailure();
+        this.gameScreen.ui.flashScreen(success ? 'rgba(0,255,65,0.2)' : 'rgba(255,0,110,0.2)', 300);
+        this.updateBreachTriageLiveUI();
+        this.renderBreachTriageInsight(success, metrics);
+
+        const feedback = document.getElementById('guess-feedback');
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: success ? 'success' : 'error',
+                title: success ? copy.successTitle : copy.failureTitle,
+                summary: success ? (this.mission.successFeedback || 'Reset wave executed successfully.') : (this.mission.failureFeedback || 'Reset wave failed.'),
+                details: [
+                    `Reset targets covered: ${metrics.correctReset.length} / ${metrics.expectedReset.length}`,
+                    `Watchlist targets covered: ${metrics.correctMonitor.length} / ${cfg.monitorGoal}`,
+                    `Final cascade risk: ${Math.round(this.riskValue)}%`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+
+        this.pushHumanLabLog(success ? 'ok' : 'danger', success ? copy.successLog : copy.failureLog);
+        this.gameScreen.ui.showNotification(success ? (this.mission.successFeedback || 'Reset wave approved.') : (this.mission.failureFeedback || 'Reset wave failed.'), success ? 'success' : 'error');
+        setTimeout(() => this.gameScreen.completePuzzle(success), success ? 1500 : 1700);
+    }
+
+    updateBreachTriageLiveUI() {
+        if (this.interactionMode !== 'breachTriageLab') return;
+
+        const options = this.session?.options || [];
+        const cfg = this.getBreachTriageConfig();
+        const metrics = this.getBreachTriageMetrics(options);
+        const selected = this.getBreachTriageSelectedOption();
+
+        const dialNum = document.getElementById('l1-dial-num');
+        if (dialNum) dialNum.textContent = `${metrics.selectedReset.length}`;
+
+        const dialRing = document.getElementById('l1-dial-ring');
+        if (dialRing) {
+            const circumference = 408;
+            dialRing.style.strokeDashoffset = circumference - (circumference * metrics.planReadiness) / 100;
+        }
+
+        const inspectValue = document.getElementById('l1-combo');
+        if (inspectValue) inspectValue.textContent = `${metrics.inspectedCount}/${cfg.inspectGoal}`;
+
+        const planFill = document.getElementById('l1-xp-fill');
+        if (planFill) planFill.style.width = `${metrics.planReadiness}%`;
+
+        const planScore = document.getElementById('bt-plan-score');
+        if (planScore) {
+            planScore.textContent = `${metrics.planReadiness}%`;
+            planScore.classList.toggle('neg', metrics.planReadiness < 60);
+        }
+
+        const resetSlots = document.getElementById('bt-reset-slots');
+        if (resetSlots) {
+            resetSlots.innerHTML = Array.from({ length: cfg.resetBudget }).map((_, index) => {
+                const option = metrics.selectedReset[index];
+                return option
+                    ? `<div class="l1-flag-slot active slot-reset">${option.value.length > 6 ? `${option.value.slice(0, 4)}…` : option.value}</div>`
+                    : '<div class="l1-flag-slot">—</div>';
+            }).join('');
+        }
+
+        const monitorSlots = document.getElementById('bt-monitor-slots');
+        if (monitorSlots) {
+            monitorSlots.innerHTML = Array.from({ length: cfg.monitorBudget }).map((_, index) => {
+                const option = metrics.selectedMonitor[index];
+                return option
+                    ? `<div class="l1-flag-slot active slot-monitor">${option.value.length > 6 ? `${option.value.slice(0, 4)}…` : option.value}</div>`
+                    : '<div class="l1-flag-slot">—</div>';
+            }).join('');
+        }
+
+        document.querySelectorAll('[data-triage-card]').forEach(card => {
+            const optionId = Number(card.dataset.triageCard || card.dataset.optionId);
+            const option = options.find(entry => entry.id === optionId);
+            const decision = this.breachTriageAssignments.get(optionId) || 'pending';
+            const inspected = this.breachTriageInspectedIds.has(optionId);
+            const state = card.querySelector('.l1-card__state');
+
+            card.classList.toggle('selected', this.breachTriageSelectedId === optionId);
+            card.classList.toggle('reviewed', inspected);
+            card.classList.toggle('triage-reset', decision === 'reset');
+            card.classList.toggle('triage-monitor', decision === 'monitor');
+
+            if (!state) return;
+            if (decision === 'reset') state.textContent = 'P1 RESET';
+            else if (decision === 'monitor') state.textContent = 'WATCHLIST';
+            else state.textContent = inspected ? 'REVIEWED' : 'READY';
+
+            if (option && this.isComplete) {
+                card.disabled = true;
+                if (option.expectedAction === 'reset') card.classList.add('triage-reset');
+                else if (option.expectedAction === 'monitor') card.classList.add('triage-monitor');
+            }
+        });
+
+        const selectedPanel = document.getElementById('bt-selected-panel');
+        if (selectedPanel) {
+            selectedPanel.innerHTML = this.renderBreachTriageSelectedPanel(selected, metrics);
+            this.bindBreachTriageActionButtons();
+        }
+
+        const submitBtn = document.getElementById('submit-selection');
+        if (submitBtn) submitBtn.disabled = this.isComplete || metrics.selectedReset.length !== cfg.resetBudget || metrics.inspectedCount < cfg.inspectGoal;
+
+        const clearBtn = document.getElementById('bt-clear-plan');
+        if (clearBtn) clearBtn.disabled = this.isComplete || (metrics.selectedReset.length === 0 && metrics.selectedMonitor.length === 0);
+
+        document.querySelectorAll('[data-triage-objective]').forEach((item, index) => {
+            item.classList.remove('on', 'done');
+            const icon = item.querySelector('.l1-objective__icon');
+            if (!icon) return;
+
+            if (this.isComplete) {
+                item.classList.add('done');
+                icon.textContent = '✓';
+                return;
+            }
+
+            if (index === 0) {
+                if (metrics.inspectedCount >= cfg.inspectGoal) {
+                    item.classList.add('done');
+                    icon.textContent = '✓';
+                } else {
+                    item.classList.add('on');
+                    icon.textContent = '▸';
+                }
+                return;
+            }
+
+            if (index === 1) {
+                if (metrics.selectedReset.length >= cfg.resetBudget) {
+                    item.classList.add('done');
+                    icon.textContent = '✓';
+                } else if (metrics.selectedReset.length > 0) {
+                    item.classList.add('on');
+                    icon.textContent = '▸';
+                } else {
+                    icon.textContent = '';
+                }
+                return;
+            }
+
+            if (metrics.correctMonitor.length >= cfg.monitorGoal) {
+                item.classList.add('done');
+                icon.textContent = '✓';
+            } else if (metrics.selectedMonitor.length > 0) {
+                item.classList.add('on');
+                icon.textContent = '▸';
+            } else {
+                icon.textContent = '';
+            }
+        });
+    }
+
     getSingleChoiceConfidenceScore() {
         const requiredEvidence = Array.isArray(this.puzzleData.requiredEvidenceIds) ? this.puzzleData.requiredEvidenceIds : [];
         if (!requiredEvidence.length) return Math.min(100, this.singleChoiceSelectedEntryIds.size * 35);
@@ -1110,14 +2078,65 @@ export class PasswordCrack {
             </div>`;
     }
 
-    renderSharedPasswordLabFrame({ levelLabel = '', title = '', status = 'ANALYST LAB ACTIVE', phases = [], content = '' }) {
-        const timeDisplay = this.gameScreen?.timer ? this.gameScreen.timer.getFormattedTime() : '00:00';
+    syncEmbeddedMissionHUD() {
+        if (this.interactionMode !== 'liveDefenseSimulation') return false;
+
+        const waves = this.getLiveDefenseWaves();
+        const totalWaves = Math.max(1, waves.length);
+        const visibleWave = Math.min(totalWaves, Math.max(1, this.liveWaveIndex + 1));
+        const timerEl = document.getElementById('l1-timer');
+        const timerLabel = document.getElementById('lab-shared-time-label');
+        const auxLabel = document.getElementById('lab-shared-aux-label');
+        const auxValue = document.getElementById('l1-ai-progress');
+
+        if (timerLabel) timerLabel.textContent = 'Timer';
+        if (timerEl) {
+            timerEl.textContent = `${Math.max(0, Math.floor(this.liveRemainingTime))}S`;
+            timerEl.classList.toggle('danger', this.liveRemainingTime <= 10);
+        }
+
+        if (auxLabel) auxLabel.textContent = 'Wave';
+        if (auxValue) {
+            auxValue.textContent = `${visibleWave}/${totalWaves}`;
+            auxValue.className = 'lab-shared-value lab-shared-value--safe';
+        }
+
+        return true;
+    }
+
+    renderSharedPasswordLabFrame({
+        levelLabel = '',
+        title = '',
+        status = 'ANALYST LAB ACTIVE',
+        phases = [],
+        content = '',
+        timeLabel = 'Time',
+        timeDisplayOverride = null,
+        auxiliaryLabel = null,
+        auxiliaryValue = null,
+        auxiliaryTone = null
+    }) {
+        const isNoTimerPressure = !!this.gameScreen?.currentMission?.puzzle?.noTimerPressure;
+        const fallbackTimeDisplay = isNoTimerPressure
+            ? 'FREE'
+            : this.gameScreen?.timer
+                ? this.gameScreen.timer.getFormattedTime()
+                : '00:00';
+        const timeDisplay = timeDisplayOverride ?? fallbackTimeDisplay;
         const scoreDisplay = String(this.gameScreen?.game?.score?.getScore?.() || 0).padStart(3, '0');
         const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
         const aiProgress = Math.floor(this.gameScreen?.aiOpponent?.getProgress?.() || 0);
+        const aiDisplay = auxiliaryValue ?? (isNoTimerPressure ? 'LAB' : `${aiProgress}%`);
+        const aiLabel = auxiliaryLabel ?? (isNoTimerPressure ? 'Mode' : 'AI');
+        const timeValueClass = (timeDisplayOverride !== null || isNoTimerPressure) ? 'lab-shared-value lab-shared-value--safe' : 'lab-shared-value';
+        const aiValueClass = auxiliaryTone
+            ? `lab-shared-value lab-shared-value--${auxiliaryTone}`
+            : isNoTimerPressure
+                ? 'lab-shared-value lab-shared-value--safe'
+                : 'lab-shared-value lab-shared-value--alert';
         const phaseMarkup = phases.map((phase, index) => `
             ${index ? '<div class="lab-shared-phase-sep">//</div>' : ''}
-            <div class="lab-shared-phase ${phase.active ? 'active' : ''}">
+            <div class="lab-shared-phase ${phase.active ? 'active' : ''} ${phase.done ? 'done' : ''}">
                 <span class="lab-shared-phase__dot"></span>
                 <strong>${String(index + 1).padStart(2, '0')}</strong>${phase.label}
             </div>`).join('');
@@ -1139,16 +2158,16 @@ export class PasswordCrack {
                     </div>
                     <div class="lab-shared-stats">
                         <div class="lab-shared-stat">
-                            <div class="lab-shared-label">Time</div>
-                            <div class="lab-shared-value" id="l1-timer">${timeDisplay}</div>
+                            <div class="lab-shared-label" id="lab-shared-time-label">${timeLabel}</div>
+                            <div class="${timeValueClass}" id="l1-timer">${timeDisplay}</div>
                         </div>
                         <div class="lab-shared-stat">
                             <div class="lab-shared-label">Score</div>
                             <div class="lab-shared-value lab-shared-value--score" id="l1-score">${scoreDisplay}</div>
                         </div>
                         <div class="lab-shared-stat">
-                            <div class="lab-shared-label">AI</div>
-                            <div class="lab-shared-value lab-shared-value--alert" id="l1-ai-progress">${aiProgress}%</div>
+                            <div class="lab-shared-label" id="lab-shared-aux-label">${aiLabel}</div>
+                            <div class="${aiValueClass}" id="l1-ai-progress">${aiDisplay}</div>
                         </div>
                         <div class="lab-shared-stat">
                             <div class="lab-shared-label">Hints</div>
@@ -1180,14 +2199,14 @@ export class PasswordCrack {
 
     renderSharedPasswordLabThemeStyles() {
         return `<style>
-            .lab-shared-shell,.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell,.password-puzzle.investigation-shell,.password-puzzle.inspection-shell{--lab-cyan:#17d8ff;--lab-red:#ff3f78;--lab-green:#00ff88;--lab-gold:#ffcc00;--lab-white:#edf7ff;--lab-text:rgba(232,244,255,.86);--lab-text-mid:rgba(168,216,232,.58);--lab-text-low:rgba(168,216,232,.3);--lab-border:rgba(23,216,255,.16);display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:radial-gradient(circle at top left,rgba(23,216,255,.12),transparent 24%),radial-gradient(circle at bottom right,rgba(255,63,120,.08),transparent 28%),linear-gradient(180deg,#030914 0%,#020610 100%) !important;color:var(--lab-text)!important;border:1px solid var(--lab-border)!important;box-shadow:0 24px 72px rgba(0,0,0,.34)!important;font-family:'Courier Prime','Share Tech Mono',monospace;overflow:hidden}
+            .lab-shared-shell,.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell,.password-puzzle.investigation-shell,.password-puzzle.inspection-shell{--lab-cyan:#17d8ff;--lab-red:#ff3f78;--lab-green:#00ff88;--lab-gold:#ffcc00;--lab-white:#edf7ff;--lab-text:rgba(232,244,255,.86);--lab-text-mid:rgba(168,216,232,.58);--lab-text-low:rgba(168,216,232,.3);--lab-border:rgba(23,216,255,.16);display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:radial-gradient(circle at top left,rgba(23,216,255,.12),transparent 24%),radial-gradient(circle at bottom right,rgba(255,63,120,.08),transparent 28%),linear-gradient(180deg,#030914 0%,#020610 100%) !important;color:var(--lab-text)!important;border:1px solid var(--lab-border)!important;box-shadow:0 24px 72px rgba(0,0,0,.34)!important;font-family:'Courier Prime','Share Tech Mono',monospace;overflow:auto}
             .password-puzzle.investigation-shell,.password-puzzle.inspection-shell{overflow:auto}
             .lab-shared-shell,.lab-shared-shell *,.lab-shared-shell *::before,.lab-shared-shell *::after,.l2-shell *,.l3-shell *,.srl-shell *,.ld-shell *,.th-shell *,.patch-shell *,.ea-shell *,.password-puzzle.investigation-shell *,.password-puzzle.inspection-shell *,.l2-shell *::before,.l3-shell *::before,.srl-shell *::before,.ld-shell *::before,.th-shell *::before,.patch-shell *::before,.ea-shell *::before,.password-puzzle.investigation-shell *::before,.password-puzzle.inspection-shell *::before,.l2-shell *::after,.l3-shell *::after,.srl-shell *::after,.ld-shell *::after,.th-shell *::after,.patch-shell *::after,.ea-shell *::after,.password-puzzle.investigation-shell *::after,.password-puzzle.inspection-shell *::after{box-sizing:border-box}
             @keyframes labSharedScan{0%{top:-4px}100%{top:100%}}
             @keyframes labSharedBlink{0%,100%{opacity:1}50%{opacity:0}}
             @keyframes labSharedPulse{0%,100%{opacity:1}50%{opacity:.45}}
             .lab-shared-shell{position:relative;cursor:crosshair}
-            .lab-shared-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.34}
+            .lab-shared-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.2}
             .lab-shared-crt{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
             .lab-shared-crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(1,3,12,.78) 100%)}
             .lab-shared-scanline{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(transparent,rgba(23,216,255,.12),transparent);z-index:2;animation:labSharedScan 5s linear infinite;pointer-events:none}
@@ -1216,7 +2235,9 @@ export class PasswordCrack {
             .lab-shared-phase strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;font-weight:400}
             .lab-shared-phase__dot{width:8px;height:8px;border-radius:50%;background:rgba(23,216,255,.14);flex-shrink:0}
             .lab-shared-phase.active{color:var(--lab-cyan)}
+            .lab-shared-phase.done{color:var(--lab-green)}
             .lab-shared-phase.active .lab-shared-phase__dot{background:var(--lab-cyan);box-shadow:0 0 14px rgba(23,216,255,.42)}
+            .lab-shared-phase.done .lab-shared-phase__dot{background:var(--lab-green);box-shadow:0 0 14px rgba(0,255,136,.3)}
             .lab-shared-phase-sep{color:rgba(23,216,255,.3);font-size:16px}
             .lab-shared-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:3px;color:var(--lab-cyan);text-shadow:0 0 12px rgba(23,216,255,.28)}
             .lab-shared-status__dot{width:8px;height:8px;background:var(--lab-green);box-shadow:0 0 12px rgba(0,255,136,.75);animation:labSharedBlink 1s step-end infinite}
@@ -1224,6 +2245,7 @@ export class PasswordCrack {
             .lab-shared-content{display:flex;flex:1;min-height:0;overflow:hidden}
             .lab-shared-content > *{flex:1;min-height:0}
             .lab-shared-content .l2-shell,.lab-shared-content .l3-shell,.lab-shared-content .srl-shell,.lab-shared-content .ld-shell,.lab-shared-content .th-shell,.lab-shared-content .patch-shell,.lab-shared-content .ea-shell,.lab-shared-content .password-puzzle.investigation-shell,.lab-shared-content .password-puzzle.inspection-shell{background:transparent !important;border:0 !important;box-shadow:none !important}
+            .lab-shared-content .srl-shell{overflow:visible !important}
             .lab-shared-content .l2-header,.lab-shared-content .l2-phases,.lab-shared-content .l2-hint-strip,.lab-shared-content .l3-header,.lab-shared-content .l3-phases,.lab-shared-content .l3-hint-strip,.lab-shared-content .srl-header,.lab-shared-content .srl-phases,.lab-shared-content .ld-header,.lab-shared-content .ld-phases,.lab-shared-content .ld-hint-strip,.lab-shared-content .th-header,.lab-shared-content .th-hint-strip,.lab-shared-content .patch-header,.lab-shared-content .patch-phases,.lab-shared-content .patch-hint-strip,.lab-shared-content .ea-header,.lab-shared-content .ea-phases,.lab-shared-content .ea-hint-strip,.lab-shared-content .investigation-masthead,.lab-shared-content .investigation-progress-rail,.lab-shared-content .investigation-hint-strip,.lab-shared-content .inspection-masthead,.lab-shared-content .inspection-progress-rail,.lab-shared-content .inspection-hint-strip{display:none !important}
             .l2-header,.l3-header,.srl-header,.ld-header,.th-header,.patch-header,.ea-header,.investigation-masthead,.inspection-masthead{background:rgba(1,8,24,.94)!important;border-bottom:1px solid var(--lab-border)!important}
             .l2-brand,.l3-brand,.srl-brand,.ld-brand,.th-brand,.patch-brand,.ea-brand,.investigation-masthead__brand,.inspection-masthead__brand{color:var(--lab-cyan)!important;font-family:'Orbitron',sans-serif!important;font-weight:800!important;letter-spacing:4px!important}
@@ -1258,7 +2280,7 @@ export class PasswordCrack {
             @keyframes l1Blink{0%,100%{opacity:1}50%{opacity:0}}
             @keyframes l1Pulse{0%,100%{opacity:1}50%{opacity:.45}}
             @keyframes l1Spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-            .l1-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.32}
+            .l1-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.2}
             .l1-crt{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
             .l1-crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(1,3,12,.78) 100%)}
             .l1-scanline{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(transparent,rgba(23,216,255,.12),transparent);z-index:2;animation:l1ScanDown 5s linear infinite;pointer-events:none}
@@ -1525,10 +2547,11 @@ export class PasswordCrack {
         this.visualizerElement = container;
         const config = this.getSaltReuseLabConfig();
         const state = this.saltReuseState || {};
+        const isFinished = !!state.completion;
         const sharedPhases = [
-            { label: 'HASH FORGE', active: state.phase === 1 },
-            { label: 'ATTACK SIM', active: state.phase === 2 },
-            { label: 'CLASSIFIER', active: state.phase === 3 }
+            { label: 'HASH FORGE', active: state.phase === 1 && !isFinished, done: state.phase > 1 || isFinished },
+            { label: 'ATTACK SIM', active: state.phase === 2 && !isFinished, done: state.phase > 2 || isFinished },
+            { label: 'CLASSIFIER', active: state.phase === 3 && !isFinished, done: isFinished }
         ];
 
         if (state.completion) {
@@ -1598,6 +2621,30 @@ export class PasswordCrack {
         this.gameScreen.syncEmbeddedMissionHUD();
     }
 
+    renderSaltReusePhaseBrief({ phaseLabel = '', title = '', copy = '', chips = [] }) {
+        const chipMarkup = chips.map(chip => `
+            <div class="srl-phase-chip ${chip.state ? `is-${chip.state}` : ''}">
+                ${chip.label}
+            </div>`).join('');
+
+        return `
+            <div class="srl-phase-brief">
+                ${phaseLabel ? `<div class="srl-phase-brief__eyebrow">${phaseLabel}</div>` : ''}
+                ${title ? `<div class="srl-phase-brief__title">${title}</div>` : ''}
+                ${copy ? `<div class="srl-phase-brief__copy">${copy}</div>` : ''}
+                ${chipMarkup ? `<div class="srl-phase-brief__chips">${chipMarkup}</div>` : ''}
+            </div>`;
+    }
+
+    renderSaltReusePanelHead({ eyebrow = '', title = '', copy = '' }) {
+        return `
+            <div class="srl-panel-head">
+                ${eyebrow ? `<div class="srl-panel-eyebrow">${eyebrow}</div>` : ''}
+                ${title ? `<div class="srl-panel-title">${title}</div>` : ''}
+                ${copy ? `<div class="srl-panel-copy">${copy}</div>` : ''}
+            </div>`;
+    }
+
     renderSaltReusePhaseOne(config, state) {
         const quickPicks = Array.isArray(config.quickPicks) ? config.quickPicks : [];
         const salts = Array.isArray(config.fixedSalts) && config.fixedSalts.length >= 2
@@ -1637,13 +2684,33 @@ export class PasswordCrack {
                     <div class="srl-check-card__desc">${answer.description}</div>
                 </div>
             </label>`).join('');
+        const phaseOneGateMessage = state.phaseOneValidated
+            ? 'Phase 2 unlocked. Continue to the attack simulator.'
+            : state.insightVisible
+                ? 'To unlock phase 2, choose the correct knowledge-check answer: salt breaks shared crack paths because identical passwords store as different hashes per user.'
+                : 'To unlock phase 2, first forge a salted hash so the knowledge check appears.';
+        const phaseBrief = this.renderSaltReusePhaseBrief({
+            phaseLabel: 'Phase 1 · Hash Forge Lab',
+            title: 'Prove that identical passwords become different stored records.',
+            copy: 'Generate two salted hashes side by side, compare how much the outputs diverge, then clear the knowledge check to unlock the attack simulator.',
+            chips: [
+                { label: state.hashA && state.hashB ? 'Hash forged' : 'Forge a salted hash', state: state.hashA && state.hashB ? 'success' : 'active' },
+                { label: state.insightVisible ? 'Comparison insight unlocked' : 'Reveal the comparison insight', state: state.insightVisible ? 'success' : '' },
+                { label: state.phaseOneValidated ? 'Knowledge check passed' : 'Pass the knowledge check', state: state.phaseOneValidated ? 'success' : '' }
+            ]
+        });
 
         return `
             <div class="srl-hint-strip">HINT: Type any password below and watch what salt does to the stored output.</div>
-            <div class="srl-phase-screen">
+            <div class="srl-phase-screen srl-phase-screen--lab">
+                ${phaseBrief}
                 <div class="srl-lab">
                     <div class="srl-panel srl-panel-left">
-                        <div class="srl-section-kicker">Password Input</div>
+                        ${this.renderSaltReusePanelHead({
+                            eyebrow: 'Input Console',
+                            title: 'Choose a password to salt',
+                            copy: 'Use a quick pick or type your own credential. The goal is to prove that the password stays the same while the stored hash does not.'
+                        })}
                         <div class="srl-brief-box">
                             Salt is <strong>random data added to a password before hashing</strong>.
                             Two users with identical passwords get completely different stored values.
@@ -1658,33 +2725,39 @@ export class PasswordCrack {
                         <button class="srl-primary-btn" id="srl-forge-btn" type="button">FORGE HASH WITH SALT</button>
                     </div>
                     <div class="srl-panel">
-                        <div class="srl-section-kicker">Dual Reactor Output</div>
+                        ${this.renderSaltReusePanelHead({
+                            eyebrow: 'Comparison Output',
+                            title: 'Alice and Bob store different hashes',
+                            copy: 'The password stays identical, but each user-specific salt forces a different stored result and breaks the shared crack path.'
+                        })}
                         <div class="srl-reactor">
-                            <div class="srl-reactor-cell ${state.hashA ? 'firing' : ''}">
-                                <div class="srl-reactor-top">
-                                    <div class="srl-reactor-id">REACTOR A - USER ALICE</div>
-                                    <div class="srl-salt-pill">SALT: ${salts[0]}</div>
+                            <div class="srl-reactor-grid">
+                                <div class="srl-reactor-cell ${state.hashA ? 'firing' : ''}">
+                                    <div class="srl-reactor-top">
+                                        <div class="srl-reactor-id">REACTOR A - USER ALICE</div>
+                                        <div class="srl-salt-pill">SALT: ${salts[0]}</div>
+                                    </div>
+                                    <div class="srl-formula">
+                                        <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
+                                        <span>+</span>
+                                        <span class="srl-token salt">${salts[0]}</span>
+                                        <span>&rarr;</span>
+                                    </div>
+                                    <div class="srl-hash-output ${state.hashA ? 'has-value' : ''}">${hashA}</div>
                                 </div>
-                                <div class="srl-formula">
-                                    <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
-                                    <span>+</span>
-                                    <span class="srl-token salt">${salts[0]}</span>
-                                    <span>&rarr;</span>
+                                <div class="srl-reactor-cell ${state.hashB ? 'firing' : ''}">
+                                    <div class="srl-reactor-top">
+                                        <div class="srl-reactor-id">REACTOR B - USER BOB</div>
+                                        <div class="srl-salt-pill">SALT: ${salts[1]}</div>
+                                    </div>
+                                    <div class="srl-formula">
+                                        <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
+                                        <span>+</span>
+                                        <span class="srl-token salt">${salts[1]}</span>
+                                        <span>&rarr;</span>
+                                    </div>
+                                    <div class="srl-hash-output ${state.hashB ? 'has-value' : ''}">${hashB}</div>
                                 </div>
-                                <div class="srl-hash-output ${state.hashA ? 'has-value' : ''}">${hashA}</div>
-                            </div>
-                            <div class="srl-reactor-cell ${state.hashB ? 'firing' : ''}">
-                                <div class="srl-reactor-top">
-                                    <div class="srl-reactor-id">REACTOR B - USER BOB</div>
-                                    <div class="srl-salt-pill">SALT: ${salts[1]}</div>
-                                </div>
-                                <div class="srl-formula">
-                                    <span class="srl-token pw">${password.length > 12 ? `${password.slice(0, 12)}...` : password}</span>
-                                    <span>+</span>
-                                    <span class="srl-token salt">${salts[1]}</span>
-                                    <span>&rarr;</span>
-                                </div>
-                                <div class="srl-hash-output ${state.hashB ? 'has-value' : ''}">${hashB}</div>
                             </div>
                         </div>
                         <div class="srl-divergence">
@@ -1708,6 +2781,7 @@ export class PasswordCrack {
                             </div>
                         </div>
                         <div class="srl-nav-row solo">
+                            <div class="srl-gate-note ${state.phaseOneValidated ? 'ready' : ''}">${phaseOneGateMessage}</div>
                             <button class="srl-nav-btn" id="srl-phase1-next" type="button" ${state.phaseOneValidated ? '' : 'disabled'}>CONTINUE TO ATTACK SIMULATOR</button>
                         </div>
                     </div>
@@ -1747,14 +2821,28 @@ export class PasswordCrack {
                     <div class="srl-check-card__desc">${answer.description}</div>
                 </div>
             </label>`).join('');
+        const phaseBrief = this.renderSaltReusePhaseBrief({
+            phaseLabel: 'Phase 2 · Attack Simulator',
+            title: 'Compare the blast radius of one crack with and without salt.',
+            copy: 'Run the unsalted scenario first, then the salted comparison. When you can explain the attacker workflow difference, the classifier unlocks.',
+            chips: [
+                { label: state.attackBadDone ? 'Unsalted chain reaction simulated' : 'Run scenario A first', state: state.attackBadDone ? 'success' : 'active' },
+                { label: state.attackGoodDone ? 'Salted comparison simulated' : 'Run scenario B second', state: state.attackGoodDone ? 'success' : '' },
+                { label: state.phaseTwoValidated ? 'Workflow check passed' : 'Answer the workflow check', state: state.phaseTwoValidated ? 'success' : '' }
+            ]
+        });
 
         return `
             <div class="srl-hint-strip">HINT: Watch what happens when an attacker cracks one hash, with and without salt.</div>
-            <div class="srl-phase-screen">
+            <div class="srl-phase-screen srl-phase-screen--attack">
+                ${phaseBrief}
                 <div class="srl-attack-grid">
                     <div class="srl-panel srl-attack-panel danger">
-                        <div class="srl-attack-title bad">SCENARIO A - NO SALT</div>
-                        <div class="srl-mini-copy">Database stolen. All 5 users had "password123". No salt was used.</div>
+                        ${this.renderSaltReusePanelHead({
+                            eyebrow: 'Scenario A · No Salt',
+                            title: 'One crack fans out across every matching user',
+                            copy: 'Database stolen. All five users chose "password123". With no salt, every record shares the same stored hash.'
+                        })}
                         <div class="srl-db-table">
                             <div class="srl-db-row header"><div>USER</div><div>STORED HASH</div></div>
                             ${users.map(user => `<div class="srl-db-row"><div class="user">${user}</div><div class="hash">${unsaltedHash}</div></div>`).join('')}
@@ -1769,8 +2857,11 @@ export class PasswordCrack {
                         </div>
                     </div>
                     <div class="srl-panel srl-attack-panel safe">
-                        <div class="srl-attack-title good">SCENARIO B - WITH SALT</div>
-                        <div class="srl-mini-copy">Same passwords. Salt applied per-user. Database stolen again.</div>
+                        ${this.renderSaltReusePanelHead({
+                            eyebrow: 'Scenario B · With Salt',
+                            title: 'Each record becomes its own cracking problem',
+                            copy: 'Same passwords. New breach. Per-user salt produces unique hashes, so cracking Alice does not automatically unlock Bob.'
+                        })}
                         <div class="srl-db-table">
                             <div class="srl-db-row header"><div>USER</div><div>STORED HASH (salted)</div></div>
                             ${users.map((user, idx) => `<div class="srl-db-row"><div class="user">${user}</div><div class="hash">${saltedHashes[idx]}</div></div>`).join('')}
@@ -1804,12 +2895,48 @@ export class PasswordCrack {
         const session = state.classifierSession || { weak: [], strong: [], all: [] };
         const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
         const selectedCount = state.selectedPasswords.size;
+        const reviewedCount = state.revealedWeak.size + state.falsePositives.size;
+        const candidateCount = session.all.length;
         const riskLevel = this.riskValue >= 60 ? 'high' : (this.riskValue >= 30 ? 'medium' : '');
         const feedbackClass = state.feedback?.type === 'success' ? 'success' : (state.feedback?.type === 'error' ? 'error' : '');
+        const feedbackTone = feedbackClass || 'info';
+        const feedbackMessage = state.feedback
+            ? state.feedback.message
+            : 'Select the shared, easy-to-guess passwords only. Leave the strong unique passwords unselected.';
+        const phaseBrief = this.renderSaltReusePhaseBrief({
+            phaseLabel: 'Phase 3 · Threat Classifier',
+            title: 'Flag the passwords that create the biggest unsalted chain-failure risk.',
+            copy: 'Choose only the common, predictable passwords that many users are likely to share. Leave long, unique credentials unflagged.',
+            chips: [
+                { label: `${candidateCount} candidates in review`, state: 'active' },
+                { label: `${selectedCount} currently flagged`, state: selectedCount ? 'success' : '' },
+                { label: attemptsLeft ? `${attemptsLeft} attempts remaining` : 'Final attempt used', state: attemptsLeft ? '' : 'warning' }
+            ]
+        });
 
         return `
             <div class="srl-hint-strip">TASK: Select ALL passwords that create the highest chain-failure risk if no salt is used. Avoid selecting strong or unique passwords.</div>
-            <div class="srl-phase-screen">
+            <div class="srl-phase-screen srl-phase-screen--classifier">
+                ${phaseBrief}
+                <div class="srl-question-card srl-question-card--full">
+                    <div class="srl-section-kicker">Question</div>
+                    <div class="srl-question-title">Which passwords create the highest chain-failure risk?</div>
+                    <div class="srl-question-copy">Choose the common, broadly reused, easy-to-guess passwords only. Strong unique passwords should stay unflagged.</div>
+                    <div class="srl-question-stats">
+                        <div class="srl-question-stat">
+                            <span class="srl-question-stat__label">Candidates</span>
+                            <strong>${candidateCount}</strong>
+                        </div>
+                        <div class="srl-question-stat">
+                            <span class="srl-question-stat__label">Flagged</span>
+                            <strong>${selectedCount}</strong>
+                        </div>
+                        <div class="srl-question-stat">
+                            <span class="srl-question-stat__label">Reviewed</span>
+                            <strong>${reviewedCount}</strong>
+                        </div>
+                    </div>
+                </div>
                 <div class="srl-classifier-grid">
                     <div class="srl-panel srl-classifier-left">
                         <div class="srl-mission-box">
@@ -1836,24 +2963,44 @@ export class PasswordCrack {
                             <div class="srl-section-kicker">Selection Count</div>
                             <div class="srl-selection-total">${selectedCount}<span> FLAGGED</span></div>
                         </div>
-                        <div class="srl-feedback ${feedbackClass ? `visible ${feedbackClass}` : ''}">
-                            ${state.feedback ? state.feedback.message : 'Select the highest chain-risk passwords, then submit your classification.'}
+                        <div class="srl-feedback srl-feedback--sidebar visible ${feedbackTone}">
+                            ${feedbackMessage}
                         </div>
                     </div>
-                    <div class="srl-panel">
-                        <div class="srl-section-kicker">Password Intelligence - Flag High Chain-Risk Entries</div>
-                        <div class="srl-password-grid">
-                            ${session.all.map(pw => {
-                                const selected = state.selectedPasswords.has(pw);
-                                const correct = state.revealedWeak.has(pw);
-                                const falsePositive = state.falsePositives.has(pw);
-                                const cls = selected ? 'selected' : correct ? 'correct' : falsePositive ? 'false' : '';
-                                return `<button class="srl-password-card ${cls}" type="button" data-srl-password="${pw}" ${this.isComplete ? 'disabled' : ''}>${pw}</button>`;
-                            }).join('')}
+                    <div class="srl-panel srl-panel--classifier">
+                        <div class="srl-password-grid-wrap">
+                            <div class="srl-password-grid-head">
+                                <div>
+                                    <div class="srl-section-kicker">Answer Options</div>
+                                    <div class="srl-panel-copy">Flag only the passwords that are both weak and likely to be reused widely.</div>
+                                </div>
+                                <div class="srl-card-legend">
+                                    <div class="srl-card-legend__item"><span class="srl-card-swatch selected"></span>Flagged</div>
+                                    <div class="srl-card-legend__item"><span class="srl-card-swatch correct"></span>Confirmed weak</div>
+                                    <div class="srl-card-legend__item"><span class="srl-card-swatch false"></span>False positive</div>
+                                </div>
+                            </div>
+                            <div class="srl-password-grid">
+                                ${session.all.map(pw => {
+                                    const selected = state.selectedPasswords.has(pw);
+                                    const correct = state.revealedWeak.has(pw);
+                                    const falsePositive = state.falsePositives.has(pw);
+                                    const cls = selected ? 'selected' : correct ? 'correct' : falsePositive ? 'false' : '';
+                                    const statusLabel = selected ? 'FLAGGED' : correct ? 'CONFIRMED WEAK' : falsePositive ? 'SAFE / STRONG' : 'READY';
+                                    return `
+                                        <button class="srl-password-card ${cls}" type="button" data-srl-password="${pw}" ${this.isComplete ? 'disabled' : ''}>
+                                            <span class="srl-password-card__state">${statusLabel}</span>
+                                            <span class="srl-password-card__value">${pw}</span>
+                                        </button>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        <div class="srl-feedback srl-feedback-inline visible ${feedbackTone}">
+                            ${feedbackMessage}
                         </div>
                         <div class="srl-submit-row">
+                            <div class="srl-submit-copy">${selectedCount ? `${selectedCount} password${selectedCount === 1 ? '' : 's'} flagged as high risk` : `Choose the weak, reusable passwords to enable submit`}</div>
                             <button class="srl-primary-btn" id="srl-submit-classifier" type="button" ${selectedCount ? '' : 'disabled'}>SUBMIT CLASSIFICATION</button>
-                            <div class="srl-submit-copy">${selectedCount ? `${selectedCount} password${selectedCount === 1 ? '' : 's'} flagged as high risk` : `Select at least ${classifier.minSelection || 1} to submit`}</div>
                         </div>
                     </div>
                 </div>
@@ -1877,7 +3024,7 @@ export class PasswordCrack {
             btn.addEventListener('click', () => {
                 state.forgeInput = btn.dataset.srlQuick || '';
                 this.audio.playButtonClick();
-                this.renderSaltReuseLab(this.visualizerElement);
+                this.rerenderSaltReuseLab({ anchorSelector: '.srl-panel-left' });
             });
         });
         document.getElementById('srl-forge-btn')?.addEventListener('click', () => this.handleSaltReuseForge());
@@ -1918,11 +3065,12 @@ export class PasswordCrack {
         state.divergence = this.calculateHashDivergence(state.hashA, state.hashB);
         state.insightVisible = true;
         this.audio.playButtonClick();
-        this.renderSaltReuseLab(this.visualizerElement);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-phase-screen--lab' });
     }
 
     changeSaltReusePhase(phase) {
         if (this.isComplete || !this.saltReuseState) return;
+        this.clearSaltReuseCompletionTimer();
         this.saltReuseState.phase = phase;
         this.audio.playButtonClick();
         this.renderSaltReuseLab(this.visualizerElement);
@@ -1936,7 +3084,7 @@ export class PasswordCrack {
             ? 'Correct. Salt does not stop guessing, but it forces attackers to solve each user record separately.'
             : 'Not quite. Salt isolates identical passwords into different stored hashes; it does not magically strengthen weak passwords.';
         this.audio.playButtonClick();
-        this.renderSaltReuseLab(this.visualizerElement);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-knowledge-check' });
     }
 
     runSaltReuseAttackScenario(type) {
@@ -1949,7 +3097,7 @@ export class PasswordCrack {
             this.saltReuseState.attackBadDone = true;
             this.saltReuseState.attackBadRows = users.map(user => ({ user, note: 'password123 exposed' }));
             this.saltReuseState.attackBadMessage = 'Hash 5f4dcc3b... matched "password123" in 0.3s via rainbow table. One crack instantly exposed every matching user.';
-            this.renderSaltReuseLab(this.visualizerElement);
+            this.rerenderSaltReuseLab({ anchorSelector: '.srl-phase-screen--attack' });
             return;
         }
 
@@ -1961,7 +3109,7 @@ export class PasswordCrack {
             note: idx === 0 ? 'cracked after 4.2h' : 'still computing independently'
         }));
         this.saltReuseState.attackGoodMessage = 'Alice cracked does not mean Bob cracked. Per-user salt forces the attacker to solve each record as a separate problem.';
-        this.renderSaltReuseLab(this.visualizerElement);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-phase-screen--attack' });
     }
 
     answerSaltReusePhaseTwo(answerId) {
@@ -1972,7 +3120,7 @@ export class PasswordCrack {
             ? 'Correct. Salt changes one stolen database from a shared crack into many separate cracking problems.'
             : 'Look again at the simulator. Salt does not prevent theft, and cracking one salted record does not automatically unlock the rest.';
         this.audio.playButtonClick();
-        this.renderSaltReuseLab(this.visualizerElement);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-check-panel' });
     }
 
     toggleSaltReusePassword(password) {
@@ -1982,7 +3130,7 @@ export class PasswordCrack {
         if (state.selectedPasswords.has(password)) state.selectedPasswords.delete(password);
         else state.selectedPasswords.add(password);
         this.audio.playButtonClick();
-        this.renderSaltReuseLab(this.visualizerElement);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-password-grid-wrap' });
     }
 
     submitSaltReuseClassification() {
@@ -2013,29 +3161,30 @@ export class PasswordCrack {
                 message: `${falsePositives.length} strong password${falsePositives.length === 1 ? '' : 's'} incorrectly flagged. Strong, unique passwords do not create a chain failure across many users.`
             };
             this.audio.playFailure();
-            this.renderSaltReuseLab(this.visualizerElement);
+            this.rerenderSaltReuseLab({ anchorSelector: '.srl-panel--classifier' });
             this.gameScreen.ui.showNotification('Strong passwords were incorrectly flagged.', 'error');
             return;
         }
 
         if (missed.length) {
             this.riskValue = Math.min(100, this.riskValue + (classifier.missedWeakRisk || 20));
+            if (this.attempts >= this.maxAttempts || this.hasRiskBreached()) {
+                state.classifierSession.weak.forEach(pw => state.revealedWeak.add(pw));
+                state.feedback = {
+                    type: 'error',
+                    message: 'Analysis exhausted. The correct high chain-risk passwords are now revealed. Review the confirmed answers before the case closes.'
+                };
+                this.audio.playFailure();
+                this.rerenderSaltReuseLab({ anchorSelector: '.srl-panel--classifier' });
+                this.queueSaltReuseCompletion(false, 2200);
+                return;
+            }
             state.feedback = {
                 type: 'error',
                 message: `${missed.length} high-risk password${missed.length === 1 ? '' : 's'} missed. Common and predictable values create the biggest blast radius when salt is absent.`
             };
             this.audio.playFailure();
-            this.renderSaltReuseLab(this.visualizerElement);
-            if (this.attempts >= this.maxAttempts || this.hasRiskBreached()) {
-                state.classifierSession.weak.forEach(pw => state.revealedWeak.add(pw));
-                state.feedback = {
-                    type: 'error',
-                    message: 'Analysis exhausted. The correct high chain-risk passwords are now revealed.'
-                };
-                this.renderSaltReuseLab(this.visualizerElement);
-                this.startSaltReuseCompletion(false);
-                return;
-            }
+            this.rerenderSaltReuseLab({ anchorSelector: '.srl-panel--classifier' });
             this.gameScreen.ui.showNotification('Incomplete analysis. Reassess the common passwords.', 'error');
             return;
         }
@@ -2046,12 +3195,13 @@ export class PasswordCrack {
             message: `All ${state.classifierSession.weak.length} high chain-risk passwords identified with zero false positives. Salt isolates each account, but weak passwords still remain easy attacker targets.`
         };
         this.audio.playSuccess();
-        this.renderSaltReuseLab(this.visualizerElement);
-        this.startSaltReuseCompletion(true);
+        this.rerenderSaltReuseLab({ anchorSelector: '.srl-panel--classifier' });
+        this.queueSaltReuseCompletion(true, 2000);
     }
 
     startSaltReuseCompletion(success) {
         if (this.isComplete || !this.saltReuseState) return;
+        this.clearSaltReuseCompletionTimer();
         this.isComplete = true;
         if (success) {
             this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
@@ -2067,7 +3217,11 @@ export class PasswordCrack {
 
     renderSaltReuseLabStyles() {
         return `<style>
-            .srl-shell{background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+            .lab-shared-shell{height:auto!important;min-height:100%!important;overflow:visible!important}
+            .lab-shared-body,
+            .lab-shared-content{flex:0 0 auto!important;height:auto!important;min-height:0!important;overflow:visible!important}
+            .lab-shared-content > .srl-shell{flex:0 0 auto;min-height:auto!important;width:100%}
+            .srl-shell{display:flex;flex-direction:column;width:100%;height:auto!important;min-height:100%!important;overflow:visible!important;background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
             .srl-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
             .srl-brand,.srl-level,.srl-status,.srl-phase,.srl-label,.srl-section-kicker,.srl-nav-btn,.srl-sim-btn,.srl-quick-btn,.srl-submit-copy{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
             .srl-brand{color:#f5a623;font-weight:700}.srl-level{color:rgba(245,166,35,.72);font-size:.85rem}.srl-status{color:#00e87a;font-size:.82rem}
@@ -2075,14 +3229,37 @@ export class PasswordCrack {
             .srl-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.srl-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
             .srl-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}.srl-phase.done{color:rgba(0,232,122,.75);border-bottom-color:rgba(0,232,122,.35)}
             .srl-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.72);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
-            .srl-lab,.srl-attack-grid,.srl-classifier-grid{display:grid;grid-template-columns:1fr 1fr;min-height:520px}.srl-classifier-grid{grid-template-columns:320px 1fr}
-            .srl-panel{padding:28px;background:rgba(0,0,0,.18)}.srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:1px solid rgba(245,166,35,.12)}
-            .srl-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-reactor-cell,.srl-divergence,.srl-db-table,.srl-result,.srl-feedback,.srl-completion-card{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
+            .srl-phase-screen{display:block;min-height:0;overflow:visible;padding:22px 24px 24px}
+            .srl-phase-screen--lab,.srl-phase-screen--attack,.srl-phase-screen--classifier{overflow:visible}
+            .srl-phase-brief{display:grid;gap:12px;padding:20px 22px;margin-bottom:18px;background:linear-gradient(135deg,rgba(245,166,35,.12),rgba(0,212,255,.04));border:1px solid rgba(245,166,35,.16);box-shadow:0 20px 40px rgba(0,0,0,.18)}
+            .srl-phase-brief__eyebrow,.srl-panel-eyebrow{font-family:Consolas,"Courier New",monospace;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,166,35,.64)}
+            .srl-phase-brief__title{font-size:clamp(1.35rem,2.2vw,1.95rem);line-height:1.08;color:#eef2ff;font-weight:700;max-width:760px}
+            .srl-phase-brief__copy{max-width:900px;color:rgba(196,208,236,.76);line-height:1.7;font-size:.94rem}
+            .srl-phase-brief__chips{display:flex;flex-wrap:wrap;gap:10px}
+            .srl-phase-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);background:rgba(7,14,24,.86);color:rgba(196,208,236,.7);font-family:Consolas,"Courier New",monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase}
+            .srl-phase-chip::before{content:'';width:8px;height:8px;border-radius:50%;background:rgba(180,190,230,.24);box-shadow:0 0 0 1px rgba(255,255,255,.04) inset}
+            .srl-phase-chip.is-active{border-color:rgba(245,166,35,.28);color:#ffcb6b}
+            .srl-phase-chip.is-active::before{background:#f5a623;box-shadow:0 0 12px rgba(245,166,35,.34)}
+            .srl-phase-chip.is-success{border-color:rgba(0,232,122,.24);color:rgba(180,255,210,.92)}
+            .srl-phase-chip.is-success::before{background:#00e87a;box-shadow:0 0 12px rgba(0,232,122,.34)}
+            .srl-phase-chip.is-warning{border-color:rgba(255,64,96,.22);color:rgba(255,170,180,.92)}
+            .srl-phase-chip.is-warning::before{background:#ff4060;box-shadow:0 0 12px rgba(255,64,96,.3)}
+            .srl-lab,.srl-attack-grid,.srl-classifier-grid{display:grid;gap:18px;align-items:start;min-height:0}
+            .srl-lab,.srl-attack-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+            .srl-classifier-grid{grid-template-columns:minmax(260px,320px) minmax(0,1fr);overflow:visible}
+            .srl-panel{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0;padding:22px;background:#07111b;border:1px solid rgba(245,166,35,.12)}
+            .srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:1px solid rgba(245,166,35,.12)}
+            .srl-panel-head{display:grid;gap:6px;padding-bottom:14px;border-bottom:1px solid rgba(245,166,35,.08)}
+            .srl-panel-title{font-size:1.12rem;line-height:1.25;color:#eef2ff;font-weight:700}
+            .srl-panel-copy{color:rgba(196,208,236,.68);font-size:.86rem;line-height:1.65}
+            .srl-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-reactor-cell,.srl-divergence,.srl-db-table,.srl-result,.srl-feedback,.srl-completion-card{background:rgba(7,14,24,.96);border:1px solid rgba(245,166,35,.12)}
             .srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-divergence,.srl-result,.srl-feedback,.srl-completion-card{padding:16px;line-height:1.7}.srl-brief-box strong,.srl-mission-box strong,.srl-insight strong{color:#f5a623}
             .srl-label{display:block;color:rgba(245,166,35,.55);font-size:.74rem;margin:18px 0 8px}.srl-input{width:100%;padding:12px 14px;background:rgba(0,0,0,.48);border:1px solid rgba(245,166,35,.28);border-left:3px solid #f5a623;color:#ffcb6b;outline:none}
-            .srl-quick-picks{display:flex;gap:8px;flex-wrap:wrap}.srl-quick-btn,.srl-nav-btn,.srl-sim-btn{padding:7px 12px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.72);cursor:pointer}
-            .srl-quick-btn:hover,.srl-nav-btn:hover,.srl-sim-btn:hover{border-color:rgba(245,166,35,.45);color:#ffcb6b}.srl-primary-btn{padding:13px 18px;margin-top:20px;background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border:1px solid rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em;text-transform:uppercase;cursor:pointer}
-            .srl-primary-btn:disabled,.srl-nav-btn:disabled,.srl-sim-btn:disabled{opacity:.45;cursor:not-allowed}.srl-reactor{display:flex;flex-direction:column;gap:16px}.srl-reactor-cell{padding:16px}.srl-reactor-cell.firing{border-color:rgba(245,166,35,.44);box-shadow:0 0 24px rgba(245,166,35,.08)}
+            .srl-quick-picks{display:flex;gap:8px;flex-wrap:wrap}
+            .srl-quick-btn,.srl-nav-btn,.srl-sim-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;padding:7px 12px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.72);cursor:pointer;position:relative;z-index:2;white-space:nowrap;pointer-events:auto;touch-action:manipulation}
+            .srl-quick-btn:hover,.srl-nav-btn:hover,.srl-sim-btn:hover{border-color:rgba(245,166,35,.45);color:#ffcb6b}
+            .srl-primary-btn{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;width:auto;min-width:260px;max-width:100%;min-height:48px;padding:13px 18px;margin-top:20px;margin-right:auto;background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border:1px solid rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em;text-transform:uppercase;cursor:pointer;position:relative;z-index:3;white-space:normal;text-align:center;pointer-events:auto;touch-action:manipulation}
+            .srl-primary-btn:disabled,.srl-nav-btn:disabled,.srl-sim-btn:disabled{opacity:.45;cursor:not-allowed}.srl-reactor{display:grid;gap:16px}.srl-reactor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.srl-reactor-cell{padding:16px}.srl-reactor-cell.firing{border-color:rgba(245,166,35,.44);box-shadow:0 0 24px rgba(245,166,35,.08)}
             .srl-reactor-top,.srl-div-stats,.srl-submit-row,.srl-nav-row,.srl-attempt-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.srl-reactor-id{font-family:Consolas,"Courier New",monospace;color:rgba(245,166,35,.48);font-size:.74rem;letter-spacing:.16em}
             .srl-salt-pill{padding:4px 8px;border:1px solid rgba(245,166,35,.22);background:rgba(245,166,35,.08);color:#ffcb6b}.srl-formula{display:flex;align-items:center;gap:8px;margin:10px 0;color:rgba(180,190,230,.58)}
             .srl-token{padding:4px 8px;border:1px solid}.srl-token.pw{border-color:rgba(0,212,255,.35);color:#00d4ff;background:rgba(0,212,255,.08)}.srl-token.salt{border-color:rgba(245,166,35,.35);color:#f5a623;background:rgba(245,166,35,.08)}
@@ -2090,31 +3267,79 @@ export class PasswordCrack {
             .srl-div-track{display:flex;gap:2px;margin:10px 0}.srl-div-seg{height:8px;flex:1;background:rgba(0,212,255,.12)}.srl-div-seg.match{background:rgba(255,64,96,.48)}.srl-div-seg.diff{background:rgba(0,232,122,.54)}
             .srl-div-stats{font-family:Consolas,"Courier New",monospace;color:rgba(180,190,230,.62);font-size:.82rem}.srl-insight{display:none;margin-top:16px;padding:16px;background:rgba(0,232,122,.05);border:1px solid rgba(0,232,122,.22);line-height:1.7;color:rgba(220,245,230,.86)}
             .srl-insight.visible{display:block}.srl-insight .accent{color:#ffcb6b}.srl-knowledge-check,.srl-check-panel{display:none;margin-top:16px;padding:16px;background:rgba(255,255,255,.02);border:1px solid rgba(245,166,35,.12)}
-            .srl-knowledge-check.visible,.srl-check-panel{display:block}.srl-check-list{display:grid;gap:10px}.srl-check-card{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid rgba(245,166,35,.12);background:rgba(0,0,0,.26);cursor:pointer}
+            .srl-knowledge-check.visible,.srl-check-panel{display:block}
+            .srl-check-panel{position:static;z-index:auto;isolation:isolate;margin-top:18px;padding:18px 22px;background:#07111b;border:1px solid rgba(245,166,35,.12);box-shadow:0 18px 36px rgba(0,0,0,.24)}
+            .srl-check-list{display:grid;gap:10px}
+            .srl-check-card{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid rgba(245,166,35,.12);background:rgba(10,18,30,.98);cursor:pointer;min-width:0}
             .srl-check-card.selected,.srl-check-card:has(input:checked){border-color:rgba(0,212,255,.34);background:rgba(0,212,255,.06)}.srl-check-card input{margin-top:4px}.srl-check-card__copy{display:grid;gap:6px}
-            .srl-check-card__title{color:#eef2ff;line-height:1.5}.srl-check-card__desc{color:rgba(180,190,230,.58);font-size:.82rem;line-height:1.5}.srl-check-feedback{display:none;margin-top:12px;padding:14px;border:1px solid rgba(245,166,35,.12);font-size:.88rem;line-height:1.6}
+            .srl-check-card__title{color:#eef2ff;line-height:1.5;word-break:break-word}.srl-check-card__desc{color:rgba(180,190,230,.58);font-size:.82rem;line-height:1.5;word-break:break-word}.srl-check-feedback{display:none;margin-top:12px;padding:14px;border:1px solid rgba(245,166,35,.12);font-size:.88rem;line-height:1.6}
             .srl-check-feedback.visible{display:block}.srl-check-feedback.success{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}.srl-check-feedback.error{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.9)}
-            .srl-nav-row{padding:18px 28px;border-top:1px solid rgba(245,166,35,.12);background:#0a0d18}.srl-nav-row.solo{padding:0;margin-top:18px;border-top:0;background:transparent;justify-content:flex-end}
+            .srl-nav-row{padding:18px 0 0;border-top:1px solid rgba(245,166,35,.12);background:transparent}.srl-nav-row.solo{padding:0;margin-top:18px;border-top:0;background:transparent;justify-content:space-between;align-items:flex-start}
+            .srl-gate-note{max-width:620px;padding:12px 14px;border:1px solid rgba(245,166,35,.12);background:rgba(255,191,0,.06);color:rgba(255,218,128,.88);font-size:.84rem;line-height:1.65;letter-spacing:.04em}
+            .srl-gate-note.ready{border-color:rgba(0,232,122,.24);background:rgba(0,232,122,.06);color:rgba(180,255,210,.92)}
             .srl-attack-title{font-size:1rem;font-weight:700;letter-spacing:.18em;margin-bottom:6px}.srl-attack-title.bad,.danger-text{color:#ff4060}.srl-attack-title.good{color:#00e87a}
             .srl-mini-copy,.srl-observation,.srl-submit-copy,.srl-risk-sub{color:rgba(180,190,230,.58);font-size:.82rem;line-height:1.6}.srl-db-table{margin-top:16px}.srl-db-row{display:grid;grid-template-columns:90px 1fr}
             .srl-db-row>div{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04)}.srl-db-row.header{background:rgba(255,255,255,.03);color:rgba(180,190,230,.46);font-size:.75rem;letter-spacing:.16em}.srl-db-row .user{color:#00d4ff}.srl-db-row .hash{color:rgba(180,190,230,.56);font-family:Consolas,"Courier New",monospace}
             .srl-observation{padding:10px 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);margin:14px 0}.srl-observation.bad{color:rgba(255,64,96,.76)}.srl-observation.good{color:rgba(0,232,122,.76)}
             .srl-sim-btn.bad{border-color:rgba(255,64,96,.32);color:#ff4060}.srl-sim-btn.good{border-color:rgba(0,232,122,.28);color:#00e87a}.srl-result{display:none;margin-top:14px}.srl-result.visible{display:block}
             .srl-result.bad{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.9)}.srl-result.good{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}
-            .srl-chain{display:flex;flex-direction:column;gap:6px;margin-top:12px}.srl-chain-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-left:2px solid transparent;font-size:.85rem}
-            .srl-chain-row span{width:14px;text-align:center}.srl-chain-row em{margin-left:auto;font-style:normal;color:inherit;opacity:.8}.srl-chain-row.cracked{border-left-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}.srl-chain-row.isolated{border-left-color:rgba(180,190,230,.28);background:rgba(0,0,0,.25);color:rgba(180,190,230,.62)}
-            .srl-classifier-left{display:flex;flex-direction:column;gap:18px}.srl-risk-value{font-size:2rem;font-weight:700;color:#eef2ff}.srl-risk-value.medium{color:#f5a623}.srl-risk-value.high{color:#ff4060}
+            .srl-result,.srl-chain-row{word-break:break-word;overflow-wrap:anywhere}
+            .srl-attack-grid{position:relative;z-index:1;grid-auto-rows:max-content}
+            .srl-attack-panel{display:flex;flex-direction:column;min-width:0;min-height:0;height:auto!important;overflow:visible;align-self:start}
+            .srl-chain{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+            .srl-chain-row{display:grid;grid-template-columns:16px minmax(68px,96px) minmax(0,1fr);align-items:flex-start;gap:10px;padding:10px 12px;background:#0b1624;border-left:2px solid transparent;font-size:.85rem}
+            .srl-chain-row span{width:16px;text-align:center}
+            .srl-chain-row strong{display:block;line-height:1.45}
+            .srl-chain-row em{margin-left:0;font-style:normal;color:inherit;opacity:.84;max-width:100%;text-align:left;line-height:1.45}
+            .srl-chain-row.cracked{border-left-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}
+            .srl-chain-row.isolated{border-left-color:rgba(180,190,230,.28);background:#0b1624;color:rgba(180,190,230,.62)}
+            .srl-classifier-left{display:flex;flex-direction:column;gap:18px;overflow:visible;border-right:1px solid rgba(245,166,35,.12);border-bottom:0}
+            .srl-panel--classifier{display:flex;flex-direction:column;gap:16px;overflow:visible}
+            .srl-question-card,.srl-password-grid-wrap{background:#07111b;border:1px solid rgba(245,166,35,.12)}
+            .srl-question-card{display:grid;gap:12px;padding:18px}
+            .srl-question-card--full{margin-bottom:18px}
+            .srl-question-title{font-size:1.35rem;line-height:1.2;color:#eef2ff;font-weight:700}
+            .srl-question-copy{color:rgba(180,190,230,.72);line-height:1.7}
+            .srl-question-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+            .srl-question-stat{padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(245,166,35,.12)}
+            .srl-question-stat strong{display:block;font-size:1.4rem;color:#eef2ff}
+            .srl-question-stat__label{display:block;margin-bottom:6px;color:rgba(245,166,35,.62);font-family:Consolas,"Courier New",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase}
+            .srl-password-grid-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+            .srl-card-legend{display:flex;flex-wrap:wrap;gap:8px 12px}
+            .srl-card-legend__item{display:inline-flex;align-items:center;gap:8px;color:rgba(196,208,236,.68);font-family:Consolas,"Courier New",monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase}
+            .srl-card-swatch{width:12px;height:12px;border:1px solid rgba(255,255,255,.12);background:#0b1624}
+            .srl-card-swatch.selected{border-color:#ff4060;background:rgba(255,64,96,.18)}
+            .srl-card-swatch.correct{border-color:#00e87a;background:rgba(0,232,122,.14)}
+            .srl-card-swatch.false{border-color:#f5a623;background:rgba(245,166,35,.16)}
+            .srl-password-grid-wrap{display:flex;flex-direction:column;gap:14px;min-height:0;padding:18px}
+            .srl-risk-value{font-size:2rem;font-weight:700;color:#eef2ff}.srl-risk-value.medium{color:#f5a623}.srl-risk-value.high{color:#ff4060}
             .srl-risk-track{height:5px;background:rgba(255,64,96,.12);margin-top:10px}.srl-risk-fill{height:100%;background:linear-gradient(90deg,#f5a623,#ff4060)}.srl-attempt-row span:last-child{margin-left:8px;color:rgba(180,190,230,.62);font-family:Consolas,"Courier New",monospace}
             .srl-attempt-pip{width:10px;height:10px;transform:rotate(45deg);border:1px solid rgba(180,190,230,.28);display:inline-block}.srl-attempt-pip.used{background:#ff4060;border-color:#ff4060}.srl-attempt-pip.active{background:#f5a623;border-color:#f5a623}
             .srl-selection-total{font-size:2rem;font-weight:700}.srl-selection-total span{font-size:.85rem;color:rgba(180,190,230,.48);font-family:Consolas,"Courier New",monospace;letter-spacing:.18em}.srl-feedback{display:none}.srl-feedback.visible{display:block}
+            .srl-feedback.info{border-color:rgba(0,212,255,.18);background:rgba(0,212,255,.05);color:rgba(190,240,255,.9)}
             .srl-feedback.error{border-color:rgba(255,64,96,.22);background:rgba(255,64,96,.05);color:rgba(255,170,180,.92)}.srl-feedback.success{border-color:rgba(0,232,122,.22);background:rgba(0,232,122,.05);color:rgba(180,255,210,.9)}
-            .srl-password-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:440px;overflow:auto}.srl-password-card{padding:12px;background:rgba(0,0,0,.42);border:1px solid rgba(245,166,35,.12);color:rgba(200,210,240,.72);text-align:left;word-break:break-all;cursor:pointer}
-            .srl-password-card:hover{border-color:rgba(245,166,35,.38);color:#ffcb6b}.srl-password-card.selected{border-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}.srl-password-card.correct{border-color:#00e87a;background:rgba(0,232,122,.08);color:#00e87a}.srl-password-card.false{border-color:#f5a623;background:rgba(245,166,35,.08);color:#f5a623}
-            .srl-submit-row{margin-top:18px;padding-top:18px;border-top:1px solid rgba(245,166,35,.12)}.srl-completion{min-height:540px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:20px;background:radial-gradient(circle at center,rgba(0,232,122,.06),transparent 60%)}
+            .srl-feedback--sidebar{margin-top:auto}
+            .srl-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start}
+            .srl-password-card{display:grid;gap:10px;align-content:flex-start;min-height:96px;padding:14px;background:linear-gradient(180deg,#0b1624 0%,#0a1220 100%);border:1px solid rgba(245,166,35,.12);color:rgba(200,210,240,.72);text-align:left;word-break:break-word;line-height:1.55;cursor:pointer;transition:border-color .2s ease,transform .2s ease,box-shadow .2s ease}
+            .srl-password-card:hover{border-color:rgba(245,166,35,.38);color:#ffcb6b;transform:translateY(-2px);box-shadow:0 16px 30px rgba(0,0,0,.18)}
+            .srl-password-card.selected{border-color:#ff4060;background:rgba(255,64,96,.1);color:#ff7e92}
+            .srl-password-card.correct{border-color:#00e87a;background:rgba(0,232,122,.08);color:#00e87a}
+            .srl-password-card.false{border-color:#f5a623;background:rgba(245,166,35,.08);color:#f5a623}
+            .srl-password-card__state{font-family:Consolas,"Courier New",monospace;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(196,208,236,.54)}
+            .srl-password-card.selected .srl-password-card__state{color:rgba(255,170,180,.86)}
+            .srl-password-card.correct .srl-password-card__state{color:rgba(180,255,210,.88)}
+            .srl-password-card.false .srl-password-card__state{color:rgba(255,218,128,.86)}
+            .srl-password-card__value{font-size:.98rem;line-height:1.55;color:inherit;overflow-wrap:anywhere}
+            .srl-submit-row{margin-top:0;padding-top:16px;border-top:1px solid rgba(245,166,35,.12);flex-wrap:wrap}
+            .srl-submit-copy{flex:1 1 260px}
+            .srl-submit-row .srl-primary-btn{margin-top:0;margin-left:auto;min-width:260px}
+            .srl-submit-row--sticky{position:static;bottom:auto;z-index:auto;padding-bottom:0;background:none}
+            .srl-completion{min-height:540px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:20px;background:radial-gradient(circle at center,rgba(0,232,122,.06),transparent 60%)}
             .srl-completion-badge{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(0,232,122,.35);background:rgba(0,232,122,.08);font-weight:700;color:#00e87a}.srl-completion-title{font-size:1.5rem;font-weight:700;letter-spacing:.24em}.srl-completion-sub{font-family:Consolas,"Courier New",monospace;color:rgba(0,232,122,.72);letter-spacing:.18em}
             .srl-completion-card{max-width:620px;text-align:left}.srl-completion-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,232,122,.08)}.srl-completion-arrow{color:#00e87a}.srl-completion-insight{margin-top:14px;color:#ffcb6b}
-            @media (max-width:980px){.srl-lab,.srl-attack-grid,.srl-classifier-grid{grid-template-columns:1fr}.srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}.srl-password-grid{grid-template-columns:repeat(2,1fr)}}
-            @media (max-width:640px){.srl-header{padding:14px 18px}.srl-panel{padding:20px}.srl-password-grid,.srl-phases{grid-template-columns:1fr}.srl-reactor-top,.srl-submit-row,.srl-nav-row{flex-direction:column;align-items:flex-start}}
+            @media (max-width:1180px){.srl-classifier-grid{grid-template-columns:1fr}.srl-classifier-left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
+            @media (max-width:980px){.srl-phase-screen{padding:18px}.srl-lab,.srl-attack-grid,.srl-classifier-grid,.srl-reactor-grid{grid-template-columns:1fr}.srl-panel-left,.srl-classifier-left,.srl-attack-panel:first-child{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}.srl-password-grid{grid-template-columns:repeat(2,1fr)}}
+            @media (max-width:640px){.srl-header{padding:14px 18px}.srl-phase-brief,.srl-panel,.srl-question-card{padding:18px}.srl-password-grid,.srl-phases,.srl-question-stats{grid-template-columns:1fr}.srl-reactor-top,.srl-submit-row,.srl-nav-row,.srl-password-grid-head{flex-direction:column;align-items:flex-start}.srl-submit-row .srl-primary-btn{width:100%;min-width:0;margin-left:0}}
         </style>`;
     }
 
@@ -2579,6 +3804,11 @@ export class PasswordCrack {
         const options = Array.isArray(session.options) ? session.options : [];
         const allClassified = options.every(option => !!this.predictionRatings[option]);
         const boardSummary = this.getPredictionClassificationSummary(session);
+        const ratedCount = Object.keys(this.predictionRatings).length;
+        const selectedIndex = this.predictionSelected ? options.indexOf(this.predictionSelected) : -1;
+        const selectedLabel = selectedIndex >= 0 ? `OPTION ${String.fromCharCode(65 + selectedIndex)}` : 'NONE';
+        const submitReady = !!this.predictionSelected;
+        const submitButtonLabel = submitReady ? 'SUBMIT PREDICTION' : 'SELECT A BREAKS FIRST CARD';
         const choiceMarkup = options.map((option, idx) => {
             const profile = this.getPredictionPasswordProfile(option, session);
             const selected = this.predictionSelected === option;
@@ -2588,42 +3818,52 @@ export class PasswordCrack {
                     ${label.toUpperCase()}
                 </button>`).join('');
             return `
-                <div class="l3-card ${selected ? 'selected' : ''}">
-                    <div class="l3-card__top">
-                        <span class="l3-card__label">OPTION ${String.fromCharCode(65 + idx)}</span>
-                        <label class="l3-pick">
-                            <input type="radio" name="prediction-choice" value="${option}" ${selected ? 'checked' : ''}/>
-                            BREAKS FIRST
-                        </label>
+                <div class="l3-card ${selected ? 'selected' : ''} ${currentRating ? `is-rated is-rated--${currentRating}` : ''}" data-card-index="${idx}">
+                    <div class="l3-card__accent"></div>
+                    <div class="l3-card__body">
+                        <div class="l3-card__top">
+                            <div class="l3-card__identity">
+                                <span class="l3-card__label">OPTION ${String.fromCharCode(65 + idx)}</span>
+                                <span class="l3-card__status">${currentRating ? currentRating.toUpperCase() : 'UNRATED'}</span>
+                            </div>
+                        </div>
+                        <div class="l3-card__value">${option}</div>
+                        <div class="l3-signal-grid">
+                            <div class="l3-signal">
+                                <span>Length</span>
+                                <strong>${profile.lengthSignal}</strong>
+                            </div>
+                            <div class="l3-signal">
+                                <span>Predictability</span>
+                                <strong>${profile.predictabilitySignal}</strong>
+                            </div>
+                            <div class="l3-signal">
+                                <span>Pattern Risk</span>
+                                <strong>${profile.commonRiskSignal}</strong>
+                            </div>
+                        </div>
+                        <div class="l3-card__note">${profile.note}</div>
+                        <div class="l3-card__footer">
+                            <div class="l3-rate-label">Classify this password first</div>
+                            <div class="l3-rate-row">${classifyButtons}</div>
+                            <button class="l3-pick l3-pick--block ${selected ? 'selected' : ''}" type="button" data-prediction-pick="${option}">
+                                <span>${selected ? 'FINAL ANSWER SELECTED' : 'MARK AS BREAKS FIRST'}</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="l3-card__value">${option}</div>
-                    <div class="l3-signal-grid">
-                        <div class="l3-signal">
-                            <span>Length</span>
-                            <strong>${profile.lengthSignal}</strong>
-                        </div>
-                        <div class="l3-signal">
-                            <span>Predictability</span>
-                            <strong>${profile.predictabilitySignal}</strong>
-                        </div>
-                        <div class="l3-signal">
-                            <span>Pattern Risk</span>
-                            <strong>${profile.commonRiskSignal}</strong>
-                        </div>
-                    </div>
-                    <div class="l3-card__note">${profile.note}</div>
-                    <div class="l3-rate-label">Classify this password first</div>
-                    <div class="l3-rate-row">${classifyButtons}</div>
                 </div>`;
         }).join('');
         const raceMarkup = options.map((option, idx) => `
-            <div class="race-row" style="margin:10px 0;">
-                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;">
-                    <span>${String.fromCharCode(65 + idx)}. ${option}</span>
-                    <span id="race-time-${idx}">Estimating...</span>
+            <div class="l3-race-row">
+                <div class="l3-race-row__meta">
+                    <div class="l3-race-row__title">
+                        <span class="l3-race-row__tag">${String.fromCharCode(65 + idx)}</span>
+                        <span class="l3-race-row__password">${option}</span>
+                    </div>
+                    <span class="l3-race-row__time" id="race-time-${idx}">Estimating...</span>
                 </div>
-                <div style="height:10px;background:rgba(100,116,139,0.2);border-radius:999px;overflow:hidden;">
-                    <div id="race-bar-${idx}" style="height:10px;width:0%;transition:width ${this.puzzleData?.simulationUI?.animateDurationMs || 3200}ms linear;background:var(--cyber-blue);"></div>
+                <div class="l3-race-track">
+                    <div id="race-bar-${idx}" class="l3-race-bar" style="transition-duration:${this.puzzleData?.simulationUI?.animateDurationMs || 3200}ms;"></div>
                 </div>
             </div>`).join('');
 
@@ -2635,70 +3875,103 @@ export class PasswordCrack {
                 title: 'PASSWORD STRENGTH<br>RACE',
                 status: 'BENCHMARK LAB ACTIVE',
                 phases: [
-                    { label: 'CLASSIFY', active: !allClassified },
+                    { label: 'CLASSIFY', active: !allClassified && !this.predictionSelected },
                     { label: 'PREDICT', active: allClassified && !this.predictionSelected },
-                    { label: 'RACE', active: allClassified && !!this.predictionSelected }
+                    { label: 'RACE', active: !!this.predictionSelected }
                 ],
                 content: `
                     <div class="l3-shell">
-                        <div class="l3-header">
-                            <div class="l3-brand">SHADOWDEF</div>
-                            <div class="l3-level">LEVEL 3 - PASSWORD STRENGTH RACE</div>
-                            <div class="l3-status">BENCHMARK LAB ACTIVE</div>
-                        </div>
-                        <div class="l3-phases">
-                            <div class="l3-phase active"><span>01</span>CLASSIFY</div>
-                            <div class="l3-phase"><span>02</span>PREDICT</div>
-                            <div class="l3-phase"><span>03</span>RACE</div>
-                        </div>
-                        <div class="l3-hint-strip">HINT: Keep the logic simple. Short and predictable breaks first. Long and less predictable holds longer.</div>
-                        <div class="l3-frame">
-                            <aside class="l3-panel l3-panel-left">
-                                <div class="l3-section-kicker">Mission Brief</div>
-                                <div class="l3-brief-box">
-                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
-                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
-                                    <div><strong>Task:</strong> Classify each password, then predict which one breaks first.</div>
-                                </div>
-                                <div class="l3-section-kicker">Decision Timer</div>
-                                <div class="l3-metric-box">
-                                    <div class="l3-metric-box__row"><span>Time left</span><strong id="prediction-timer-text">${this.predictionRemaining}s</strong></div>
-                                    <div class="progress-bar"><div class="progress-fill" id="prediction-timer-fill" style="width:100%;"></div></div>
-                                    <div class="l3-metric-box__meta">
-                                        <span>${Object.keys(this.predictionRatings).length}/${options.length} classified</span>
-                                        <span>${this.predictionSelected ? 'Prediction selected' : 'Prediction pending'}</span>
-                                    </div>
-                                </div>
-                                <div class="l3-section-kicker">Simple Security Rules</div>
-                                <div class="l3-guide">
-                                    <div class="l3-hint">Short passwords usually break faster.</div>
-                                    <div class="l3-hint">Common words and known patterns are easy to guess.</div>
-                                    <div class="l3-hint">Longer and less predictable passwords usually last longer.</div>
-                                </div>
-                                <div class="l3-section-kicker" style="margin-top:18px;">Benchmark Preview</div>
-                                <div class="l3-metric-box">
-                                    <div class="l3-metric-box__row"><span>Current board read</span><strong>${allClassified ? 'READY' : 'PENDING'}</strong></div>
-                                    <div class="l3-metric-box__meta"><span>Read: ${boardSummary}</span></div>
-                                </div>
-                            </aside>
-                            <main class="l3-panel l3-panel-right">
-                                <div class="l3-main-head">
+                        <div class="l3-body">
+                            <section class="l3-arena">
+                                <div class="l3-arena-header">
                                     <div>
-                                        <div class="l3-section-kicker">Comparison Board</div>
-                                        <div class="l3-main-title">Rate each password first, then choose which one will break first in the benchmark race</div>
+                                        <div class="l3-arena-title">PREDICT<br>THE<br><span>WINNER</span></div>
+                                        <div class="l3-arena-sub">// ${options.length} benchmark candidates · choose the weakest one first</div>
                                     </div>
-                                    <div id="attempt-counter" class="l3-attempts">Decisions: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
+                                    <div class="l3-arena-hint">
+                                        Rate each card, then use <b>MARK AS BREAKS FIRST</b> on the password you think collapses first.
+                                    </div>
                                 </div>
-                                <div class="l3-card-grid" id="prediction-choice-grid">${choiceMarkup}</div>
-                                <div class="l3-actions">
-                                    <button class="l3-btn l3-btn-primary" id="submit-prediction-choice" ${allClassified && this.predictionSelected ? '' : 'disabled'}>RUN BENCHMARK RACE</button>
+                                <div class="l3-arena-scroll">
+                                    <div class="l3-grid" id="prediction-choice-grid">${choiceMarkup}</div>
                                 </div>
-                                <div id="prediction-race-board" class="l3-race-board" style="display:none;">
-                                    <div class="l3-section-kicker">Crack Speed Race</div>
-                                    <div id="prediction-race-rows">${raceMarkup}</div>
+                                <div class="l3-submit-dock">
+                                    <div class="l3-submit-cluster">
+                                        <span class="l3-submit-label">Target</span>
+                                        <div class="l3-target-slot ${submitReady ? 'active' : ''}" id="prediction-target-slot">${submitReady ? selectedLabel : 'NONE'}</div>
+                                    </div>
+                                    <div class="l3-submit-cluster l3-submit-cluster--summary">
+                                        <div class="l3-submit-value" id="prediction-rated-total">${ratedCount}/${options.length}</div>
+                                        <div class="l3-submit-points-label">Rated</div>
+                                    </div>
+                                    <div class="l3-submit-meta">
+                                        <div class="l3-attempts" id="attempt-counter">Decisions: <span>${this.attempts}</span> / ${this.maxAttempts}</div>
+                                    </div>
+                                    <button class="l3-fire-btn" id="submit-prediction-choice" ${submitReady ? '' : 'disabled'}>${submitButtonLabel}</button>
                                 </div>
-                                <div class="l3-feedback guess-feedback" id="guess-feedback">${allClassified ? 'Choose which password breaks first, then run the benchmark race.' : 'Classify every password as WEAK, MEDIUM, or STRONG before making your final prediction.'}</div>
-                            </main>
+                            </section>
+
+                            <aside class="l3-console">
+                                <section class="l3-console-panel">
+                                    <div class="l3-console-title">Mission Brief</div>
+                                    <div class="l3-brief-box">
+                                        <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
+                                        <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
+                                        <div><strong>Task:</strong> Rate the candidates, then predict which one breaks first.</div>
+                                    </div>
+                                </section>
+
+                                <section class="l3-console-panel">
+                                    <div class="l3-console-head">
+                                        <div class="l3-console-title">Benchmark Signals</div>
+                                        <div class="l3-console-chip" id="prediction-analysis-chip">${submitReady ? 'TARGET LOCKED' : 'ANALYZE'}</div>
+                                    </div>
+                                    <div class="l3-console-stats">
+                                        <div class="l3-console-stat">
+                                            <span>Time</span>
+                                            <strong id="prediction-timer-text">${this.predictionRemaining}s</strong>
+                                        </div>
+                                        <div class="l3-console-stat">
+                                            <span>Rated</span>
+                                            <strong id="prediction-signal-rated">${ratedCount}/${options.length}</strong>
+                                        </div>
+                                        <div class="l3-console-stat">
+                                            <span>Target</span>
+                                            <strong id="prediction-signal-target">${submitReady ? selectedLabel : 'NONE'}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="l3-console-track">
+                                        <div class="l3-console-fill" id="prediction-timer-fill" style="width:100%;"></div>
+                                    </div>
+                                    <div class="l3-console-summary" id="prediction-summary-text">${boardSummary}</div>
+                                    <div class="l3-hint-stack">
+                                        <div class="l3-hint">Short passwords usually break faster.</div>
+                                        <div class="l3-hint">Common words and known substitutions are cheap attacker wins.</div>
+                                        <div class="l3-hint">Longer and less predictable passwords usually hold longer.</div>
+                                    </div>
+                                </section>
+
+                                <section class="l3-console-panel l3-console-panel--fill">
+                                    <div class="l3-console-head">
+                                        <div class="l3-console-title">Race Console</div>
+                                        <div class="l3-console-chip" id="prediction-race-chip">${submitReady ? 'READY' : 'WAITING'}</div>
+                                    </div>
+                                    <div class="l3-feedback guess-feedback" id="guess-feedback">${submitReady ? 'Press SUBMIT PREDICTION to run the benchmark race.' : 'Choose one card as BREAKS FIRST to continue. Ratings help your analysis, but they do not block submit.'}</div>
+                                    <div id="prediction-race-board" class="l3-race-board" style="display:none;">
+                                        <div class="l3-race-board__head">
+                                            <div>
+                                                <div class="l3-section-kicker">Crack Speed Race</div>
+                                                <div class="l3-race-board__title">Benchmark replay shows which password collapses first under automated guessing.</div>
+                                            </div>
+                                            <div class="l3-race-board__legend">
+                                                <span><i class="l3-race-board__dot l3-race-board__dot--weak"></i>Fastest to crack</span>
+                                                <span><i class="l3-race-board__dot l3-race-board__dot--strong"></i>Holds longer</span>
+                                            </div>
+                                        </div>
+                                        <div id="prediction-race-rows">${raceMarkup}</div>
+                                    </div>
+                                </section>
+                            </aside>
                         </div>
                     </div>`
             })}`;
@@ -2709,25 +3982,164 @@ export class PasswordCrack {
         this.gameScreen.syncEmbeddedMissionHUD();
     }
 
+    refreshPredictionChoiceInlineState() {
+        if (!this.visualizerElement) return;
+        const session = this.predictionSession || this.createPredictionSession();
+        const options = Array.isArray(session.options) ? session.options : [];
+        const allClassified = options.every(option => !!this.predictionRatings[option]);
+        const ratedCount = options.filter(option => !!this.predictionRatings[option]).length;
+        const selectedIndex = this.predictionSelected ? options.indexOf(this.predictionSelected) : -1;
+        const selectedLabel = selectedIndex >= 0 ? `OPTION ${String.fromCharCode(65 + selectedIndex)}` : 'NONE';
+        const submitReady = !!this.predictionSelected;
+        const boardSummary = this.getPredictionClassificationSummary(session);
+
+        options.forEach((option, idx) => {
+            const card = this.visualizerElement.querySelector(`.l3-card[data-card-index="${idx}"]`);
+            if (!card) return;
+            const currentRating = this.predictionRatings[option] || '';
+            const selected = this.predictionSelected === option;
+
+            card.classList.toggle('selected', selected);
+            ['weak', 'medium', 'strong'].forEach(level => {
+                card.classList.toggle(`is-rated--${level}`, currentRating === level);
+            });
+
+            const status = card.querySelector('.l3-card__status');
+            if (status) status.textContent = currentRating ? currentRating.toUpperCase() : 'UNRATED';
+
+            card.querySelectorAll('[data-rating-value]').forEach(rateBtn => {
+                rateBtn.classList.toggle('selected', rateBtn.dataset.ratingValue === currentRating);
+            });
+
+            const pickButton = card.querySelector('[data-prediction-pick]');
+            const pickLabel = pickButton?.querySelector('span');
+            if (pickButton) pickButton.classList.toggle('selected', selected);
+            if (pickLabel) pickLabel.textContent = selected ? 'FINAL ANSWER SELECTED' : 'MARK AS BREAKS FIRST';
+        });
+
+        const targetSlot = document.getElementById('prediction-target-slot');
+        if (targetSlot) {
+            targetSlot.textContent = selectedLabel;
+            targetSlot.classList.toggle('active', submitReady);
+        }
+
+        const ratedTotal = document.getElementById('prediction-rated-total');
+        if (ratedTotal) ratedTotal.textContent = `${ratedCount}/${options.length}`;
+
+        const signalRated = document.getElementById('prediction-signal-rated');
+        if (signalRated) signalRated.textContent = `${ratedCount}/${options.length}`;
+
+        const signalTarget = document.getElementById('prediction-signal-target');
+        if (signalTarget) signalTarget.textContent = selectedLabel;
+
+        const analysisChip = document.getElementById('prediction-analysis-chip');
+        if (analysisChip) analysisChip.textContent = submitReady ? 'TARGET LOCKED' : 'ANALYZE';
+
+        const raceChip = document.getElementById('prediction-race-chip');
+        if (raceChip) raceChip.textContent = submitReady ? 'READY' : 'WAITING';
+
+        const summary = document.getElementById('prediction-summary-text');
+        if (summary) summary.innerHTML = boardSummary;
+
+        const feedback = document.getElementById('guess-feedback');
+        const raceBoard = document.getElementById('prediction-race-board');
+        if (feedback && (!raceBoard || raceBoard.style.display === 'none')) {
+            feedback.innerHTML = submitReady
+                ? 'Press SUBMIT PREDICTION to run the benchmark race.'
+                : 'Choose one card as BREAKS FIRST to continue. Ratings help your analysis, but they do not block submit.';
+        }
+
+        const submitButton = document.getElementById('submit-prediction-choice');
+        if (submitButton) {
+            submitButton.disabled = !submitReady;
+            submitButton.textContent = submitReady ? 'SUBMIT PREDICTION' : 'SELECT A BREAKS FIRST CARD';
+        }
+
+        const phases = Array.from(this.visualizerElement.querySelectorAll('.lab-shared-phase'));
+        phases.forEach((phase, index) => {
+            const isActive = index === 0
+                ? !allClassified && !submitReady
+                : index === 1
+                    ? allClassified && !submitReady
+                    : submitReady;
+            phase.classList.toggle('active', isActive);
+        });
+    }
+
+    capturePredictionChoiceInlineScrollState() {
+        if (!this.visualizerElement) return [];
+        const selectors = ['__root__', '.lab-shared-shell', '.l3-arena-scroll', '.l3-console-panel--fill'];
+        return selectors.map(selector => {
+            const element = selector === '__root__'
+                ? this.visualizerElement
+                : this.visualizerElement.querySelector(selector);
+            return element ? { selector, scrollTop: element.scrollTop, scrollLeft: element.scrollLeft } : null;
+        }).filter(Boolean);
+    }
+
+    restorePredictionChoiceInlineScrollState(state) {
+        if (!Array.isArray(state) || !state.length || !this.visualizerElement) return;
+        const apply = () => {
+            state.forEach(entry => {
+                const element = entry.selector === '__root__'
+                    ? this.visualizerElement
+                    : this.visualizerElement.querySelector(entry.selector);
+                if (!element) return;
+                element.scrollTop = entry.scrollTop || 0;
+                element.scrollLeft = entry.scrollLeft || 0;
+            });
+        };
+
+        apply();
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                apply();
+            });
+        });
+    }
+
+    bindPredictionChoiceStableAction(element, handler) {
+        if (!element) return;
+        const suppressFocusShift = event => {
+            event.preventDefault();
+        };
+
+        element.addEventListener('mousedown', suppressFocusShift);
+        element.addEventListener('pointerdown', suppressFocusShift);
+
+        element.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (this.isComplete) return;
+            const scrollState = this.capturePredictionChoiceInlineScrollState();
+            handler(event, element);
+            element.blur();
+            this.restorePredictionChoiceInlineScrollState(scrollState);
+        });
+    }
+
     setupPredictionChoiceEventListeners() {
         document.querySelectorAll('[data-prediction-rate]').forEach(btn => {
-            btn.addEventListener('click', () => {
+            this.bindPredictionChoiceStableAction(btn, () => {
                 const password = btn.dataset.predictionRate || '';
                 const rating = btn.dataset.ratingValue || '';
                 if (!password || !rating) return;
                 this.predictionRatings[password] = rating;
                 this.audio.playButtonClick();
-                this.renderPredictionChoicePuzzle(this.visualizerElement);
+                this.refreshPredictionChoiceInlineState();
             });
         });
-        document.querySelectorAll('input[name="prediction-choice"]').forEach(r => {
-            r.addEventListener('change', () => {
-                this.predictionSelected = r.value;
+        document.querySelectorAll('[data-prediction-pick]').forEach(btn => {
+            this.bindPredictionChoiceStableAction(btn, () => {
+                this.predictionSelected = btn.dataset.predictionPick || null;
                 this.audio.playButtonClick();
-                this.renderPredictionChoicePuzzle(this.visualizerElement);
+                this.refreshPredictionChoiceInlineState();
             });
         });
-        document.getElementById('submit-prediction-choice')?.addEventListener('click', () => this.submitPredictionChoiceDecision());
+        this.bindPredictionChoiceStableAction(
+            document.getElementById('submit-prediction-choice'),
+            () => this.submitPredictionChoiceDecision()
+        );
     }
 
     startPredictionTimer() {
@@ -2781,45 +4193,104 @@ export class PasswordCrack {
 
     renderPredictionChoiceStyles() {
         return `<style>
-            .l3-shell{background:linear-gradient(180deg,#070b12 0%,#06080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
-            .l3-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
-            .l3-brand,.l3-level,.l3-status,.l3-phase,.l3-section-kicker,.l3-btn,.l3-attempts,.l3-card__label,.l3-rate-label{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
-            .l3-brand{color:#f5a623;font-weight:700}.l3-level{color:rgba(245,166,35,.72);font-size:.85rem}.l3-status{color:#00e87a;font-size:.82rem}
-            .l3-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
-            .l3-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.l3-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
-            .l3-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}
-            .l3-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
-            .l3-frame{display:grid;grid-template-columns:340px 1fr;min-height:640px}
-            .l3-panel{padding:28px;background:rgba(0,0,0,.18)}.l3-panel-left{border-right:1px solid rgba(245,166,35,.12)}
-            .l3-section-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}
-            .l3-brief-box,.l3-metric-box,.l3-guide,.l3-card,.l3-feedback,.l3-race-board{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
-            .l3-brief-box,.l3-metric-box,.l3-feedback,.l3-race-board{padding:16px;line-height:1.7}.l3-brief-box strong{color:#f5a623}
-            .l3-metric-box__row,.l3-metric-box__meta,.l3-main-head,.l3-actions,.l3-card__top,.l3-pick{display:flex;justify-content:space-between;align-items:center;gap:12px}
-            .l3-metric-box__row strong{font-size:1.8rem;color:#eef2ff}.l3-metric-box__meta{margin-top:10px;flex-wrap:wrap;color:rgba(180,190,230,.62);font-size:.82rem}
-            .l3-guide{padding:0}.l3-hint{padding:12px 14px;border-bottom:1px solid rgba(245,166,35,.08);color:rgba(220,228,245,.84);line-height:1.65}.l3-hint:last-child{border-bottom:0}
-            .l3-main-title{font-size:1.35rem;color:#eef2ff;line-height:1.45}.l3-attempts{padding:10px 12px;border:1px solid rgba(245,166,35,.18);background:rgba(245,166,35,.06);color:rgba(245,166,35,.82);font-size:.74rem}
-            .l3-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-            .l3-card{padding:16px;transition:border-color .18s ease,box-shadow .18s ease}.l3-card.selected{border-color:#00d4ff;background:rgba(0,212,255,.06);box-shadow:0 0 0 1px rgba(0,212,255,.18) inset}
-            .l3-card__label{font-size:.72rem;color:rgba(245,166,35,.56)}.l3-pick{font-size:.76rem;color:rgba(220,228,245,.78)}
-            .l3-pick input{accent-color:#00d4ff}
-            .l3-card__value{margin:14px 0 12px;font-size:1.2rem;font-weight:700;color:#eef2ff;word-break:break-word}
-            .l3-signal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-            .l3-signal{padding:10px;border:1px solid rgba(245,166,35,.1);background:rgba(245,166,35,.04)}
-            .l3-signal span{display:block;color:rgba(180,190,230,.54);font-size:.78rem}.l3-signal strong{display:block;margin-top:6px;color:#ffcb6b;font-size:.84rem}
-            .l3-card__note{margin-top:12px;color:rgba(180,190,230,.66);line-height:1.6}
-            .l3-rate-label{margin-top:14px;color:rgba(245,166,35,.6);font-size:.7rem}
-            .l3-rate-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-            .l3-rate-btn{padding:8px 12px;background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.76);cursor:pointer;font-family:Consolas,"Courier New",monospace;letter-spacing:.16em;text-transform:uppercase}
-            .l3-rate-btn.selected{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
-            .l3-feedback{margin-top:18px;color:rgba(220,228,245,.86);min-height:74px}
-            .l3-actions{margin-top:18px;justify-content:flex-end}
-            .l3-btn{padding:13px 18px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.78);cursor:pointer}
-            .l3-btn:disabled{opacity:.45;cursor:not-allowed}
-            .l3-btn:hover:not(:disabled){border-color:rgba(245,166,35,.45);color:#ffcb6b}
-            .l3-btn-primary{background:linear-gradient(90deg,rgba(245,166,35,.16),rgba(245,166,35,.06));border-color:rgba(245,166,35,.42);color:#eef2ff;font-weight:700;letter-spacing:.24em}
-            .l3-race-board{margin-top:18px}
-            @media (max-width:1080px){.l3-frame{grid-template-columns:1fr}.l3-panel-left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
-            @media (max-width:720px){.l3-header{padding:14px 18px}.l3-panel{padding:20px}.l3-card-grid,.l3-phases,.l3-signal-grid{grid-template-columns:1fr}.l3-main-head,.l3-actions,.l3-card__top{flex-direction:column;align-items:flex-start}}
+            .l3-shell{display:flex;flex-direction:column;min-height:0;color:#eef2ff}
+            .l3-brand,.l3-level,.l3-status,.l3-phase,.l3-section-kicker,.l3-attempts,.l3-card__label,.l3-rate-label,.l3-card__status,.l3-submit-label,.l3-submit-points-label,.l3-console-title,.l3-console-chip,.l3-race-row__tag{font-family:Consolas,"Courier New",monospace;letter-spacing:.2em;text-transform:uppercase}
+            .lab-shared-content > .l3-shell{flex:0 0 auto;min-height:auto!important;width:100%}
+            .l3-shell{width:100%;height:auto!important;min-height:100%!important;overflow:visible!important;background:transparent}
+            .l3-body{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 360px;overflow:hidden}
+            .l3-arena{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid rgba(23,216,255,.16)}
+            .l3-arena-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:16px 24px 12px;border-bottom:1px solid rgba(23,216,255,.16);background:rgba(0,4,14,.58);flex-shrink:0}
+            .l3-arena-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,4.2vw,68px);letter-spacing:3px;line-height:.88;color:rgba(255,255,255,.92);text-transform:uppercase}
+            .l3-arena-title span{color:#ff3f78;text-shadow:0 0 18px rgba(255,63,120,.28)}
+            .l3-arena-sub{margin-top:4px;font-size:10px;letter-spacing:1px;color:rgba(168,216,232,.48)}
+            .l3-arena-hint{max-width:300px;text-align:right;font-size:10px;letter-spacing:1px;line-height:1.5;color:rgba(168,216,232,.48)}
+            .l3-arena-hint b{color:#17d8ff;font-weight:700}
+            .l3-arena-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 24px;scrollbar-width:thin;scrollbar-color:rgba(23,216,255,.28) transparent}
+            .l3-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+            .l3-card{position:relative;overflow:hidden;padding:0;border:1px solid rgba(23,216,255,.16);background:rgba(2,15,34,.9);color:rgba(232,244,255,.86);text-align:left;transition:border-color .2s ease,box-shadow .2s ease}
+            .l3-card:hover{border-color:#17d8ff;box-shadow:-4px 0 0 rgba(23,216,255,.48),0 0 28px rgba(23,216,255,.12)}
+            .l3-card.selected{border-color:#ff3f78;background:rgba(22,4,14,.96);box-shadow:0 0 0 1px rgba(255,63,120,.22) inset,0 0 28px rgba(255,63,120,.14)}
+            .l3-card.is-rated--weak:not(.selected){border-color:rgba(255,63,120,.26)}
+            .l3-card.is-rated--medium:not(.selected){border-color:rgba(255,204,0,.26)}
+            .l3-card.is-rated--strong:not(.selected){border-color:rgba(0,255,136,.26)}
+            .l3-card__accent{height:2px;background:rgba(23,216,255,.28);transition:background .3s ease}
+            .l3-card:hover .l3-card__accent{background:#17d8ff}
+            .l3-card.selected .l3-card__accent{background:#ff3f78;box-shadow:0 0 10px rgba(255,63,120,.42)}
+            .l3-card.is-rated--medium .l3-card__accent{background:#ffcc00}
+            .l3-card.is-rated--strong .l3-card__accent{background:#00ff88}
+            .l3-card__body{display:flex;flex-direction:column;gap:12px;padding:16px;min-height:100%}
+            .l3-card__top,.l3-race-row__meta{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+            .l3-card__identity{display:flex;flex-direction:column;gap:8px}
+            .l3-card__label{font-size:10px;letter-spacing:1px;color:rgba(168,216,232,.48)}
+            .l3-card__status{display:inline-flex;align-items:center;padding:3px 8px;border:1px solid rgba(23,216,255,.18);font-size:9px;letter-spacing:2px;color:rgba(232,244,255,.72);background:rgba(23,216,255,.05)}
+            .l3-card__value{font-family:'Teko',sans-serif;font-size:30px;font-weight:600;letter-spacing:2px;line-height:1.05;color:#17d8ff;word-break:break-all;text-shadow:0 0 10px rgba(23,216,255,.18)}
+            .l3-card.selected .l3-card__value{color:#ff3f78;text-shadow:0 0 14px rgba(255,63,120,.24)}
+            .l3-signal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+            .l3-signal{padding:10px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .l3-signal span{display:block;color:rgba(168,216,232,.48);font-size:9px;letter-spacing:1px;text-transform:uppercase}
+            .l3-signal strong{display:block;margin-top:6px;color:rgba(232,244,255,.9);font-size:.86rem;letter-spacing:.06em;line-height:1.4}
+            .l3-card__note{color:rgba(168,216,232,.62);line-height:1.65;font-size:.92rem;min-height:74px}
+            .l3-card__footer{display:grid;gap:12px;margin-top:auto}
+            .l3-rate-label{color:rgba(168,216,232,.48);font-size:9px;letter-spacing:2px}
+            .l3-rate-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+            .l3-rate-btn{display:inline-flex;justify-content:center;align-items:center;min-height:38px;padding:8px 10px;background:rgba(0,0,0,.34);border:1px solid rgba(23,216,255,.18);color:rgba(232,244,255,.76);cursor:pointer;font-family:Consolas,"Courier New",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+            .l3-rate-btn.selected{border-color:#17d8ff;color:#17d8ff;background:rgba(23,216,255,.08);box-shadow:0 0 0 1px rgba(0,212,255,.14) inset}
+            .l3-pick{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:12px 14px;border:1px solid rgba(23,216,255,.22);background:rgba(23,216,255,.05);color:rgba(232,244,255,.82);cursor:pointer;text-align:center;font-family:Consolas,"Courier New",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+            .l3-pick span{line-height:1.45}
+            .l3-pick.selected,.l3-card.selected .l3-pick{border-color:#ff3f78;background:rgba(255,63,120,.1);color:#ffdce8;box-shadow:0 0 0 1px rgba(255,63,120,.14) inset}
+            .l3-submit-dock{display:flex;align-items:center;gap:20px;padding:16px 24px;border-top:1px solid rgba(23,216,255,.16);background:rgba(0,4,14,.84);flex-shrink:0;min-width:0}
+            .l3-submit-cluster{display:flex;align-items:center;gap:8px;min-width:0}
+            .l3-submit-cluster--summary{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:0}
+            .l3-submit-label{margin-right:4px;font-size:9px;letter-spacing:2px;color:rgba(168,216,232,.24)}
+            .l3-target-slot{min-width:64px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(23,216,255,.28);background:rgba(23,216,255,.03);color:rgba(168,216,232,.24);font-family:'Teko',sans-serif;font-size:13px;letter-spacing:1px;transition:all .3s ease}
+            .l3-target-slot.active{border-color:#ff3f78;background:rgba(255,63,120,.08);color:#ff3f78;box-shadow:0 0 10px rgba(255,63,120,.16)}
+            .l3-submit-value{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:#17d8ff;line-height:1}
+            .l3-submit-points-label{font-size:8px;letter-spacing:2px;color:rgba(168,216,232,.24)}
+            .l3-submit-meta{min-width:112px;text-align:right}
+            .l3-attempts{color:rgba(168,216,232,.24);font-size:8px;letter-spacing:2px}
+            .l3-fire-btn{margin-left:4px;border:none;background:#ff3f78;color:#03070d;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:12px 30px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:all .2s ease}
+            .l3-fire-btn:hover{background:#ff5a8f;box-shadow:0 10px 32px rgba(255,63,120,.26)}
+            .l3-fire-btn:disabled,.l3-fire-btn:disabled:hover{background:rgba(168,216,232,.18);color:rgba(3,7,13,.48);cursor:not-allowed;box-shadow:none}
+            .l3-console{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;overflow:hidden;background:rgba(0,3,12,.97)}
+            .l3-console-panel{position:relative;padding:18px 20px;background:rgba(0,3,12,.94);border-bottom:1px solid rgba(23,216,255,.16);flex-shrink:0}
+            .l3-console-panel--fill{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+            .l3-console-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:9px;letter-spacing:3px;color:rgba(168,216,232,.24)}
+            .l3-console-title::before{content:'//';color:#17d8ff;font-size:11px}
+            .l3-console-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .l3-console-chip{padding:5px 9px;border:1px solid rgba(255,63,120,.24);background:rgba(255,63,120,.08);color:#ffd9e5;font-size:9px;letter-spacing:2px}
+            .l3-brief-box{padding:0;border:0;background:none;box-shadow:none;backdrop-filter:none;line-height:1.85;color:rgba(232,244,255,.86)}
+            .l3-brief-box strong{color:#ffcc00}
+            .l3-console-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+            .l3-console-stat{padding:10px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .l3-console-stat span{display:block;color:rgba(168,216,232,.24);font-size:8px;letter-spacing:2px;text-transform:uppercase}
+            .l3-console-stat strong{display:block;margin-top:6px;color:rgba(255,255,255,.92);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;line-height:1}
+            .l3-console-track{height:4px;background:rgba(23,216,255,.12);margin-bottom:12px}
+            .l3-console-fill{height:100%;background:linear-gradient(90deg,#17d8ff,rgba(135,241,255,.92));box-shadow:0 0 12px rgba(23,216,255,.26)}
+            .l3-console-summary{margin-bottom:12px;color:rgba(168,216,232,.48);font-size:11px;line-height:1.6}
+            .l3-hint-stack{display:flex;flex-direction:column;gap:8px}
+            .l3-hint{padding:10px 12px;border-left:2px solid #17d8ff;background:rgba(23,216,255,.05);color:rgba(232,244,255,.86);font-size:11px;line-height:1.6}
+            .l3-feedback{margin-bottom:12px;padding:12px 14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.82);color:rgba(232,244,255,.86);line-height:1.65;font-size:11px;min-height:92px}
+            .l3-race-board{display:flex;flex-direction:column;gap:14px;min-height:0}
+            .l3-race-board__head{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start}
+            .l3-race-board__title{color:rgba(220,228,245,.82);line-height:1.6;max-width:680px}
+            .l3-race-board__legend{display:flex;gap:14px;flex-wrap:wrap;color:rgba(180,190,230,.7);font-size:.82rem}
+            .l3-race-board__legend span{display:inline-flex;align-items:center;gap:8px}
+            .l3-race-board__dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+            .l3-race-board__dot--weak{background:var(--cyber-pink)}
+            .l3-race-board__dot--strong{background:var(--cyber-green)}
+            .l3-race-row{padding:14px 0;border-top:1px solid rgba(23,216,255,.1)}
+            .l3-race-row:first-child{border-top:0;padding-top:4px}
+            .l3-race-row__title{display:flex;align-items:center;gap:10px;min-width:0}
+            .l3-race-row__tag{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid rgba(23,216,255,.18);background:rgba(23,216,255,.06);color:#eef2ff;font-size:.7rem;flex-shrink:0}
+            .l3-race-row__password{color:#eef2ff;word-break:break-word;line-height:1.5}
+            .l3-race-row__time{color:#ffcb6b;font-family:Consolas,"Courier New",monospace;letter-spacing:.08em;white-space:nowrap}
+            .l3-race-track{height:12px;margin-top:10px;background:rgba(100,116,139,0.2);overflow:hidden}
+            .l3-race-bar{height:100%;width:0%;transition-property:width;transition-timing-function:linear;background:var(--cyber-blue);box-shadow:0 0 12px rgba(23,216,255,.18)}
+            .l3-arena-scroll::-webkit-scrollbar,.l3-console-panel--fill::-webkit-scrollbar{width:4px}
+            .l3-arena-scroll::-webkit-scrollbar-thumb,.l3-console-panel--fill::-webkit-scrollbar-thumb{background:rgba(23,216,255,.28);border-radius:999px}
+            @media (max-width:1280px){.l3-body{grid-template-columns:minmax(0,1fr) 340px}.l3-arena-title{font-size:clamp(42px,3.8vw,60px)}}
+            @media (max-width:1080px){.l3-shell{overflow:auto}.l3-body{grid-template-columns:1fr;height:auto;overflow:visible}.l3-arena{border-right:0;border-bottom:1px solid rgba(23,216,255,.16)}}
+            @media (max-width:760px){.l3-arena-header,.l3-arena-scroll,.l3-submit-dock,.l3-console-panel{padding-left:16px;padding-right:16px}.l3-arena-header{flex-direction:column;align-items:flex-start}.l3-arena-hint{text-align:left;max-width:none}.l3-grid,.l3-signal-grid,.l3-console-stats{grid-template-columns:1fr}.l3-submit-dock{flex-wrap:wrap}.l3-submit-cluster--summary,.l3-submit-meta{margin-left:0;align-items:flex-start;text-align:left}.l3-fire-btn{width:100%;margin-left:0}.l3-pick{justify-content:flex-start;text-align:left}}
         </style>`;
     }
 
@@ -2827,10 +4298,6 @@ export class PasswordCrack {
         if (this.isComplete) return;
         const session = this.predictionSession || {};
         const options = Array.isArray(session.options) ? session.options : [];
-        if (!options.every(option => !!this.predictionRatings[option])) {
-            this.gameScreen.ui.showNotification('Classify every password first.', 'warning');
-            return;
-        }
         if (!this.predictionSelected) { this.gameScreen.ui.showNotification('Select one password first.', 'warning'); return; }
         this.attempts++;
         this.updateAttemptCounter();
@@ -2854,8 +4321,11 @@ export class PasswordCrack {
         const correct = this.predictionSelected === session.correctAnswer;
         const feedback = document.getElementById('guess-feedback');
         const explanation = session.simpleExplanation || '';
+        const unrated = options.filter(option => !this.predictionRatings[option]);
         const mismatches = options.filter(option => this.predictionRatings[option] !== this.getPredictionPasswordProfile(option, session).expectedRating);
-        const classificationLine = mismatches.length
+        const classificationLine = unrated.length
+            ? `<div style="margin-top:6px;">You skipped ${unrated.length} rating${unrated.length === 1 ? '' : 's'}. The race still runs, but your analysis was incomplete.</div>`
+            : mismatches.length
             ? `<div style="margin-top:6px;">Your strength labels missed ${mismatches.length} password${mismatches.length === 1 ? '' : 's'}. Focus on length and predictability first.</div>`
             : `<div style="margin-top:6px;color:var(--cyber-green);">Your strength labels matched the benchmark logic.</div>`;
         if (feedback) feedback.innerHTML = `<div><strong>${correct ? (this.mission.successFeedback || 'Good call.') : (this.mission.failureFeedback || 'Incorrect prediction.')}</strong></div><div style="margin-top:6px;">${explanation}</div>${classificationLine}`;
@@ -2914,6 +4384,158 @@ export class PasswordCrack {
         setTimeout(() => this.gameScreen.completePuzzle(false), 1200);
     }
 
+    renderInvestigationStyles() {
+        return `<style>
+            .lab-shared-content > .password-puzzle.investigation-shell{flex:1 1 auto;min-height:0!important;width:100%;overflow:hidden!important}
+            .password-puzzle.investigation-shell{display:flex;flex:1 1 auto;min-height:100%!important;width:100%;background:transparent!important;color:rgba(232,244,255,.86);overflow:hidden!important}
+            .password-puzzle.investigation-shell .investigation-body{display:grid;grid-template-columns:minmax(0,1fr) 360px;flex:1;min-width:0;min-height:0;overflow:hidden}
+            .password-puzzle.investigation-shell .investigation-arena{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid rgba(23,216,255,.16)}
+            .password-puzzle.investigation-shell .investigation-arena-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:16px 24px 12px;border-bottom:1px solid rgba(23,216,255,.16);background:rgba(0,4,14,.58);flex-shrink:0}
+            .password-puzzle.investigation-shell .investigation-arena-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,4.2vw,68px);letter-spacing:3px;line-height:.88;color:rgba(255,255,255,.92);text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-arena-title span{color:#ff3f78;text-shadow:0 0 18px rgba(255,63,120,.28)}
+            .password-puzzle.investigation-shell .investigation-arena-sub{margin-top:4px;font-size:10px;letter-spacing:1px;color:rgba(168,216,232,.48);text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-arena-hint{max-width:320px;text-align:right;font-size:10px;letter-spacing:1px;line-height:1.6;color:rgba(168,216,232,.48)}
+            .password-puzzle.investigation-shell .investigation-arena-hint b{color:#17d8ff;font-weight:700}
+            .password-puzzle.investigation-shell .investigation-arena-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 24px 20px;scrollbar-width:thin;scrollbar-color:rgba(23,216,255,.28) transparent}
+            .password-puzzle.investigation-shell .investigation-arena-scroll::-webkit-scrollbar,.password-puzzle.investigation-shell .investigation-console-panel--fill::-webkit-scrollbar{width:4px}
+            .password-puzzle.investigation-shell .investigation-arena-scroll::-webkit-scrollbar-thumb,.password-puzzle.investigation-shell .investigation-console-panel--fill::-webkit-scrollbar-thumb{background:rgba(23,216,255,.28);border-radius:999px}
+            .password-puzzle.investigation-shell .investigation-stage-board{display:grid;gap:16px}
+            .password-puzzle.investigation-shell .investigation-case-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+            .password-puzzle.investigation-shell .investigation-strip-card{padding:12px 14px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .password-puzzle.investigation-shell .investigation-strip-card span{display:block;color:rgba(168,216,232,.32);font-size:8px;letter-spacing:2px;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-strip-card strong{display:block;margin-top:6px;color:#17d8ff;font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1}
+            .password-puzzle.investigation-shell .investigation-strip-card strong.tone-alert{color:#ffcc00}
+            .password-puzzle.investigation-shell .investigation-strip-card strong.tone-safe{color:#00ff88}
+            .password-puzzle.investigation-shell .investigation-panel,
+            .password-puzzle.investigation-shell .investigation-question-panel,
+            .password-puzzle.investigation-shell .investigation-feedback-wrap,
+            .password-puzzle.investigation-shell .investigation-selected-entry{border:1px solid rgba(23,216,255,.12);background:rgba(2,10,24,.76)!important;box-shadow:0 18px 40px rgba(0,0,0,.22)!important;backdrop-filter:blur(12px)}
+            .password-puzzle.investigation-shell .investigation-panel__header,
+            .password-puzzle.investigation-shell .investigation-question-panel__header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+            .password-puzzle.investigation-shell .investigation-panel__header strong,
+            .password-puzzle.investigation-shell .investigation-question-panel__eyebrow{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(23,216,255,.72)}
+            .password-puzzle.investigation-shell .investigation-phase-chip,
+            .password-puzzle.investigation-shell .investigation-side-chip{padding:4px 9px;border:1px solid rgba(255,63,120,.22);background:rgba(255,63,120,.08);color:#ffd9e5;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-panel{padding:16px}
+            .password-puzzle.investigation-shell .investigation-panel--logs{display:grid;gap:14px;overflow:visible!important}
+            .password-puzzle.investigation-shell .investigation-board-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+            .password-puzzle.investigation-shell .investigation-board-stat,
+            .password-puzzle.investigation-shell .investigation-question-stat{padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .password-puzzle.investigation-shell .investigation-board-stat span,
+            .password-puzzle.investigation-shell .investigation-question-stat span{display:block;color:rgba(168,216,232,.32);font-size:8px;letter-spacing:2px;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-board-stat strong,
+            .password-puzzle.investigation-shell .investigation-question-stat strong{display:block;margin-top:6px;color:rgba(255,255,255,.94);font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;line-height:1}
+            .password-puzzle.investigation-shell .investigation-log-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+            .password-puzzle.investigation-shell .investigation-log-entry{display:flex;flex-direction:column;gap:0;padding:0;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.03);cursor:pointer;overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease}
+            .password-puzzle.investigation-shell .investigation-log-entry:hover,
+            .password-puzzle.investigation-shell .investigation-log-entry.is-selected{border-color:#17d8ff;box-shadow:-4px 0 0 rgba(23,216,255,.42),0 0 28px rgba(23,216,255,.08)}
+            .password-puzzle.investigation-shell .investigation-log-entry__accent{height:2px;background:rgba(23,216,255,.18)}
+            .password-puzzle.investigation-shell .investigation-log-entry__accent.investigation-log-entry__status--critical{background:#ff3f78;box-shadow:0 0 14px rgba(255,63,120,.32)}
+            .password-puzzle.investigation-shell .investigation-log-entry__accent.investigation-log-entry__status--warning{background:#ffcc00;box-shadow:0 0 14px rgba(255,204,0,.24)}
+            .password-puzzle.investigation-shell .investigation-log-entry__accent.investigation-log-entry__status--safe{background:#17d8ff;box-shadow:0 0 14px rgba(23,216,255,.26)}
+            .password-puzzle.investigation-shell .investigation-log-entry__body{display:flex;flex-direction:column;gap:0;padding:16px;min-height:100%}
+            .password-puzzle.investigation-shell .investigation-log-entry__meta{display:flex;justify-content:space-between;gap:12px;color:rgba(168,216,232,.36);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-log-entry__title{margin-top:8px;color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:28px;letter-spacing:1px;line-height:1.05}
+            .password-puzzle.investigation-shell .investigation-log-entry__subtitle{margin-top:4px;color:rgba(168,216,232,.64);line-height:1.55}
+            .password-puzzle.investigation-shell .investigation-log-entry__actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:12px}
+            .password-puzzle.investigation-shell .investigation-action-btn,
+            .password-puzzle.investigation-shell .investigation-question-panel .btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 14px;border:1px solid rgba(23,216,255,.24)!important;background:rgba(23,216,255,.06)!important;color:rgba(232,244,255,.82)!important;font-family:'Share Tech Mono',monospace!important;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}
+            .password-puzzle.investigation-shell .investigation-action-btn.is-flagged{border-color:#ff3f78!important;background:rgba(255,63,120,.1)!important;color:#ffdce8!important}
+            .password-puzzle.investigation-shell .investigation-question-panel{display:grid;gap:14px;padding:16px}
+            .password-puzzle.investigation-shell .investigation-panel--logs .investigation-question-panel{padding:0;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important}
+            .password-puzzle.investigation-shell .investigation-panel--logs .investigation-question-panel + .investigation-question-panel{padding-top:14px;border-top:1px solid rgba(23,216,255,.08)!important}
+            .password-puzzle.investigation-shell .investigation-question-panel__title{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:34px;letter-spacing:1px;line-height:1.05}
+            .password-puzzle.investigation-shell .investigation-question-panel__sub{color:rgba(168,216,232,.58);line-height:1.7}
+            .password-puzzle.investigation-shell .investigation-question-panel__meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+            .password-puzzle.investigation-shell .investigation-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+            .password-puzzle.investigation-shell .investigation-choice-card{position:relative;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.03);cursor:pointer;overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease}
+            .password-puzzle.investigation-shell .investigation-choice-card:hover,
+            .password-puzzle.investigation-shell .investigation-choice-card.is-selected{border-color:#17d8ff;box-shadow:0 0 0 1px rgba(23,216,255,.16) inset,0 0 24px rgba(23,216,255,.08)}
+            .password-puzzle.investigation-shell .investigation-choice-card input{position:absolute;opacity:0;pointer-events:none}
+            .password-puzzle.investigation-shell .investigation-choice-card__accent{height:2px;background:rgba(23,216,255,.22)}
+            .password-puzzle.investigation-shell .investigation-choice-card.is-selected .investigation-choice-card__accent{background:#17d8ff;box-shadow:0 0 10px rgba(23,216,255,.32)}
+            .password-puzzle.investigation-shell .investigation-choice-card__copy{display:flex;flex-direction:column;gap:0;padding:16px;min-height:100%}
+            .password-puzzle.investigation-shell .investigation-choice-card__marker{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border:1px solid rgba(23,216,255,.18);background:rgba(23,216,255,.06);color:#17d8ff;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-choice-card__top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+            .password-puzzle.investigation-shell .investigation-choice-card__heading{display:flex;flex-direction:column;gap:4px}
+            .password-puzzle.investigation-shell .investigation-choice-card__label{color:rgba(168,216,232,.38);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-choice-card__title{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:28px;letter-spacing:1px;line-height:1.05}
+            .password-puzzle.investigation-shell .investigation-choice-card__tag{padding:4px 8px;border:1px solid rgba(23,216,255,.18);background:rgba(23,216,255,.06);color:rgba(232,244,255,.8);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-choice-card__desc{display:block;margin-top:10px;color:rgba(168,216,232,.64);line-height:1.65}
+            .password-puzzle.investigation-shell .investigation-question-panel__footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:2px;border-top:1px solid rgba(23,216,255,.08)}
+            .password-puzzle.investigation-shell .investigation-question-panel__hint{color:rgba(168,216,232,.42);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-feedback-wrap{display:grid;gap:12px;padding:16px}
+            .password-puzzle.investigation-shell .investigation-feedback-wrap .guess-feedback{margin:0;min-height:124px;padding:14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.86);color:rgba(232,244,255,.86);line-height:1.7}
+            .password-puzzle.investigation-shell .investigation-attempt-counter{margin:0;color:rgba(168,216,232,.44);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-console{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;overflow:hidden;background:rgba(0,3,12,.97)}
+            .password-puzzle.investigation-shell .investigation-console-panel{padding:18px 20px;border-bottom:1px solid rgba(23,216,255,.16);background:rgba(0,3,12,.94);flex-shrink:0}
+            .password-puzzle.investigation-shell .investigation-console-panel--fill{display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;overflow-y:auto}
+            .password-puzzle.investigation-shell .investigation-console-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;color:rgba(168,216,232,.24);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-console-title::before{content:'//';color:#17d8ff;font-size:11px}
+            .password-puzzle.investigation-shell .investigation-console-chip{padding:5px 9px;border:1px solid rgba(255,63,120,.22);background:rgba(255,63,120,.08);color:#ffdce8;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-console-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .password-puzzle.investigation-shell .investigation-brief-box{line-height:1.8;color:rgba(232,244,255,.86)}
+            .password-puzzle.investigation-shell .investigation-brief-box strong{color:#ffcc00}
+            .password-puzzle.investigation-shell .investigation-objective-list{display:grid;gap:8px;margin-top:14px}
+            .password-puzzle.investigation-shell .investigation-objective{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .password-puzzle.investigation-shell .investigation-objective__icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(23,216,255,.18);color:rgba(168,216,232,.38);flex-shrink:0}
+            .password-puzzle.investigation-shell .investigation-objective.on .investigation-objective__icon{border-color:#17d8ff;color:#17d8ff;background:rgba(23,216,255,.08)}
+            .password-puzzle.investigation-shell .investigation-objective__text{line-height:1.6;color:rgba(232,244,255,.86)}
+            .password-puzzle.investigation-shell .investigation-console-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+            .password-puzzle.investigation-shell .investigation-console-stat{padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .password-puzzle.investigation-shell .investigation-console-stat span{display:block;color:rgba(168,216,232,.32);font-size:8px;letter-spacing:2px;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-console-stat strong{display:block;margin-top:6px;color:#17d8ff;font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1}
+            .password-puzzle.investigation-shell .investigation-profile__name{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:34px;letter-spacing:1px;line-height:1}
+            .password-puzzle.investigation-shell .investigation-profile__role{margin-top:4px;color:rgba(168,216,232,.56);line-height:1.6}
+            .password-puzzle.investigation-shell .investigation-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+            .password-puzzle.investigation-shell .investigation-mini-card{padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04)}
+            .password-puzzle.investigation-shell .investigation-mini-card__label{display:block;color:rgba(168,216,232,.32);font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-mini-card__value{display:block;margin-top:6px;color:rgba(255,255,255,.9);font-size:1rem;line-height:1.5;word-break:break-word}
+            .password-puzzle.investigation-shell .investigation-policy{display:grid;gap:10px}
+            .password-puzzle.investigation-shell .investigation-policy-row{display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(23,216,255,.04);align-items:center}
+            .password-puzzle.investigation-shell .investigation-policy-row span{color:rgba(232,244,255,.82);line-height:1.5}
+            .password-puzzle.investigation-shell .investigation-policy-row strong{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-selected-panel{display:flex;flex-direction:column;min-height:0}
+            .password-puzzle.investigation-shell .investigation-selected-entry{display:grid;gap:10px;min-height:0;padding:16px}
+            .password-puzzle.investigation-shell .investigation-selected-entry__empty{color:rgba(168,216,232,.44);line-height:1.7}
+            .password-puzzle.investigation-shell .investigation-selected-entry__meta{color:rgba(168,216,232,.36);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+            .password-puzzle.investigation-shell .investigation-selected-entry__title{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:30px;letter-spacing:1px;line-height:1.05}
+            .password-puzzle.investigation-shell .investigation-selected-entry__subtitle{color:rgba(168,216,232,.6);line-height:1.6}
+            .password-puzzle.investigation-shell .investigation-selected-entry__body{color:rgba(232,244,255,.86);line-height:1.75}
+            .password-puzzle.investigation-shell .investigation-selected-entry__flag{padding:10px 12px;border-left:2px solid rgba(23,216,255,.38);background:rgba(23,216,255,.05);color:rgba(232,244,255,.82);line-height:1.6}
+            .password-puzzle.investigation-shell .investigation-selected-entry__flag.is-flagged{border-left-color:#ff3f78;background:rgba(255,63,120,.08);color:#ffdce8}
+            @media (max-width:1280px){
+                .password-puzzle.investigation-shell .investigation-body{grid-template-columns:minmax(0,1fr) 340px}
+                .password-puzzle.investigation-shell .investigation-arena-title{font-size:clamp(42px,3.8vw,60px)}
+            }
+            @media (max-width:1080px){
+                .password-puzzle.investigation-shell{overflow:auto!important}
+                .password-puzzle.investigation-shell .investigation-body{grid-template-columns:1fr;height:auto;overflow:visible}
+                .password-puzzle.investigation-shell .investigation-arena{border-right:0;border-bottom:1px solid rgba(23,216,255,.16)}
+                .password-puzzle.investigation-shell .investigation-console{overflow:visible}
+                .password-puzzle.investigation-shell .investigation-console-panel--fill{overflow:visible}
+            }
+            @media (max-width:760px){
+                .password-puzzle.investigation-shell .investigation-arena-header,
+                .password-puzzle.investigation-shell .investigation-arena-scroll,
+                .password-puzzle.investigation-shell .investigation-console-panel{padding-left:16px;padding-right:16px}
+                .password-puzzle.investigation-shell .investigation-arena-header{flex-direction:column;align-items:flex-start}
+                .password-puzzle.investigation-shell .investigation-arena-hint{text-align:left;max-width:none}
+                .password-puzzle.investigation-shell .investigation-case-strip,
+                .password-puzzle.investigation-shell .investigation-board-summary,
+                .password-puzzle.investigation-shell .investigation-log-list,
+                .password-puzzle.investigation-shell .investigation-question-panel__meta,
+                .password-puzzle.investigation-shell .investigation-console-stats,
+                .password-puzzle.investigation-shell .investigation-mini-grid,
+                .password-puzzle.investigation-shell .investigation-choice-list{grid-template-columns:1fr}
+                .password-puzzle.investigation-shell .investigation-question-panel__footer{flex-direction:column;align-items:stretch}
+                .password-puzzle.investigation-shell .investigation-question-panel .btn{width:100%}
+                .password-puzzle.investigation-shell .investigation-log-entry__meta,
+                .password-puzzle.investigation-shell .investigation-choice-card__top{flex-direction:column;align-items:flex-start}
+            }
+        </style>`;
+    }
+
     // ─── Investigation (Level 4) ──────────────────────────────────────────────
 
     renderInvestigationPuzzle(container) {
@@ -2922,6 +4544,7 @@ export class PasswordCrack {
         const policy = this.puzzleData.systemPolicy || {};
         const causeChoices = Array.isArray(this.puzzleData.choices) ? this.puzzleData.choices : [];
         const followUp = this.puzzleData.followUpDefenseQuestion || null;
+        const defenseOptions = Array.isArray(followUp?.options) ? followUp.options : [];
         const flaggedCount = this.investigationFlaggedEvents.size;
         const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
         const flagQuality = this.getInvestigationFlagQuality(logs);
@@ -2929,22 +4552,44 @@ export class PasswordCrack {
         const leadHint = this.investigationStage === 'defense'
             ? 'Contain the confirmed breach path before the attacker re-establishes access.'
             : 'Inspect the access trail, flag the strongest signals, and reconstruct the initial breach path.';
-        const causeMarkup = causeChoices.map(c => `
-            <label class="investigation-choice-card">
-                <input type="radio" name="investigation-cause" value="${c.id}"/>
+        const selectedCauseChoice = causeChoices.find(choice => choice.id === this.investigationSelectedCause) || null;
+        const confirmedCauseChoice = causeChoices.find(choice => choice.id === this.puzzleData.correctAnswer) || null;
+        const selectedDefenseChoice = defenseOptions.find(option => option.id === this.investigationSelectedDefense) || null;
+        const renderInvestigationChoiceCard = (item, idx, groupName, selectedId, fallbackDesc, kindLabel) => `
+            <label class="investigation-choice-card ${selectedId === item.id ? 'is-selected' : ''}">
+                <input type="radio" name="${groupName}" value="${item.id}" ${selectedId === item.id ? 'checked' : ''}/>
+                <div class="investigation-choice-card__accent"></div>
                 <div class="investigation-choice-card__copy">
-                    <span class="investigation-choice-card__title">${c.label}</span>
-                    <span class="investigation-choice-card__desc">${c.description || c.explanation || c.summary || 'Review the evidence trail and choose the attack path that best fits the observed sequence.'}</span>
+                    <div class="investigation-choice-card__top">
+                        <div class="investigation-choice-card__heading">
+                            <span class="investigation-choice-card__marker">${kindLabel} ${String.fromCharCode(65 + idx)}</span>
+                            <span class="investigation-choice-card__title">${item.label}</span>
+                        </div>
+                        <span class="investigation-choice-card__tag">${groupName === 'investigation-cause' ? 'ATTACK' : 'CONTROL'}</span>
+                    </div>
+                    <span class="investigation-choice-card__desc">${item.description || item.explanation || item.summary || fallbackDesc}</span>
                 </div>
-            </label>`).join('');
-        const defenseMarkup = followUp ? (Array.isArray(followUp.options) ? followUp.options.map(o => `
-            <label class="investigation-choice-card">
-                <input type="radio" name="investigation-defense" value="${o.id}"/>
-                <div class="investigation-choice-card__copy">
-                    <span class="investigation-choice-card__title">${o.label}</span>
-                    <span class="investigation-choice-card__desc">${o.description || o.explanation || 'Choose the control that most directly disrupts the attack pattern visible in the logs.'}</span>
-                </div>
-            </label>`).join('') : '') : '';
+            </label>`;
+        const causeMarkup = causeChoices.map((choice, idx) =>
+            renderInvestigationChoiceCard(
+                choice,
+                idx,
+                'investigation-cause',
+                this.investigationSelectedCause,
+                'Review the evidence trail and choose the attack path that best fits the observed sequence.',
+                'OPTION'
+            )
+        ).join('');
+        const defenseMarkup = followUp ? defenseOptions.map((option, idx) =>
+            renderInvestigationChoiceCard(
+                option,
+                idx,
+                'investigation-defense',
+                this.investigationSelectedDefense,
+                'Choose the control that most directly disrupts the attack pattern visible in the logs.',
+                'CONTROL'
+            )
+        ).join('') : '';
         const profileCards = this.getInvestigationProfileFields(profile).map(field => `
             <div class="investigation-mini-card">
                 <span class="investigation-mini-card__label">${field.label}</span>
@@ -2955,10 +4600,25 @@ export class PasswordCrack {
                 <span>${row.label}</span>
                 <strong class="${row.className}">${row.value}</strong>
             </div>`).join('');
+        const briefingObjectives = (Array.isArray(this.mission.objectives) && this.mission.objectives.length)
+            ? this.mission.objectives
+            : [
+                'Flag the strongest breach indicators in the access trail.',
+                'Identify the attack path that best fits the observed login pattern.',
+                'Choose the control that shuts down repeat access.'
+            ];
+        const objectivesMarkup = briefingObjectives.map((objective, index) => {
+            const isOn = this.investigationStage === 'defense' ? index < 2 : index === 0;
+            return `
+                <div class="investigation-objective ${isOn ? 'on' : ''}">
+                    <div class="investigation-objective__icon">${isOn ? '▸' : ''}</div>
+                    <div class="investigation-objective__text">${objective}</div>
+                </div>`;
+        }).join('');
         const logMarkup = logs.map(log => `
             <article class="investigation-log-entry ${this.investigationSelectedEntryId === log.id ? 'is-selected' : ''}"
                      data-investigation-entry="${log.id}">
-                <div class="investigation-log-entry__status investigation-log-entry__status--${log.statusTone}"></div>
+                <div class="investigation-log-entry__accent investigation-log-entry__status--${log.statusTone}"></div>
                 <div class="investigation-log-entry__body">
                     <div class="investigation-log-entry__meta">
                         <span>${log.timestamp}</span>
@@ -2985,6 +4645,7 @@ export class PasswordCrack {
 
         container.innerHTML = `
             ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderInvestigationStyles()}
             ${this.renderSharedPasswordLabFrame({
                 levelLabel: '// LEVEL 04 - FORENSIC REVIEW',
                 title: 'BREACH<br>INVESTIGATION',
@@ -2996,136 +4657,187 @@ export class PasswordCrack {
                 ],
                 content: `
                     <div class="password-puzzle investigation-shell">
-                        <section class="investigation-masthead">
-                            <div class="investigation-masthead__brand">SHADOWDEF</div>
-                            <div class="investigation-masthead__case">LEVEL 4 · BREACH INVESTIGATION</div>
-                            <div class="investigation-masthead__status">${this.investigationStage === 'defense' ? 'CONTAINMENT WINDOW ACTIVE' : 'FORENSIC REVIEW ACTIVE'}</div>
-                        </section>
-
-                        <section class="investigation-header">
-                            <div class="investigation-header__title">
-                                <div class="investigation-level-badge">LEVEL<br>4</div>
-                                <div>
-                                    <h2 class="puzzle-title investigation-title">BREACH INVESTIGATION</h2>
-                                    <div class="investigation-subtitle">${this.mission.objective || 'Reconstruct how the vault breach happened and identify the right defensive response.'}</div>
-                                    <div class="investigation-case-meta">
-                                        <span>CASE ID: VAULT-04</span>
-                                        <span>ANALYST FLAGS: ${flaggedCount}/${this.investigationFlagLimit}</span>
-                                        <span>DECISIONS LEFT: ${attemptsLeft}</span>
+                        <div class="investigation-body">
+                            <section class="investigation-arena">
+                                <div class="investigation-arena-header">
+                                    <div>
+                                        <div class="investigation-arena-title">TRACE<br>THE<br><span>BREACH</span></div>
+                                        <div class="investigation-arena-sub">// CASE VAULT-04 · reconstruct the vault access path before the attacker returns</div>
+                                    </div>
+                                    <div class="investigation-arena-hint">
+                                        Inspect the <b>access log</b>, flag the strongest indicators, then lock the correct <b>attack path</b> and <b>containment control</b>.
                                     </div>
                                 </div>
-                            </div>
-                            <div class="investigation-header__metrics">
-                                <div class="investigation-metric">
-                                    <span>INTEGRITY</span>
-                                    <strong id="investigation-integrity">${this.getInvestigationIntegrity()}%</strong>
-                                </div>
-                                <div class="investigation-metric">
-                                    <span>FLAGS</span>
-                                    <strong id="investigation-flag-count">${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}</strong>
-                                </div>
-                                <div class="investigation-metric">
-                                    <span>TIME</span>
-                                    <strong>${this.getInvestigationTimeDisplay()}</strong>
-                                </div>
-                            </div>
-                        </section>
 
-                        <div class="investigation-hint-strip">${leadHint}</div>
+                                <div class="investigation-arena-scroll">
+                                    <div class="investigation-stage-board">
+                                        <div class="investigation-case-strip">
+                                            <div class="investigation-strip-card">
+                                                <span>Case ID</span>
+                                                <strong>VAULT-04</strong>
+                                            </div>
+                                            <div class="investigation-strip-card">
+                                                <span>Analyst Flags</span>
+                                                <strong id="investigation-flag-count">${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}</strong>
+                                            </div>
+                                            <div class="investigation-strip-card">
+                                                <span>Integrity</span>
+                                                <strong class="tone-safe" id="investigation-integrity">${this.getInvestigationIntegrity()}%</strong>
+                                            </div>
+                                            <div class="investigation-strip-card">
+                                                <span>Phase</span>
+                                                <strong class="tone-alert" id="investigation-phase-short">${this.investigationStage === 'defense' ? 'P2' : 'P1'}</strong>
+                                            </div>
+                                        </div>
 
-                        <div class="investigation-progress-rail">
-                            <div class="investigation-progress-step is-active">
-                                <span class="investigation-progress-step__num">01</span>
-                                <span class="investigation-progress-step__label">TRACE EVENTS</span>
-                            </div>
-                            <div class="investigation-progress-step ${this.investigationStage === 'defense' ? 'is-active' : ''}">
-                                <span class="investigation-progress-step__num">02</span>
-                                <span class="investigation-progress-step__label">IDENTIFY ATTACK</span>
-                            </div>
-                            <div class="investigation-progress-step ${this.investigationStage === 'defense' ? 'is-active' : ''}">
-                                <span class="investigation-progress-step__num">03</span>
-                                <span class="investigation-progress-step__label">SELECT DEFENSE</span>
-                            </div>
-                        </div>
+                                        <div class="investigation-panel investigation-panel--logs">
+                                            <div class="investigation-panel__header">
+                                                <strong>ACCESS LOG - VAULT SYSTEM</strong>
+                                                <span class="investigation-phase-chip">${phaseLabel}</span>
+                                            </div>
+                                            <div class="investigation-board-summary">
+                                                <div class="investigation-board-stat">
+                                                    <span>Events</span>
+                                                    <strong>${logs.length}</strong>
+                                                </div>
+                                                <div class="investigation-board-stat">
+                                                    <span>Flagged</span>
+                                                    <strong id="investigation-board-flagged">${flaggedCount}</strong>
+                                                </div>
+                                                <div class="investigation-board-stat">
+                                                    <span>Selected</span>
+                                                    <strong id="investigation-board-selected">${this.investigationSelectedEntryId || 'NONE'}</strong>
+                                                </div>
+                                                <div class="investigation-board-stat">
+                                                    <span>Critical</span>
+                                                    <strong>${flagQuality.criticalFlags}</strong>
+                                                </div>
+                                            </div>
+                                            <div class="investigation-log-list">${logMarkup}</div>
+                                            <section class="investigation-question-panel" id="investigation-cause-block" ${this.investigationStage === 'defense' ? 'style="display:none;"' : ''}>
+                                                <div class="investigation-question-panel__header">
+                                                    <div class="investigation-question-panel__eyebrow">Cause Analysis</div>
+                                                    <span class="investigation-phase-chip">SELECT ATTACK</span>
+                                                </div>
+                                                <div class="investigation-question-panel__title">What attack unlocked unauthorized access?</div>
+                                                <div class="investigation-question-panel__sub">Use the flagged evidence, login cadence, and policy gaps to identify the breach pattern that best fits the sequence.</div>
+                                                <div class="investigation-question-panel__meta">
+                                                    <div class="investigation-question-stat">
+                                                        <span>Candidates</span>
+                                                        <strong>${causeChoices.length}</strong>
+                                                    </div>
+                                                    <div class="investigation-question-stat">
+                                                        <span>Critical Flags</span>
+                                                        <strong>${flagQuality.criticalFlags}</strong>
+                                                    </div>
+                                                    <div class="investigation-question-stat">
+                                                        <span>Selected</span>
+                                                        <strong id="investigation-cause-selected">${selectedCauseChoice ? selectedCauseChoice.label : 'None yet'}</strong>
+                                                    </div>
+                                                </div>
+                                                <div class="investigation-choice-list">${causeMarkup}</div>
+                                                <div class="investigation-question-panel__footer">
+                                                    <button class="btn btn-primary" type="button" id="submit-investigation-cause">SUBMIT ANALYSIS</button>
+                                                    <div class="investigation-question-panel__hint" id="investigation-submit-hint">Flag suspicious entries first</div>
+                                                </div>
+                                            </section>
 
-                        <section class="investigation-grid">
-                            <div class="investigation-panel investigation-panel--logs">
-                                <div class="investigation-panel__header">
-                                    <strong>ACCESS LOG - VAULT SYSTEM</strong>
-                                    <span class="investigation-phase-chip">${phaseLabel}</span>
+                                            <section class="investigation-question-panel" id="investigation-defense-block" ${this.investigationStage === 'defense' ? '' : 'style="display:none;"'}>
+                                                ${followUp ? `
+                                                    <div class="investigation-question-panel__header">
+                                                        <div class="investigation-question-panel__eyebrow">Containment Response</div>
+                                                        <span class="investigation-phase-chip">SELECT DEFENSE</span>
+                                                    </div>
+                                                    <div class="investigation-question-panel__title">${followUp.prompt}</div>
+                                                    <div class="investigation-question-panel__sub">Choose the control that most directly breaks the repeated guessing or credential reuse path you just confirmed.</div>
+                                                    <div class="investigation-question-panel__meta">
+                                                        <div class="investigation-question-stat">
+                                                            <span>Controls</span>
+                                                            <strong>${defenseOptions.length}</strong>
+                                                        </div>
+                                                        <div class="investigation-question-stat">
+                                                            <span>Confirmed Cause</span>
+                                                            <strong>${confirmedCauseChoice ? confirmedCauseChoice.label : 'Complete phase one'}</strong>
+                                                        </div>
+                                                        <div class="investigation-question-stat">
+                                                            <span>Selected</span>
+                                                            <strong id="investigation-defense-selected">${selectedDefenseChoice ? selectedDefenseChoice.label : 'None yet'}</strong>
+                                                        </div>
+                                                    </div>
+                                                    <div class="investigation-choice-list">${defenseMarkup}</div>
+                                                    <div class="investigation-question-panel__footer">
+                                                        <button class="btn btn-primary" type="button" id="submit-investigation-defense">SUBMIT DEFENSE</button>
+                                                        <div class="investigation-question-panel__hint">Choose the control that blocks repeated guessing or credential reuse.</div>
+                                                    </div>` : ''}
+                                            </section>
+                                        </div>
+
+                                        <div class="investigation-feedback-wrap">
+                                            <div class="guess-feedback investigation-feedback" id="guess-feedback">
+                                                Review the evidence trail, inspect suspicious entries, and connect the login pattern to the most likely attack path.
+                                            </div>
+                                            <div id="attempt-counter" class="investigation-attempt-counter">
+                                                Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="investigation-board-summary">
-                                    <div class="investigation-board-stat">
-                                        <span>EVENTS</span>
-                                        <strong>${logs.length}</strong>
-                                    </div>
-                                    <div class="investigation-board-stat">
-                                        <span>FLAGGED</span>
-                                        <strong id="investigation-board-flagged">${flaggedCount}</strong>
-                                    </div>
-                                    <div class="investigation-board-stat">
-                                        <span>SELECTED</span>
-                                        <strong id="investigation-board-selected">${this.investigationSelectedEntryId || 'NONE'}</strong>
-                                    </div>
-                                    <div class="investigation-board-stat">
-                                        <span>CRITICAL FLAGS</span>
-                                        <strong>${flagQuality.criticalFlags}</strong>
-                                    </div>
-                                </div>
-                                <div class="investigation-log-list">${logMarkup}</div>
-                            </div>
+                            </section>
 
-                            <div class="investigation-side-stack">
-                                <div class="investigation-panel">
-                                    <div class="investigation-panel__header"><strong>ACCOUNT PROFILE</strong></div>
+                            <aside class="investigation-console">
+                                <section class="investigation-console-panel">
+                                    <div class="investigation-console-title">Mission Brief</div>
+                                    <div class="investigation-brief-box">
+                                        <div><strong>Objective:</strong> ${this.mission.objective || 'Reconstruct how the vault breach happened and identify the right defensive response.'}</div>
+                                        <div><strong>Scenario:</strong> ${this.mission.scenario || leadHint}</div>
+                                        <div><strong>Task:</strong> Flag the strongest clues, select the correct cause, then choose the best containment control.</div>
+                                    </div>
+                                    <div class="investigation-objective-list">${objectivesMarkup}</div>
+                                </section>
+
+                                <section class="investigation-console-panel">
+                                    <div class="investigation-console-head">
+                                        <div class="investigation-console-title">Analyst Telemetry</div>
+                                        <div class="investigation-console-chip" id="investigation-console-mode">${this.investigationStage === 'defense' ? 'CONTAINMENT LIVE' : 'FORENSIC REVIEW'}</div>
+                                    </div>
+                                    <div class="investigation-console-stats">
+                                        <div class="investigation-console-stat">
+                                            <span>Integrity</span>
+                                            <strong id="investigation-integrity-console">${this.getInvestigationIntegrity()}%</strong>
+                                        </div>
+                                        <div class="investigation-console-stat">
+                                            <span>Flags</span>
+                                            <strong id="investigation-flag-count-console">${flaggedCount}/${this.investigationFlagLimit}</strong>
+                                        </div>
+                                        <div class="investigation-console-stat">
+                                            <span>Time</span>
+                                            <strong>${this.getInvestigationTimeDisplay()}</strong>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="investigation-console-panel">
+                                    <div class="investigation-console-title">Account Profile</div>
                                     <div class="investigation-profile">
                                         <div class="investigation-profile__name">${profile.name || 'Unknown User'}</div>
                                         <div class="investigation-profile__role">${profile.role || 'Role unavailable'}</div>
                                         <div class="investigation-mini-grid">${profileCards}</div>
                                     </div>
-                                </div>
+                                </section>
 
-                                <div class="investigation-panel">
-                                    <div class="investigation-panel__header"><strong>SYSTEM POLICY</strong></div>
+                                <section class="investigation-console-panel">
+                                    <div class="investigation-console-title">System Policy</div>
                                     <div class="investigation-policy">${policyRows}</div>
-                                </div>
+                                </section>
 
-                                <div class="investigation-panel">
-                                    <div class="investigation-panel__header">
-                                        <strong>SELECTED ENTRY</strong>
+                                <section class="investigation-console-panel investigation-console-panel--fill investigation-selected-panel">
+                                    <div class="investigation-console-head">
+                                        <div class="investigation-console-title">Selected Entry</div>
                                         <span class="investigation-side-chip">${this.investigationSelectedEntryId || 'AWAITING INSPECTION'}</span>
                                     </div>
                                     <div class="investigation-selected-entry" id="investigation-selected-entry"></div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="investigation-question-panel" id="investigation-cause-block">
-                            <div class="investigation-question-panel__title">What type of attack allowed unauthorized access to the vault?</div>
-                            <div class="investigation-question-panel__sub">Use the flagged evidence, login cadence, and exposed policy gaps to identify the breach pattern.</div>
-                            <div class="investigation-choice-list">${causeMarkup}</div>
-                            <div class="investigation-question-panel__footer">
-                                <button class="btn btn-primary" id="submit-investigation-cause">SUBMIT ANALYSIS</button>
-                                <div class="investigation-question-panel__hint" id="investigation-submit-hint">Flag suspicious entries first</div>
-                            </div>
-                        </section>
-
-                        <section class="investigation-question-panel" id="investigation-defense-block" style="display:none;">
-                            ${followUp ? `
-                                <div class="investigation-question-panel__title">${followUp.prompt}</div>
-                                <div class="investigation-question-panel__sub">Select the control that most directly breaks the repeated guessing or credential reuse path you just confirmed.</div>
-                                <div class="investigation-choice-list">${defenseMarkup}</div>
-                                <div class="investigation-question-panel__footer">
-                                    <button class="btn btn-primary" id="submit-investigation-defense">SUBMIT DEFENSE</button>
-                                    <div class="investigation-question-panel__hint">Choose the control that blocks repeated guessing or credential reuse.</div>
-                                </div>` : ''}
-                        </section>
-
-                        <div class="guess-feedback investigation-feedback" id="guess-feedback">
-                            Review the evidence trail, inspect suspicious entries, and connect the login pattern to the most likely attack path.
-                        </div>
-                        <div id="attempt-counter" class="investigation-attempt-counter">
-                            Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                                </section>
+                            </aside>
                         </div>
                     </div>`
             })}`;
@@ -3154,8 +4866,30 @@ export class PasswordCrack {
                 this.audio.playButtonClick();
             });
         });
-        document.querySelectorAll('input[name="investigation-cause"]').forEach(r => { r.addEventListener('change', () => { this.investigationSelectedCause = r.value; this.audio.playButtonClick(); }); });
-        document.querySelectorAll('input[name="investigation-defense"]').forEach(r => { r.addEventListener('change', () => { this.investigationSelectedDefense = r.value; this.audio.playButtonClick(); }); });
+        document.querySelectorAll('input[name="investigation-cause"]').forEach(r => {
+            r.addEventListener('change', () => {
+                this.investigationSelectedCause = r.value;
+                document.querySelectorAll('.investigation-choice-card input[name="investigation-cause"]').forEach(input => {
+                    input.closest('.investigation-choice-card')?.classList.toggle('is-selected', input.checked);
+                });
+                const selectedLabel = document.getElementById('investigation-cause-selected');
+                const selectedOption = (this.puzzleData.choices || []).find(choice => choice.id === r.value);
+                if (selectedLabel) selectedLabel.textContent = selectedOption?.label || 'None yet';
+                this.audio.playButtonClick();
+            });
+        });
+        document.querySelectorAll('input[name="investigation-defense"]').forEach(r => {
+            r.addEventListener('change', () => {
+                this.investigationSelectedDefense = r.value;
+                document.querySelectorAll('.investigation-choice-card input[name="investigation-defense"]').forEach(input => {
+                    input.closest('.investigation-choice-card')?.classList.toggle('is-selected', input.checked);
+                });
+                const selectedLabel = document.getElementById('investigation-defense-selected');
+                const selectedOption = (this.puzzleData.followUpDefenseQuestion?.options || []).find(option => option.id === r.value);
+                if (selectedLabel) selectedLabel.textContent = selectedOption?.label || 'None yet';
+                this.audio.playButtonClick();
+            });
+        });
         document.getElementById('submit-investigation-cause')?.addEventListener('click', () => this.submitInvestigationCause());
         document.getElementById('submit-investigation-defense')?.addEventListener('click', () => this.submitInvestigationDefense());
     }
@@ -3323,12 +5057,25 @@ export class PasswordCrack {
     updateInvestigationDashboard() {
         const integrity = document.getElementById('investigation-integrity');
         if (integrity) integrity.textContent = `${this.getInvestigationIntegrity()}%`;
+        const integrityConsole = document.getElementById('investigation-integrity-console');
+        if (integrityConsole) integrityConsole.textContent = `${this.getInvestigationIntegrity()}%`;
         const flagCount = document.getElementById('investigation-flag-count');
         if (flagCount) flagCount.textContent = `${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}`;
+        const flagCountConsole = document.getElementById('investigation-flag-count-console');
+        if (flagCountConsole) flagCountConsole.textContent = `${this.investigationFlaggedEvents.size}/${this.investigationFlagLimit}`;
         const boardFlagged = document.getElementById('investigation-board-flagged');
         if (boardFlagged) boardFlagged.textContent = `${this.investigationFlaggedEvents.size}`;
         const boardSelected = document.getElementById('investigation-board-selected');
         if (boardSelected) boardSelected.textContent = this.investigationSelectedEntryId || 'NONE';
+        const phaseShort = document.getElementById('investigation-phase-short');
+        if (phaseShort) phaseShort.textContent = this.investigationStage === 'defense' ? 'P2' : 'P1';
+        const consoleMode = document.getElementById('investigation-console-mode');
+        if (consoleMode) consoleMode.textContent = this.investigationStage === 'defense' ? 'CONTAINMENT LIVE' : 'FORENSIC REVIEW';
+        const phases = Array.from(this.visualizerElement?.querySelectorAll('.lab-shared-phase') || []);
+        phases.forEach((phase, index) => {
+            const isActive = index === 0 ? this.investigationStage !== 'defense' : this.investigationStage === 'defense';
+            phase.classList.toggle('active', isActive);
+        });
         const submitHint = document.getElementById('investigation-submit-hint');
         if (submitHint) submitHint.textContent = this.investigationFlaggedEvents.size === 0
             ? 'Flag suspicious entries first'
@@ -3358,6 +5105,24 @@ export class PasswordCrack {
     }
 
     // ─── Inspection (Level 5) ─────────────────────────────────────────────────
+
+    renderInspectionStyles() {
+        return `<style>
+            .password-puzzle.inspection-shell .inspection-grid{grid-template-columns:minmax(0,1fr) minmax(340px,390px)}
+            .password-puzzle.inspection-shell .inspection-main{min-width:0}
+            .password-puzzle.inspection-shell .inspection-sidebar{display:grid;gap:16px;min-width:0;align-content:start}
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-question-panel,
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-feedback,
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-attempt-counter{margin:0}
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-question-panel__footer{flex-direction:column;align-items:stretch}
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-question-panel .btn{width:100%}
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-decision-list{padding:0 16px 16px;grid-template-columns:1fr}
+            .password-puzzle.inspection-shell .inspection-sidebar .inspection-attempt-counter{text-align:left}
+            @media (max-width:1180px){
+                .password-puzzle.inspection-shell .inspection-grid{grid-template-columns:1fr!important}
+            }
+        </style>`;
+    }
 
     renderInspectionPuzzle(container) {
         this.visualizerElement = container;
@@ -3437,6 +5202,7 @@ export class PasswordCrack {
 
         container.innerHTML = `
             ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderInspectionStyles()}
             ${this.renderSharedPasswordLabFrame({
                 levelLabel: '// LEVEL 05 - STORAGE FORENSICS',
                 title: 'PASSWORD VAULT<br>AUDIT',
@@ -3465,9 +5231,9 @@ export class PasswordCrack {
                                 </div>
                             </div>
                             <div class="inspection-scorecard">
-                                <div class="inspection-scorecard__row"><span>Evidence Progress</span><strong>${inspectedCount}/${totalRequired}</strong></div>
-                                <div class="inspection-scorebar"><div class="inspection-scorebar__fill" style="width:${progressPct}%"></div></div>
-                                <div class="inspection-scorecard__row"><span>Attempts Left</span><strong>${Math.max(0, this.maxAttempts - this.attempts)}</strong></div>
+                                <div class="inspection-scorecard__row"><span>Evidence Progress</span><strong id="inspection-evidence-count">${inspectedCount}/${totalRequired}</strong></div>
+                                <div class="inspection-scorebar"><div class="inspection-scorebar__fill" id="inspection-scorebar-fill" style="width:${progressPct}%"></div></div>
+                                <div class="inspection-scorecard__row"><span>Attempts Left</span><strong id="inspection-attempts-left">${Math.max(0, this.maxAttempts - this.attempts)}</strong></div>
                                 <div class="inspection-scorecard__row"><span>Current Phase</span><strong>${this.inspectionStage === 'defense' ? '02' : '01'}</strong></div>
                             </div>
                         </section>
@@ -3485,6 +5251,32 @@ export class PasswordCrack {
                         <section class="inspection-grid">
                             <div class="inspection-main">${systemsMarkup}</div>
                             <aside class="inspection-sidebar">
+                                <section class="inspection-question-panel" id="inspection-choice-block" ${this.inspectionStage === 'defense' ? 'style="display:none;"' : ''}>
+                                    <div class="inspection-question-panel__title">After reviewing all evidence, which cluster stores passwords more safely?</div>
+                                    <div class="inspection-question-panel__sub">Inspect all evidence actions, then choose the safer storage design and submit from here.</div>
+                                    <div class="inspection-decision-list">${choiceMarkup}</div>
+                                    <div class="inspection-question-panel__footer">
+                                        <button class="btn btn-primary" id="submit-inspection-choice">LOCK AUDIT DECISION</button>
+                                        <div class="inspection-question-panel__hint" id="inspection-choice-hint">${inspectedCount < totalRequired ? `Inspect ${totalRequired - inspectedCount} more evidence item${totalRequired - inspectedCount === 1 ? '' : 's'} first` : 'Evidence complete. Choose the safer cluster.'}</div>
+                                    </div>
+                                </section>
+
+                                <section class="inspection-question-panel" id="inspection-defense-block" ${this.inspectionStage === 'defense' ? '' : 'style="display:none;"'}>
+                                    ${followUp ? `
+                                        <div class="inspection-question-panel__title">${followUp.prompt}</div>
+                                        <div class="inspection-question-panel__sub">Pick the control that best reduces offline cracking risk after the database is stolen.</div>
+                                        <div class="inspection-decision-list">${defenseMarkup}</div>
+                                        <div class="inspection-question-panel__footer">
+                                            <button class="btn btn-primary" id="submit-inspection-defense">SUBMIT HARDENING PLAN</button>
+                                            <div class="inspection-question-panel__hint">Think about attacker cost after breach, not just policy appearance.</div>
+                                        </div>` : ''}
+                                </section>
+
+                                <div class="guess-feedback inspection-feedback" id="guess-feedback">${this.inspectionFeedbackHtml || 'Inspect every evidence action across both clusters, then decide which design is safer and what must change next.'}</div>
+                                <div id="attempt-counter" class="inspection-attempt-counter">
+                                    Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
+                                </div>
+
                                 <div class="inspection-side-panel">
                                     <div class="inspection-side-panel__label">Analyst Brief</div>
                                     <div class="inspection-side-panel__body">
@@ -3508,32 +5300,6 @@ export class PasswordCrack {
                                 </div>
                             </aside>
                         </section>
-
-                        <section class="inspection-question-panel" id="inspection-choice-block" ${this.inspectionStage === 'defense' ? 'style="display:none;"' : ''}>
-                            <div class="inspection-question-panel__title">After reviewing all evidence, which cluster stores passwords more safely?</div>
-                            <div class="inspection-question-panel__sub">You must inspect every evidence action across both clusters before submitting your decision.</div>
-                            <div class="inspection-decision-list">${choiceMarkup}</div>
-                            <div class="inspection-question-panel__footer">
-                                <button class="btn btn-primary" id="submit-inspection-choice">LOCK AUDIT DECISION</button>
-                                <div class="inspection-question-panel__hint">${inspectedCount < totalRequired ? `Inspect ${totalRequired - inspectedCount} more evidence item${totalRequired - inspectedCount === 1 ? '' : 's'} first` : 'Evidence complete. Choose the safer cluster.'}</div>
-                            </div>
-                        </section>
-
-                        <section class="inspection-question-panel" id="inspection-defense-block" ${this.inspectionStage === 'defense' ? '' : 'style="display:none;"'}>
-                            ${followUp ? `
-                                <div class="inspection-question-panel__title">${followUp.prompt}</div>
-                                <div class="inspection-question-panel__sub">Pick the control that best reduces offline cracking risk after the database is stolen.</div>
-                                <div class="inspection-decision-list">${defenseMarkup}</div>
-                                <div class="inspection-question-panel__footer">
-                                    <button class="btn btn-primary" id="submit-inspection-defense">SUBMIT HARDENING PLAN</button>
-                                    <div class="inspection-question-panel__hint">Think about attacker cost after breach, not just policy appearance.</div>
-                                </div>` : ''}
-                        </section>
-
-                        <div class="guess-feedback inspection-feedback" id="guess-feedback">${this.inspectionFeedbackHtml || 'Inspect every evidence action across both clusters, then decide which design is safer and what must change next.'}</div>
-                        <div id="attempt-counter" class="inspection-attempt-counter">
-                            Decisions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}
-                        </div>
                     </div>`
             })}`;
         this.setupInspectionEventListeners();
@@ -3559,6 +5325,43 @@ export class PasswordCrack {
         document.getElementById('submit-inspection-defense')?.addEventListener('click', () => this.submitInspectionDefense());
     }
 
+    updateInspectionInterface() {
+        const systems = Array.isArray(this.puzzleData.systems) ? this.puzzleData.systems : [];
+        const requiredPerSystem = Math.max(1, Number(this.puzzleData.inspectionRequiredActionsPerSystem || 3));
+        const totalRequired = systems.length * requiredPerSystem;
+        const inspectedCount = this.inspectionViewedActions.size;
+        const progressPct = totalRequired ? Math.min(100, (inspectedCount / totalRequired) * 100) : 0;
+        const attemptsLeft = Math.max(0, this.maxAttempts - this.attempts);
+
+        const evidenceCount = document.getElementById('inspection-evidence-count');
+        if (evidenceCount) evidenceCount.textContent = `${inspectedCount}/${totalRequired}`;
+        const scoreFill = document.getElementById('inspection-scorebar-fill');
+        if (scoreFill) scoreFill.style.width = `${progressPct}%`;
+        const attemptsLeftEl = document.getElementById('inspection-attempts-left');
+        if (attemptsLeftEl) attemptsLeftEl.textContent = `${attemptsLeft}`;
+        const choiceHint = document.getElementById('inspection-choice-hint');
+        if (choiceHint) {
+            choiceHint.textContent = inspectedCount < totalRequired
+                ? `Inspect ${totalRequired - inspectedCount} more evidence item${totalRequired - inspectedCount === 1 ? '' : 's'} first`
+                : 'Evidence complete. Choose the safer cluster.';
+        }
+
+        systems.forEach(system => {
+            const actions = [
+                { id: 'db', key: `${system.id}:db`, action: 'view-db', panel: `db-${system.id}` },
+                { id: 'breach', key: `${system.id}:breach`, action: 'simulate-breach', panel: `breach-${system.id}` },
+                { id: 'crack', key: `${system.id}:crack`, action: 'run-crack', panel: `crack-${system.id}` }
+            ];
+            actions.forEach(item => {
+                const isViewed = this.inspectionViewedActions.has(item.key);
+                const button = this.visualizerElement?.querySelector(`button[data-action="${item.action}"][data-system-id="${system.id}"]`);
+                if (button) button.classList.toggle('is-viewed', isViewed);
+                const panel = document.getElementById(item.panel);
+                if (panel) panel.classList.toggle('is-visible', isViewed);
+            });
+        });
+    }
+
     viewInspectionDatabase(systemId) {
         const system = (this.puzzleData.systems || []).find(s => s.id === systemId);
         if (!system) return;
@@ -3566,7 +5369,7 @@ export class PasswordCrack {
         if (!panel) return;
         this.inspectionViewedActions.add(`${systemId}:db`);
         panel.classList.add('is-visible');
-        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+        this.updateInspectionInterface();
     }
 
     simulateInspectionBreach(systemId) {
@@ -3576,7 +5379,7 @@ export class PasswordCrack {
         if (!panel) return;
         this.inspectionViewedActions.add(`${systemId}:breach`);
         panel.classList.add('is-visible');
-        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+        this.updateInspectionInterface();
     }
 
     runInspectionCrackAnalysis(systemId) {
@@ -3586,7 +5389,7 @@ export class PasswordCrack {
         if (!panel) return;
         this.inspectionViewedActions.add(`${systemId}:crack`);
         panel.classList.add('is-visible');
-        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+        this.updateInspectionInterface();
     }
 
     submitInspectionChoice() {
@@ -3620,7 +5423,15 @@ export class PasswordCrack {
         if (feedback) feedback.innerHTML = this.inspectionFeedbackHtml;
         this.audio.playSuccess();
         this.gameScreen.ui.showNotification('Safer cluster identified. Final hardening decision unlocked.', 'success');
-        if (this.visualizerElement) this.renderInspectionPuzzle(this.visualizerElement);
+        if (this.visualizerElement) {
+            this.rerenderWithPreservedScroll(
+                () => this.renderInspectionPuzzle(this.visualizerElement),
+                {
+                    primarySelector: '.password-puzzle.inspection-shell',
+                    anchorSelector: '#inspection-choice-block'
+                }
+            );
+        }
     }
 
     submitInspectionDefense() {
@@ -3652,133 +5463,270 @@ export class PasswordCrack {
         setTimeout(() => this.gameScreen.completePuzzle(true), 1500);
     }
 
-    // ─── LEVEL 7: live defense with tutorial overlay + spawn ramp ────────────
+    // ─── LEVEL 6: wave defense grid ──────────────────────────────────────────
+
+    getLiveDefenseControls() {
+        return (Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : []).map(defense => ({
+            id: defense?.id || this.sanitizeId(defense?.name || 'control'),
+            name: defense?.name || 'Unknown Control',
+            energyCost: Number(defense?.energyCost || 0),
+            cooldown: Number(defense?.cooldown || 0),
+            tags: Array.isArray(defense?.tags) && defense.tags.length
+                ? defense.tags
+                : Array.isArray(defense?.protectsAgainst)
+                    ? defense.protectsAgainst
+                    : [],
+            description: defense?.description || defense?.desc || 'Deploy this control to reduce attack impact.'
+        }));
+    }
+
+    getLiveDefenseWaves() {
+        return (Array.isArray(this.puzzleData.waves) ? this.puzzleData.waves : []).map((wave, index) => ({
+            id: wave?.id || `wave-${index + 1}`,
+            name: wave?.name || `Wave ${index + 1}`,
+            attacks: (Array.isArray(wave?.attacks) ? wave.attacks : []).map((attack, attackIndex) => ({
+                id: attack?.id || `${wave?.id || `wave-${index + 1}`}-attack-${attackIndex + 1}`,
+                type: attack?.type || 'Unknown Attack',
+                damage: Number(attack?.damage ?? attack?.dmg ?? 0),
+                vector: attack?.vector || attack?.desc || attack?.description || 'Credential attack wave detected.',
+                counterIds: Array.isArray(attack?.counterIds)
+                    ? attack.counterIds
+                    : Array.isArray(attack?.counters)
+                        ? attack.counters
+                        : []
+            }))
+        }));
+    }
+
+    getLiveDefenseOverviewAttacks() {
+        const summary = new Map();
+        this.getLiveDefenseWaves().forEach(wave => {
+            wave.attacks.forEach(attack => {
+                const existing = summary.get(attack.type);
+                if (!existing || attack.damage > existing.damage) {
+                    summary.set(attack.type, {
+                        type: attack.type,
+                        damage: attack.damage,
+                        vector: attack.vector
+                    });
+                }
+            });
+        });
+        return Array.from(summary.values());
+    }
+
+    getLiveDefenseCurrentWave() {
+        return this.getLiveDefenseWaves()[this.liveWaveIndex] || null;
+    }
+
+    getLiveDefenseCoveragePercent() {
+        const controls = this.getLiveDefenseControls();
+        if (!controls.length) return 0;
+        const activeCount = controls.filter(control => Number(this.liveDefenseCooldowns[control.id] || 0) > 0).length;
+        return Math.min(100, Math.round((activeCount / controls.length) * 100));
+    }
+
+    setLiveDefenseIntel({ title = 'Standby', detail = '', description = '', tone = 'standby' } = {}) {
+        this.liveIntelState = { title, detail, description, tone };
+        this.updateLiveDefenseIntelPanel();
+    }
+
+    updateLiveDefenseIntelPanel() {
+        const panel = document.getElementById('live-current-attack');
+        if (!panel) return;
+
+        const intel = this.liveIntelState || {
+            title: 'Standby',
+            detail: '',
+            description: 'Wave starting in 3 seconds...',
+            tone: 'standby'
+        };
+
+        panel.className = `ld-intel-live ld-intel-live--${intel.tone || 'standby'}`;
+        panel.innerHTML = `
+            <div class="ld-intel-live__head">
+                <div class="ld-intel-live__kicker">Active Threat Window</div>
+                <div class="ld-intel-live__detail">${intel.detail || 'Monitoring'}</div>
+            </div>
+            <div class="ld-intel-live__title">${intel.title}</div>
+            <div class="ld-intel-live__desc">${intel.description}</div>`;
+    }
 
     renderLiveDefenseSimulationPuzzle(container) {
         this.visualizerElement = container;
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const attackTypes = Array.isArray(this.puzzleData.attackTypes) ? this.puzzleData.attackTypes : [];
-        const liveCoveragePct = defenses.length ? Math.round((this.liveSuccessfulBlocks / Math.max(1, this.liveSuccessfulBlocks + this.liveMissedWaves)) * 100) : 0;
-        const defenseMarkup = defenses.map(d => `
-            <button class="ld-card" data-live-defense="${d.name}" type="button">
-                <div class="ld-card__top">
-                    <span class="ld-card__name">${d.name}</span>
-                    <span class="ld-card__cost">${d.energyCost} EN</span>
+        const controls = this.getLiveDefenseControls();
+        const overviewAttacks = this.getLiveDefenseOverviewAttacks();
+        const totalWaves = Math.max(1, this.getLiveDefenseWaves().length);
+        const currentWave = this.getLiveDefenseCurrentWave();
+        const waveLabel = currentWave
+            ? `${this.liveWaveIndex + 1} / ${totalWaves} - ${currentWave.name}`
+            : `1 / ${totalWaves} - Initializing Defense Grid`;
+        const coveragePct = this.getLiveDefenseCoveragePercent();
+        const controlMarkup = controls.map(control => `
+            <button class="ld-control-card" data-live-defense="${control.id}" type="button">
+                <div class="ld-control-card__head">
+                    <div class="ld-control-card__name">${control.name}</div>
+                    <div class="ld-control-card__cost">${control.energyCost} EN</div>
                 </div>
-                <div class="ld-card__meta">Cooldown ${d.cooldown}s</div>
-                <div class="ld-card__tags">${(Array.isArray(d.protectsAgainst) ? d.protectsAgainst : []).map(type => `<span>${type}</span>`).join('')}</div>
-                <div class="ld-card__status" id="live-cd-${this.sanitizeId(d.name)}">READY</div>
+                <div class="ld-control-card__meta">Cooldown ${control.cooldown}s</div>
+                <div class="ld-control-card__desc">${control.description}</div>
+                <div class="ld-control-card__tags">${control.tags.map(tag => `<span>${tag}</span>`).join('')}</div>
+                <div class="ld-control-card__status" id="live-cd-${this.sanitizeId(control.id)}">READY</div>
             </button>`).join('');
-        const attackIntelMarkup = attackTypes.map(attack => `
+        const attackLibraryMarkup = overviewAttacks.map(attack => `
             <div class="ld-intel-row">
                 <div>
                     <strong>${attack.type}</strong>
-                    <div>${attack.vector || 'Credential attack wave detected.'}</div>
+                    <div>${attack.vector}</div>
                 </div>
                 <span class="ld-intel-row__damage">-${attack.damage}</span>
             </div>`).join('');
 
         container.innerHTML = `
             <style>
-                .ld-shell{background:linear-gradient(180deg,#070b12 0%,#05080f 100%);color:#eef2ff;border:1px solid rgba(245,166,35,.14);box-shadow:0 20px 60px rgba(0,0,0,.35)}
-                .ld-header{display:flex;justify-content:space-between;align-items:center;padding:16px 26px;background:#0a0d18;border-bottom:1px solid rgba(245,166,35,.25);gap:16px;flex-wrap:wrap}
-                .ld-brand,.ld-level,.ld-status,.ld-phase,.ld-kicker,.ld-card__status,.ld-card__cost,.ld-attempts,.ld-intel-row__damage{font-family:Consolas,"Courier New",monospace;letter-spacing:.18em;text-transform:uppercase}
-                .ld-brand{color:#f5a623;font-weight:700}.ld-level{color:rgba(245,166,35,.72);font-size:.85rem}.ld-status{color:#00e87a;font-size:.82rem}
-                .ld-phases{display:grid;grid-template-columns:repeat(3,1fr);background:#0b101b;border-bottom:1px solid rgba(245,166,35,.12)}
-                .ld-phase{padding:14px 10px;text-align:center;color:rgba(180,190,230,.35);border-bottom:2px solid transparent;font-size:.78rem}.ld-phase span{display:block;font-size:1.6rem;font-weight:700;line-height:1.1}
-                .ld-phase.active{color:#f5a623;background:rgba(245,166,35,.05);border-bottom-color:#f5a623}
-                .ld-hint-strip{padding:12px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid rgba(0,212,255,.12);color:rgba(0,212,255,.78);font-family:Consolas,"Courier New",monospace;letter-spacing:.12em;font-size:.82rem}
-                .ld-grid{display:grid;grid-template-columns:340px 1fr;min-height:640px}
-                .ld-panel{padding:28px;background:rgba(0,0,0,.18)}
-                .ld-panel--left{border-right:1px solid rgba(245,166,35,.12)}
-                .ld-kicker{font-size:.74rem;color:rgba(245,166,35,.64);margin-bottom:12px}
-                .ld-brief,.ld-statbox,.ld-intel,.ld-current,.ld-log,.ld-card{background:rgba(0,0,0,.34);border:1px solid rgba(245,166,35,.12)}
-                .ld-brief,.ld-statbox,.ld-current,.ld-log{padding:16px;line-height:1.7}
-                .ld-brief strong{color:#f5a623}
-                .ld-statbox{display:grid;gap:12px}
-                .ld-statrow,.ld-mainhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
-                .ld-bar{height:6px;background:rgba(255,64,96,.12);overflow:hidden}.ld-bar > div{height:100%;background:linear-gradient(90deg,#f5a623,#00d4ff)}
-                .ld-mainhead{margin-bottom:18px}.ld-title{font-size:1.4rem;color:#eef2ff;line-height:1.4}
-                .ld-attempts{padding:10px 12px;border:1px solid rgba(245,166,35,.18);background:rgba(245,166,35,.06);color:rgba(245,166,35,.82);font-size:.74rem}
-                .ld-current{min-height:120px}.ld-current strong{color:#ffcb6b}.ld-current__label{color:rgba(245,166,35,.64);font-family:Consolas,"Courier New",monospace;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
-                .ld-defense-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-                .ld-card{padding:16px;text-align:left;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;color:#eef2ff}
-                .ld-card:hover{transform:translateY(-2px);border-color:rgba(245,166,35,.36);box-shadow:0 14px 30px rgba(0,0,0,.18)}
-                .ld-card:disabled{opacity:.45;cursor:not-allowed;transform:none}
-                .ld-card__top{display:flex;justify-content:space-between;align-items:center;gap:8px}.ld-card__name{font-weight:700;font-size:1rem}.ld-card__cost{color:#ffcb6b;font-size:.7rem}
-                .ld-card__meta{margin-top:8px;color:rgba(180,190,230,.66);font-size:.86rem}.ld-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-                .ld-card__tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(0,212,255,.18);background:rgba(0,212,255,.06);color:#8beeff;font-size:.72rem}
-                .ld-card__status{margin-top:12px;color:#00e87a;font-size:.7rem}
-                .ld-log{margin-top:18px;max-height:190px;overflow:auto;text-align:left;color:rgba(220,228,245,.86)}
-                .ld-intel{padding:16px}.ld-intel-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(245,166,35,.08);color:rgba(220,228,245,.82)}
-                .ld-intel-row:last-child{border-bottom:0}.ld-intel-row strong{display:block;color:#eef2ff;margin-bottom:4px}.ld-intel-row div{color:rgba(180,190,230,.62);font-size:.84rem;line-height:1.45}.ld-intel-row__damage{color:#ff7e92;font-size:.76rem}
-                @media (max-width:1080px){.ld-grid{grid-template-columns:1fr}.ld-panel--left{border-right:0;border-bottom:1px solid rgba(245,166,35,.12)}}
-                @media (max-width:720px){.ld-header{padding:14px 18px}.ld-panel{padding:20px}.ld-defense-grid,.ld-phases{grid-template-columns:1fr}.ld-mainhead{flex-direction:column;align-items:flex-start}}
+                .ld-shell{padding:24px;min-height:0}
+                .ld-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;height:100%;min-height:0}
+                .ld-side,.ld-main{display:flex;flex-direction:column;gap:16px;min-height:0}
+                .ld-panel-card,.ld-wave-bar,.ld-log-panel,.ld-control-card,.ld-intel-live,.ld-intel-list{background:rgba(2,10,24,.68);border:1px solid rgba(23,216,255,.14);box-shadow:0 20px 48px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
+                .ld-panel-card,.ld-log-panel{padding:16px}
+                .ld-section-title,.ld-wave-label,.ld-wave-energy,.ld-intel-live__kicker,.ld-control-card__cost,.ld-control-card__meta,.ld-control-card__status,.ld-stat-label{font-family:'Share Tech Mono',monospace;letter-spacing:.18em;text-transform:uppercase}
+                .ld-section-title{font-size:.72rem;color:rgba(23,216,255,.72);margin-bottom:12px}
+                .ld-brief-copy{color:rgba(225,239,248,.82);line-height:1.65;font-size:.88rem}
+                .ld-stat-block{display:grid;gap:10px}
+                .ld-stat-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:.92rem;color:rgba(232,244,255,.82)}
+                .ld-stat-label{font-size:.64rem;color:rgba(168,216,232,.5)}
+                .ld-stat-value{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;color:#eef7ff}
+                .ld-stat-value.energy{color:#ffdd57}
+                .ld-stat-value.time{color:#18e4ff}
+                .ld-stat-value.coverage{color:#00ff88}
+                .ld-bar{height:8px;background:rgba(255,255,255,.05);border-radius:999px;overflow:hidden}
+                .ld-bar > div{height:100%;border-radius:999px;transition:width .25s ease}
+                .ld-bar-health > div{background:linear-gradient(90deg,#ff4060,#ffb347,#17d8ff)}
+                .ld-bar-energy > div{background:linear-gradient(90deg,#f7b500,#ffe36d)}
+                .ld-intel-live{padding:16px;display:grid;gap:10px}
+                .ld-intel-live__head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+                .ld-intel-live__kicker{font-size:.64rem;color:rgba(168,216,232,.48)}
+                .ld-intel-live__detail{font-size:.68rem;color:#ff9bc0}
+                .ld-intel-live__title{font-family:'Orbitron',sans-serif;font-size:1.25rem;letter-spacing:.08em;color:#eef7ff}
+                .ld-intel-live__desc{color:rgba(225,239,248,.78);line-height:1.6;font-size:.88rem}
+                .ld-intel-live--standby .ld-intel-live__detail{color:#18e4ff}
+                .ld-intel-live--warn .ld-intel-live__detail{color:#ffcc66}
+                .ld-intel-live--danger .ld-intel-live__detail,.ld-intel-live--bad .ld-intel-live__detail{color:#ff6989}
+                .ld-intel-live--good .ld-intel-live__detail{color:#00ff88}
+                .ld-intel-list{padding:8px 16px;overflow:auto;min-height:0}
+                .ld-intel-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(23,216,255,.08);color:rgba(225,239,248,.8)}
+                .ld-intel-row:last-child{border-bottom:0}
+                .ld-intel-row strong{display:block;color:#eef7ff;margin-bottom:4px}
+                .ld-intel-row div{font-size:.82rem;line-height:1.5;color:rgba(168,216,232,.58)}
+                .ld-intel-row__damage{color:#ff7e92;font-size:.74rem;flex-shrink:0}
+                .ld-wave-bar{display:flex;align-items:center;gap:12px;padding:12px 16px}
+                .ld-wave-label{font-size:.64rem;color:#18e4ff}
+                .ld-wave-info{font-size:1rem;color:#eef7ff;font-weight:700;line-height:1.4}
+                .ld-wave-energy{margin-left:auto;font-size:.7rem;color:#18e4ff}
+                .ld-wave-energy strong{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.08em;color:#ffdd57}
+                .ld-control-section{display:flex;flex-direction:column;min-height:0}
+                .ld-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-height:0}
+                .ld-control-card{padding:14px;text-align:left;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;color:#eef7ff}
+                .ld-control-card:hover{transform:translateY(-2px);border-color:rgba(23,216,255,.34);box-shadow:0 18px 34px rgba(0,0,0,.22)}
+                .ld-control-card.disabled,.ld-control-card:disabled{opacity:.42;cursor:not-allowed;transform:none}
+                .ld-control-card__head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+                .ld-control-card__name{font-weight:700;font-size:.98rem;line-height:1.35}
+                .ld-control-card__cost{font-size:.66rem;color:#18e4ff}
+                .ld-control-card__meta{margin-top:8px;font-size:.64rem;color:rgba(168,216,232,.54)}
+                .ld-control-card__desc{margin-top:8px;color:rgba(225,239,248,.72);font-size:.84rem;line-height:1.55;min-height:52px}
+                .ld-control-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+                .ld-control-card__tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(23,216,255,.14);background:rgba(23,216,255,.07);color:#8beeff;font-size:.68rem}
+                .ld-control-card__status{margin-top:12px;font-size:.66rem;color:#00ff88}
+                .ld-log-panel{display:flex;flex-direction:column;min-height:180px}
+                .ld-log-body{flex:1;overflow:auto;color:rgba(225,239,248,.8);font-size:.82rem;line-height:1.5}
+                .ld-log-line{margin-bottom:6px}
+                .ld-log-line.good{color:#00ff88}
+                .ld-log-line.bad{color:#ff6d88}
+                .ld-log-line.warn{color:#ffcc66}
+                @media (max-width:1180px){.ld-layout{grid-template-columns:1fr}.ld-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                @media (max-width:760px){.ld-shell{padding:16px}.ld-control-grid{grid-template-columns:1fr}.ld-wave-bar{flex-wrap:wrap}.ld-wave-energy{margin-left:0}}
             </style>
             ${this.renderSharedPasswordLabThemeStyles()}
             ${this.renderSharedPasswordLabFrame({
-                levelLabel: '// LEVEL 07 - BLUE TEAM OPS',
-                title: 'LIVE DEFENSE<br>SIMULATION',
-                status: 'BLUE TEAM ACTIVE',
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - ACTIVE DEFENSE GRID`,
+                title: 'CYBER DEFENSE<br>SIMULATION',
+                status: 'VAULT DEFENSE ONLINE',
+                timeLabel: 'Timer',
+                timeDisplayOverride: `${Math.max(0, Math.floor(this.liveRemainingTime))}S`,
+                auxiliaryLabel: 'Wave',
+                auxiliaryValue: `1/${totalWaves}`,
+                auxiliaryTone: 'safe',
                 phases: [
-                    { label: 'IDENTIFY WAVE', active: true },
-                    { label: 'DEPLOY CONTROL', active: this.liveSimulationElapsed > 0 },
-                    { label: 'MAINTAIN COVERAGE', active: this.liveSimulationElapsed > 10 }
+                    { label: 'STABILIZE', active: true },
+                    { label: 'ADAPT', active: false },
+                    { label: 'SURVIVE', active: false }
                 ],
                 content: `
                     <div class="ld-shell">
-                        <div class="ld-header">
-                            <div class="ld-brand">SHADOWDEF</div>
-                            <div class="ld-level">LEVEL 7 - LIVE DEFENSE SIMULATION</div>
-                            <div class="ld-status">BLUE TEAM ACTIVE</div>
-                        </div>
-                        <div class="ld-phases">
-                            <div class="ld-phase active"><span>01</span>IDENTIFY WAVE</div>
-                            <div class="ld-phase"><span>02</span>DEPLOY CONTROL</div>
-                            <div class="ld-phase"><span>03</span>MAINTAIN COVERAGE</div>
-                        </div>
-                        <div class="ld-hint-strip">HINT: Brute force, credential stuffing, offline cracking, and phishing each require different controls. No single tool wins every wave.</div>
-                        <div class="ld-grid">
-                            <aside class="ld-panel ld-panel--left">
-                                <div class="ld-kicker">Mission Brief</div>
-                                <div class="ld-brief">
-                                    <div><strong>Objective:</strong> ${this.mission.objective || ''}</div>
-                                    <div><strong>Scenario:</strong> ${this.mission.scenario || ''}</div>
-                                    <div><strong>Task:</strong> ${this.mission.userTask || ''}</div>
-                                </div>
-                                <div class="ld-kicker">Defense Telemetry</div>
-                                <div class="ld-statbox">
-                                    <div class="ld-statrow"><span>Vault Health</span><strong id="live-vault-text">${Math.floor(this.liveVaultHealth)}%</strong></div>
-                                    <div class="ld-bar"><div id="live-vault-fill" style="width:${this.liveVaultHealth}%;"></div></div>
-                                    <div class="ld-statrow"><span>Player Energy</span><strong id="live-energy-text">${Math.floor(this.liveEnergy)}%</strong></div>
-                                    <div class="ld-bar"><div id="live-energy-fill" style="width:${this.liveEnergy}%;"></div></div>
-                                    <div class="ld-statrow"><span>Time Left</span><strong id="live-time-text">${Math.floor(this.liveRemainingTime)}s</strong></div>
-                                    <div class="ld-statrow"><span>Coverage</span><strong>${liveCoveragePct}%</strong></div>
-                                    <div class="ld-statrow"><span>Blocked / Missed</span><strong>${this.liveSuccessfulBlocks} / ${this.liveMissedWaves}</strong></div>
-                                </div>
-                                <div class="ld-kicker">Attack Intel</div>
-                                <div class="ld-intel">${attackIntelMarkup}</div>
-                            </aside>
-                            <main class="ld-panel">
-                                <div class="ld-mainhead">
-                                    <div>
-                                        <div class="ld-kicker">Active Command Board</div>
-                                        <div class="ld-title">Read the incoming wave and deploy the control that breaks that attack path</div>
+                        <div class="ld-layout">
+                            <aside class="ld-side">
+                                <section class="ld-panel-card">
+                                    <div class="ld-section-title">Defense Telemetry</div>
+                                    <div class="ld-stat-block">
+                                        <div class="ld-stat-row">
+                                            <span class="ld-stat-label">Vault Health</span>
+                                            <strong class="ld-stat-value" id="live-vault-text">${Math.floor(this.liveVaultHealth)}%</strong>
+                                        </div>
+                                        <div class="ld-bar ld-bar-health"><div id="live-vault-fill" style="width:${this.liveVaultHealth}%;"></div></div>
+                                        <div class="ld-stat-row">
+                                            <span class="ld-stat-label">Player Energy</span>
+                                            <strong class="ld-stat-value energy" id="live-energy-text">${Math.floor(this.liveEnergy)} EN</strong>
+                                        </div>
+                                        <div class="ld-bar ld-bar-energy"><div id="live-energy-fill" style="width:${this.liveEnergy}%;"></div></div>
+                                        <div class="ld-stat-row">
+                                            <span class="ld-stat-label">Time Left</span>
+                                            <strong class="ld-stat-value time" id="live-time-text">${Math.floor(this.liveRemainingTime)}s</strong>
+                                        </div>
+                                        <div class="ld-stat-row">
+                                            <span class="ld-stat-label">Coverage</span>
+                                            <strong class="ld-stat-value coverage" id="cov-val">${coveragePct}%</strong>
+                                        </div>
+                                        <div class="ld-stat-row">
+                                            <span class="ld-stat-label">Blocked / Missed</span>
+                                            <strong class="ld-stat-value" id="bm-val">${this.liveSuccessfulBlocks} / ${this.liveMissedWaves}</strong>
+                                        </div>
                                     </div>
-                                    <div class="ld-attempts" id="attempt-counter">Live defense active</div>
-                                </div>
-                                <div class="ld-current" id="live-current-attack">
-                                    <div class="ld-current__label">Incoming Attack</div>
-                                    Waiting for first wave...
-                                </div>
-                                <div class="ld-kicker" style="margin-top:18px;">Available Controls</div>
-                                <div class="ld-defense-grid" id="live-defense-grid">${defenseMarkup}</div>
-                                <div class="ld-log guess-feedback" id="guess-feedback">Simulation starting. Prepare your defenses.</div>
+                                </section>
+                                <section class="ld-panel-card" style="display:flex;flex-direction:column;gap:12px;min-height:0;">
+                                    <div class="ld-section-title">Attack Intel</div>
+                                    <div id="live-current-attack"></div>
+                                    <div class="ld-intel-list">${attackLibraryMarkup}</div>
+                                </section>
+                            </aside>
+                            <main class="ld-main">
+                                <section class="ld-wave-bar">
+                                    <span class="ld-wave-label">Wave</span>
+                                    <span class="ld-wave-info" id="wave-info">${waveLabel}</span>
+                                    <span class="ld-wave-energy">Energy <strong id="en-num">${Math.floor(this.liveEnergy)}</strong></span>
+                                </section>
+                                <section class="ld-panel-card">
+                                    <div class="ld-section-title">Command Brief</div>
+                                    <div class="ld-brief-copy">${this.mission.userTask || this.mission.objective || 'Defend the vault through coordinated attack waves.'}</div>
+                                </section>
+                                <section class="ld-control-section">
+                                    <div class="ld-section-title">Available Controls</div>
+                                    <div class="ld-control-grid" id="live-defense-grid">${controlMarkup}</div>
+                                </section>
+                                <section class="ld-log-panel">
+                                    <div class="ld-section-title">Command Log</div>
+                                    <div class="ld-log-body guess-feedback" id="guess-feedback"></div>
+                                </section>
                             </main>
                         </div>
                     </div>`
             })}`;
 
+        this.setLiveDefenseIntel({
+            title: 'Standby',
+            detail: 'Initializing',
+            description: 'Wave starting in 3 seconds. Preserve energy for the later surges.',
+            tone: 'standby'
+        });
         this.setupLiveDefenseEventListeners();
         this.startLiveDefenseSimulation();
         this.startHumanLabMatrixAnimation();
@@ -3788,34 +5736,40 @@ export class PasswordCrack {
     setupLiveDefenseEventListeners() {
         document.querySelectorAll('button[data-live-defense]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const name = btn.dataset.liveDefense;
-                if (name) this.activateLiveDefense(name);
+                const controlId = btn.dataset.liveDefense;
+                if (controlId) this.activateLiveDefense(controlId);
             });
         });
     }
 
-    // FIX L7: tutorial overlay + ramp-up spawn rate
     startLiveDefenseSimulation() {
         const simConfig = this.puzzleData.simulationConfig || {};
         const regen = simConfig.energyRegenRate || {};
-        const regenAmount = Number(regen.amount || 5);
-        const regenEvery = Math.max(1, Number(regen.everySeconds || 3));
+        const regenAmount = Number(regen.amount || 3);
+        const regenEvery = Math.max(1, Number(regen.everySeconds || 1));
         const overlay = simConfig.tutorialOverlay;
-        const rampAfter = Number(simConfig.attackSpawnRate?.rampUpAfterSeconds || 0);
+        const controls = this.getLiveDefenseControls();
+        const waves = this.getLiveDefenseWaves();
 
+        this.liveWaveIndex = 0;
+        this.liveAttackIndex = 0;
+        this.liveSuccessfulBlocks = 0;
+        this.liveMissedWaves = 0;
+        this.liveTotalAttacks = waves.reduce((total, wave) => total + wave.attacks.length, 0);
+        this.liveActiveAttack = null;
         this.liveSimulationElapsed = 0;
-        this.liveRampActive = false;
+        this.liveDefenseCooldowns = {};
+        controls.forEach(control => { this.liveDefenseCooldowns[control.id] = 0; });
         this.updateLiveSimulationUI();
 
-        // Show tutorial overlay if configured
-        if (overlay && overlay.enabled) {
-            const panel = document.getElementById('live-current-attack');
-            if (panel) {
-                panel.innerHTML = `<span style="color:var(--cyber-orange);">⚠ ${overlay.message}</span>`;
-            }
-            this.appendLiveLog(overlay.message || 'Simulation starting — gentle waves for first few seconds.');
-        } else {
-            this.appendLiveLog('Live simulation started. Incoming waves expected.');
+        this.appendLiveLog(overlay?.message || 'New defense run started. Hold the vault through all threat windows.', 'good');
+        if (overlay?.enabled) {
+            this.setLiveDefenseIntel({
+                title: 'Defense Grid Online',
+                detail: 'Warmup Window',
+                description: overlay.message || 'Wave starting in 3 seconds.',
+                tone: 'warn'
+            });
         }
 
         this.liveEnergyTimerId = setInterval(() => {
@@ -3826,108 +5780,159 @@ export class PasswordCrack {
 
         this.liveCooldownTimerId = setInterval(() => {
             if (this.isComplete) return;
-            Object.keys(this.liveDefenseCooldowns).forEach(name => {
-                this.liveDefenseCooldowns[name] = Math.max(0, Number(this.liveDefenseCooldowns[name] || 0) - 1);
+            Object.keys(this.liveDefenseCooldowns).forEach(id => {
+                this.liveDefenseCooldowns[id] = Math.max(0, Number(this.liveDefenseCooldowns[id] || 0) - 1);
             });
-            this.updateLiveDefenseButtons();
+            this.updateLiveSimulationUI();
         }, 1000);
 
         this.liveDurationTimerId = setInterval(() => {
             if (this.isComplete) return;
             this.liveRemainingTime = Math.max(0, this.liveRemainingTime - 1);
             this.liveSimulationElapsed++;
-            // Switch to ramped spawn rate after threshold
-            if (rampAfter > 0 && this.liveSimulationElapsed === rampAfter && !this.liveRampActive) {
-                this.liveRampActive = true;
-                this.appendLiveLog('Attack pressure increasing — full wave mode active.');
-            }
             this.updateLiveSimulationUI();
             if (this.liveRemainingTime <= 0) this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
         }, 1000);
 
-        this.scheduleNextLiveAttack();
+        this.scheduleNextLiveAttack(simConfig.initialAttackDelayMs || 3000);
     }
 
-    // FIX L7: use ramped spawn rate when active
-    scheduleNextLiveAttack() {
+    scheduleNextLiveAttack(delayMs = null) {
         if (this.isComplete) return;
         const simConfig = this.puzzleData.simulationConfig || {};
-        const spawn = simConfig.attackSpawnRate || {};
-        let minSeconds, maxSeconds;
-        if (this.liveRampActive) {
-            minSeconds = Math.max(1, Number(spawn.rampedMinSeconds || spawn.minSeconds || 2));
-            maxSeconds = Math.max(minSeconds, Number(spawn.rampedMaxSeconds || spawn.maxSeconds || 4));
-        } else {
-            minSeconds = Math.max(1, Number(spawn.minSeconds || 2));
-            maxSeconds = Math.max(minSeconds, Number(spawn.maxSeconds || 4));
-        }
-        const delayMs = Math.floor((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
+        const resolvedDelay = Math.max(250, Number(delayMs ?? simConfig.betweenAttackDelayMs ?? 3000));
         this.liveSpawnTimeoutId = setTimeout(() => {
             if (this.isComplete) return;
             this.spawnLiveAttack();
-            this.scheduleNextLiveAttack();
-        }, delayMs);
+        }, resolvedDelay);
     }
 
     spawnLiveAttack() {
-        if (this.liveActiveAttack) this.resolveLiveAttackMissed(this.liveActiveAttack);
-        const attacks = Array.isArray(this.puzzleData.attackTypes) ? this.puzzleData.attackTypes : [];
-        if (!attacks.length) return;
-        const attack = attacks[Math.floor(Math.random() * attacks.length)];
-        this.liveActiveAttack = attack;
-        const panel = document.getElementById('live-current-attack');
-        if (panel) panel.innerHTML = `<div class="ld-current__label">Incoming Attack</div><strong>${attack.type}</strong> incoming. Potential damage: ${attack.damage}.<div style="margin-top:8px;color:rgba(180,190,230,.7);line-height:1.55;">${attack.vector || 'Credential attack wave detected.'}</div>`;
-        this.appendLiveLog(`Wave detected: ${attack.type}`);
-        this.liveAttackTimeoutId = setTimeout(() => {
-            if (this.isComplete || !this.liveActiveAttack) return;
-            this.resolveLiveAttackMissed(this.liveActiveAttack);
-            this.liveActiveAttack = null;
+        if (this.isComplete) return;
+
+        const simConfig = this.puzzleData.simulationConfig || {};
+        const waves = this.getLiveDefenseWaves();
+        const currentWave = waves[this.liveWaveIndex];
+
+        if (!currentWave) {
+            this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
+            return;
+        }
+
+        if (this.liveAttackIndex >= currentWave.attacks.length) {
+            this.liveWaveIndex += 1;
+            this.liveAttackIndex = 0;
+
+            const nextWave = waves[this.liveWaveIndex];
+            if (!nextWave) {
+                this.finishLiveDefenseSimulation(this.liveVaultHealth > 0);
+                return;
+            }
+
+            this.setLiveDefenseIntel({
+                title: nextWave.name,
+                detail: `Wave ${this.liveWaveIndex + 1}`,
+                description: 'Threat pattern shifting. Rebuild your energy and prepare the right controls.',
+                tone: 'warn'
+            });
+            this.appendLiveLog(`Wave ${this.liveWaveIndex + 1} starting: ${nextWave.name}`, 'warn');
             this.updateLiveSimulationUI();
-        }, 2200);
+            this.scheduleNextLiveAttack(simConfig.betweenWaveDelayMs || 4000);
+            return;
+        }
+
+        const attack = currentWave.attacks[this.liveAttackIndex];
+        this.liveAttackIndex += 1;
+        this.liveActiveAttack = attack;
+
+        this.setLiveDefenseIntel({
+            title: attack.type,
+            detail: `-${attack.damage} Vault`,
+            description: attack.vector,
+            tone: 'danger'
+        });
+        this.appendLiveLog(`Incoming: ${attack.type}`, 'bad');
+        this.updateLiveSimulationUI();
+
+        this.liveAttackTimeoutId = setTimeout(() => {
+            if (this.isComplete || this.liveActiveAttack !== attack) return;
+            this.resolveLiveAttack(attack, null);
+        }, Math.max(1000, Number(simConfig.attackResolveWindowMs || 5000)));
     }
 
-    activateLiveDefense(defenseName) {
+    activateLiveDefense(controlId) {
         if (this.isComplete) return;
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
-        const defense = defenses.find(d => d.name === defenseName);
-        if (!defense) return;
-        const cooldownLeft = Number(this.liveDefenseCooldowns[defenseName] || 0);
-        if (cooldownLeft > 0) { this.gameScreen.ui.showNotification(`${defenseName} cooling down (${cooldownLeft}s).`, 'warning'); return; }
-        const cost = Number(defense.energyCost || 0);
-        if (this.liveEnergy < cost) { this.gameScreen.ui.showNotification('Not enough energy.', 'warning'); return; }
-        this.liveEnergy = Math.max(0, this.liveEnergy - cost);
-        this.liveDefenseCooldowns[defenseName] = Number(defense.cooldown || 0);
-        this.updateLiveSimulationUI();
-        this.updateLiveDefenseButtons();
+
+        const controls = this.getLiveDefenseControls();
+        const control = controls.find(entry => entry.id === controlId);
+        if (!control) return;
+
+        const cooldownLeft = Number(this.liveDefenseCooldowns[control.id] || 0);
+        if (cooldownLeft > 0) {
+            this.gameScreen.ui.showNotification(`${control.name} cooling down (${cooldownLeft}s).`, 'warning');
+            return;
+        }
+
+        if (this.liveEnergy < control.energyCost) {
+            this.gameScreen.ui.showNotification('Not enough energy.', 'warning');
+            return;
+        }
+
+        this.liveEnergy = Math.max(0, this.liveEnergy - control.energyCost);
+        this.liveDefenseCooldowns[control.id] = control.cooldown;
         this.audio.playButtonClick();
-        this.appendLiveLog(`Defense activated: ${defenseName}`);
+        this.appendLiveLog(`Deployed: ${control.name}`, 'good');
+        this.updateLiveSimulationUI();
+
         if (!this.liveActiveAttack) return;
-        const attack = this.liveActiveAttack;
-        const matched = Array.isArray(defense.protectsAgainst) && defense.protectsAgainst.includes(attack.type);
-        const canCounter = Array.isArray(attack.counteredBy) && attack.counteredBy.includes(defense.name);
-        if (matched || canCounter) {
-            if (this.liveAttackTimeoutId) { clearTimeout(this.liveAttackTimeoutId); this.liveAttackTimeoutId = null; }
-            this.liveActiveAttack = null;
-            const panel = document.getElementById('live-current-attack');
-            if (panel) panel.innerHTML = `<div class="ld-current__label">Containment Result</div>${attack.type} blocked by <strong>${defense.name}</strong>.`;
-            this.appendLiveLog(`Blocked: ${attack.type} using ${defense.name}`);
-            this.liveSuccessfulBlocks++;
+
+        if (!Array.isArray(this.liveActiveAttack.counterIds) || !this.liveActiveAttack.counterIds.includes(control.id)) return;
+        this.resolveLiveAttack(this.liveActiveAttack, control);
+    }
+
+    resolveLiveAttack(attack, control = null) {
+        if (!attack || this.isComplete) return;
+
+        if (this.liveAttackTimeoutId) {
+            clearTimeout(this.liveAttackTimeoutId);
+            this.liveAttackTimeoutId = null;
+        }
+
+        const simConfig = this.puzzleData.simulationConfig || {};
+        const wasCountered = !!control && Array.isArray(attack.counterIds) && attack.counterIds.includes(control.id);
+        this.liveActiveAttack = null;
+
+        if (wasCountered) {
+            this.liveSuccessfulBlocks += 1;
+            this.setLiveDefenseIntel({
+                title: 'Threat Neutralized',
+                detail: control.name,
+                description: `${attack.type} was blocked before it could damage the vault.`,
+                tone: 'good'
+            });
+            this.appendLiveLog(`Blocked: ${attack.type} via ${control.name}`, 'good');
             this.audio.playSuccess();
         } else {
-            this.appendLiveLog(`${defense.name} did not stop ${attack.type}.`);
+            this.liveVaultHealth = Math.max(0, this.liveVaultHealth - Number(attack.damage || 0));
+            this.liveMissedWaves += 1;
+            this.setLiveDefenseIntel({
+                title: 'Impact Registered',
+                detail: `-${Number(attack.damage || 0)} Vault`,
+                description: `${attack.type} hit the vault perimeter. Re-stabilize before the next surge.`,
+                tone: 'bad'
+            });
+            this.appendLiveLog(`HIT! ${attack.type} dealt ${Number(attack.damage || 0)} damage.`, 'bad');
+            this.audio.playFailure();
         }
-    }
 
-    resolveLiveAttackMissed(attack) {
-        const damage = Number(attack?.damage || 0);
-        this.liveVaultHealth = Math.max(0, this.liveVaultHealth - damage);
-        this.liveMissedWaves++;
-        this.appendLiveLog(`Impact: ${attack.type} hit the vault (-${damage} health).`);
-        const panel = document.getElementById('live-current-attack');
-        if (panel) panel.innerHTML = `<div class="ld-current__label">Containment Result</div>${attack.type} was successful. Vault damaged by ${damage}.`;
-        this.audio.playFailure();
         this.updateLiveSimulationUI();
-        if (this.liveVaultHealth <= 0) this.finishLiveDefenseSimulation(false);
+
+        if (this.liveVaultHealth <= 0) {
+            this.finishLiveDefenseSimulation(false);
+            return;
+        }
+
+        this.scheduleNextLiveAttack(simConfig.betweenAttackDelayMs || 3000);
     }
 
     stopLiveDefenseSimulation() {
@@ -3941,40 +5946,68 @@ export class PasswordCrack {
     updateLiveSimulationUI() {
         const vault = Math.max(0, Math.min(100, this.liveVaultHealth));
         const energy = Math.max(0, Math.min(100, this.liveEnergy));
+        const coverage = this.getLiveDefenseCoveragePercent();
+        const waves = this.getLiveDefenseWaves();
+        const totalWaves = Math.max(1, waves.length);
+        const currentWave = waves[this.liveWaveIndex];
+        const waveInfo = currentWave
+            ? `${this.liveWaveIndex + 1} / ${totalWaves} - ${currentWave.name}`
+            : `${totalWaves} / ${totalWaves} - Vault Secured`;
         const vaultText = document.getElementById('live-vault-text');
         const vaultFill = document.getElementById('live-vault-fill');
         const energyText = document.getElementById('live-energy-text');
         const energyFill = document.getElementById('live-energy-fill');
         const timeText = document.getElementById('live-time-text');
+        const coverageText = document.getElementById('cov-val');
+        const blockedMissedText = document.getElementById('bm-val');
+        const waveInfoText = document.getElementById('wave-info');
+        const energyNumber = document.getElementById('en-num');
         if (vaultText) vaultText.textContent = `${Math.floor(vault)}%`;
         if (vaultFill) vaultFill.style.width = `${vault}%`;
-        if (energyText) energyText.textContent = `${Math.floor(energy)}%`;
+        if (energyText) energyText.textContent = `${Math.floor(energy)} EN`;
         if (energyFill) energyFill.style.width = `${energy}%`;
         if (timeText) timeText.textContent = `${Math.max(0, Math.floor(this.liveRemainingTime))}s`;
+        if (coverageText) coverageText.textContent = `${coverage}%`;
+        if (blockedMissedText) blockedMissedText.textContent = `${this.liveSuccessfulBlocks} / ${this.liveMissedWaves}`;
+        if (waveInfoText) waveInfoText.textContent = waveInfo;
+        if (energyNumber) energyNumber.textContent = `${Math.floor(energy)}`;
         this.updateLiveDefenseButtons();
+        this.updateLiveDefenseIntelPanel();
+        this.gameScreen.syncEmbeddedMissionHUD();
     }
 
     updateLiveDefenseButtons() {
-        const defenses = Array.isArray(this.puzzleData.defenses) ? this.puzzleData.defenses : [];
+        const controls = this.getLiveDefenseControls();
         document.querySelectorAll('button[data-live-defense]').forEach(btn => {
-            const name = btn.dataset.liveDefense;
-            const defense = defenses.find(d => d.name === name);
-            if (!defense) return;
-            const cooldown = Number(this.liveDefenseCooldowns[name] || 0);
-            const affordable = this.liveEnergy >= Number(defense.energyCost || 0);
-            btn.disabled = this.isComplete || cooldown > 0 || !affordable;
-            const cd = document.getElementById(`live-cd-${this.sanitizeId(name)}`);
-            if (cd) cd.textContent = cooldown > 0 ? `COOLDOWN: ${cooldown}s` : !affordable ? 'LOW ENERGY' : 'READY';
+            const control = controls.find(entry => entry.id === btn.dataset.liveDefense);
+            if (!control) return;
+
+            const cooldown = Number(this.liveDefenseCooldowns[control.id] || 0);
+            const affordable = this.liveEnergy >= control.energyCost;
+            const disabled = this.isComplete || cooldown > 0 || !affordable;
+            btn.disabled = disabled;
+            btn.classList.toggle('disabled', disabled);
+
+            const cd = document.getElementById(`live-cd-${this.sanitizeId(control.id)}`);
+            if (!cd) return;
+
+            cd.textContent = cooldown > 0 ? `COOLDOWN ${cooldown}s` : affordable ? 'READY' : 'LOW ENERGY';
+            cd.style.color = cooldown > 0 ? '#ffcc66' : affordable ? '#00ff88' : '#ff7e92';
         });
     }
 
-    appendLiveLog(message) {
+    appendLiveLog(message, tone = '') {
         const feedback = document.getElementById('guess-feedback');
         if (!feedback) return;
+
         const line = document.createElement('div');
-        line.textContent = `• ${message}`;
-        feedback.appendChild(line);
-        feedback.scrollTop = feedback.scrollHeight;
+        line.className = `ld-log-line${tone ? ` ${tone}` : ''}`;
+        line.textContent = `> ${message}`;
+        feedback.prepend(line);
+
+        while (feedback.children.length > 36) {
+            feedback.removeChild(feedback.lastChild);
+        }
     }
 
     finishLiveDefenseSimulation(success) {
@@ -3983,20 +6016,32 @@ export class PasswordCrack {
         this.stopLiveDefenseSimulation();
         const summary = this.puzzleData.educationalSummary || '';
         const feedback = document.getElementById('guess-feedback');
-        const coveragePct = Math.round((this.liveSuccessfulBlocks / Math.max(1, this.liveSuccessfulBlocks + this.liveMissedWaves)) * 100);
+        const coveragePct = this.getLiveDefenseCoveragePercent();
         if (feedback) {
-            feedback.innerHTML += this.renderMissionDebrief({
+            feedback.innerHTML = `${feedback.innerHTML}${this.renderMissionDebrief({
                 tone: success ? 'success' : 'error',
-                title: success ? 'Blue team held the vault line' : 'Blue team coverage collapsed',
+                title: success ? 'Vault held through the attack window' : 'Vault integrity collapsed under pressure',
                 summary,
                 details: [
-                    `Blocked waves: ${this.liveSuccessfulBlocks}`,
-                    `Missed waves: ${this.liveMissedWaves}`,
-                    `Coverage rate: ${coveragePct}%`
+                    `Blocked attacks: ${this.liveSuccessfulBlocks}`,
+                    `Missed attacks: ${this.liveMissedWaves}`,
+                    `Coverage footprint: ${coveragePct}%`,
+                    `Time survived: ${Math.max(0, Number(this.puzzleData.simulationConfig?.simulationDuration || 60) - this.liveRemainingTime)}s`
                 ],
                 insight: this.mission.knowledgeSummary?.insight || ''
-            });
+            })}`;
         }
+
+        this.setLiveDefenseIntel({
+            title: success ? 'Vault Secured' : 'Vault Breached',
+            detail: success ? 'Defense Complete' : 'Defense Failure',
+            description: success
+                ? 'All active threat windows have been contained. The vault remained online.'
+                : 'The attack campaign broke through the defense grid. Review your control rotation and energy use.',
+            tone: success ? 'good' : 'bad'
+        });
+        this.updateLiveSimulationUI();
+
         if (success) {
             this.audio.playSuccess();
             this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
@@ -4091,7 +6136,7 @@ export class PasswordCrack {
             </style>
             ${this.renderSharedPasswordLabThemeStyles()}
             ${this.renderSharedPasswordLabFrame({
-                levelLabel: '// LEVEL 08 - SOC CASEWORK',
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - SOC CASEWORK`,
                 title: 'ENTERPRISE THREAT<br>HUNT',
                 status: 'SOC CASE ACTIVE',
                 phases: [
@@ -4103,7 +6148,7 @@ export class PasswordCrack {
                     <div class="th-shell">
                         <div class="th-header">
                             <div class="th-brand">SHADOWDEF</div>
-                            <div class="th-level">LEVEL 8 - ENTERPRISE THREAT HUNT</div>
+                            <div class="th-level">LEVEL ${this.mission.level} - ENTERPRISE THREAT HUNT</div>
                             <div class="th-status">SOC CASE ACTIVE</div>
                         </div>
                         <div class="th-hint-strip">HINT: Validate behavior across multiple logs before containing. Quiet intrusions look normal until the chain is reconstructed.</div>
@@ -4403,7 +6448,7 @@ export class PasswordCrack {
             </style>
             ${this.renderSharedPasswordLabThemeStyles()}
             ${this.renderSharedPasswordLabFrame({
-                levelLabel: '// LEVEL 09 - ENGINEERING CRISIS',
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - ENGINEERING CRISIS`,
                 title: 'ZERO-DAY LIVE<br>PATCH LAB',
                 status: 'ENGINEERING CRISIS ROOM',
                 phases: [
@@ -4415,7 +6460,7 @@ export class PasswordCrack {
                     <div class="patch-shell">
                         <div class="patch-header">
                             <div class="patch-brand">SHADOWDEF</div>
-                            <div class="patch-level">LEVEL 9 - ZERO-DAY LIVE PATCH LAB</div>
+                            <div class="patch-level">LEVEL ${this.mission.level} - ZERO-DAY LIVE PATCH LAB</div>
                             <div class="patch-status">ENGINEERING CRISIS ROOM</div>
                         </div>
                         <div class="patch-phases">
@@ -4814,7 +6859,7 @@ export class PasswordCrack {
             </style>
             ${this.renderSharedPasswordLabThemeStyles()}
             ${this.renderSharedPasswordLabFrame({
-                levelLabel: '// LEVEL 10 - CERTIFICATION BOARD',
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - CERTIFICATION BOARD`,
                 title: 'ENTERPRISE SECURITY<br>ARCHITECT',
                 status: 'FINAL CERTIFICATION BOARD',
                 phases: [
@@ -4826,7 +6871,7 @@ export class PasswordCrack {
                     <div class="ea-shell">
                         <div class="ea-header">
                             <div class="ea-brand">SHADOWDEF</div>
-                            <div class="ea-level">LEVEL 10 - ENTERPRISE SECURITY ARCHITECT</div>
+                            <div class="ea-level">LEVEL ${this.mission.level} - ENTERPRISE SECURITY ARCHITECT</div>
                             <div class="ea-status">FINAL CERTIFICATION BOARD</div>
                         </div>
                         <div class="ea-phases">
@@ -5063,16 +7108,17 @@ export class PasswordCrack {
         this.revealSecondaryClue();
         if (this.hasRiskBreached()) { this.gameScreen.ui.showNotification(this.riskSystem?.breachMessage || 'Breach simulated.', 'error'); this.onMultiSelectFailure(); return; }
         if (this.attempts >= this.maxAttempts) this.onMultiSelectFailure();
-        else this.gameScreen.ui.showNotification('Classification mismatch detected. Reassess behavioral indicators.', 'error');
+        else this.gameScreen.ui.showNotification(this.interactionMode === 'humanPsychologyLab' ? this.getHumanLabCopyConfig().genericNotification : 'Classification mismatch detected. Reassess behavioral indicators.', 'error');
     }
 
     clearMultiSelectSelection() {
         this.selectedOptions.clear();
         document.querySelectorAll('[data-option-id].selected').forEach(el => el.classList.remove('selected'));
         this.audio.playButtonClick();
-        if (this.interactionMode === 'humanPsychologyLab' && this.visualizerElement) {
+        if (this.isHumanLabShellMode() && this.visualizerElement) {
             this.pushHumanLabLog('sys', 'Selection buffer cleared. Awaiting revised analyst classification.');
-            this.updateHumanPsychologyLiveUI();
+            if (this.interactionMode === 'humanPsychologyLab') this.updateHumanPsychologyLiveUI();
+            if (this.interactionMode === 'breachTriageLab') this.updateBreachTriageLiveUI();
             return;
         }
     }
@@ -5082,16 +7128,17 @@ export class PasswordCrack {
         if (!feedback) return;
         const weakCount = (this.session?.options || []).filter(o => o.isWeak).length;
         if (this.interactionMode === 'humanPsychologyLab') {
+            const copy = this.getHumanLabCopyConfig();
             const options = this.session?.options || [];
             const selected = options.filter(opt => this.selectedOptions.has(opt.id));
             const falsePositives = selected.filter(opt => !opt.isWeak);
             const missed = options.filter(opt => opt.isWeak && !this.selectedOptions.has(opt.id));
             feedback.innerHTML = `
-                <div><strong>Analyst Review:</strong> The board is not classified correctly yet.</div>
-                <div>Weak passwords in this set: ${weakCount}</div>
-                <div>Your flagged count: ${this.selectedOptions.size}</div>
-                <div>Missed predictable passwords: ${missed.length}</div>
-                <div>Strong passwords incorrectly flagged: ${falsePositives.length}</div>`;
+                <div><strong>${copy.reviewTitle}:</strong> ${copy.reviewSummary}</div>
+                <div>${copy.targetCountLabel}: ${weakCount}</div>
+                <div>${copy.yourFlaggedCountLabel}: ${this.selectedOptions.size}</div>
+                <div>${copy.missedLabel}: ${missed.length}</div>
+                <div>${copy.falsePositiveLabel}: ${falsePositives.length}</div>`;
             this.pushHumanLabLog('danger', `Classification mismatch. Missed ${missed.length} weak entry(s) and flagged ${falsePositives.length} resilient credential(s).`);
             return;
         }
@@ -5107,10 +7154,10 @@ export class PasswordCrack {
         const hintsContainer = document.getElementById('password-hints');
         if (!hintsContainer) return;
         const clue = document.createElement('div');
-        clue.className = this.interactionMode === 'humanPsychologyLab' ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
-        clue.textContent = this.interactionMode === 'humanPsychologyLab' ? text : `→ ${text}`;
+        clue.className = this.isHumanLabShellMode() ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
+        clue.textContent = this.isHumanLabShellMode() ? text : `→ ${text}`;
         hintsContainer.appendChild(clue);
-        if (this.interactionMode === 'humanPsychologyLab') {
+        if (this.isHumanLabShellMode()) {
             this.pushHumanLabLog('warn', `Additional analyst clue injected: ${text}`);
         }
     }
@@ -5120,7 +7167,8 @@ export class PasswordCrack {
         if (!feedback) return;
         const insights = Array.isArray(this.session?.securityInsight) ? this.session.securityInsight : [];
         const correctWeak = Array.isArray(this.session?.correctWeakPasswords) ? this.session.correctWeakPasswords : [];
-        const answersLine = correctWeak.length ? `<div><strong>Correct weak passwords:</strong> ${correctWeak.join(', ')}</div>` : '';
+        const humanLabCopy = this.getHumanLabCopyConfig();
+        const answersLine = correctWeak.length ? `<div><strong>${this.interactionMode === 'humanPsychologyLab' ? humanLabCopy.correctSelectionLabel : 'Correct weak passwords'}:</strong> ${correctWeak.join(', ')}</div>` : '';
         if (this.interactionMode === 'humanPsychologyLab') {
             feedback.innerHTML = `${answersLine}<div><strong>Analyst Debrief:</strong></div><div>• ${insights.join('</div><div>• ')}</div>`;
             this.pushHumanLabLog('ok', `Debrief ready. Verified weak credentials: ${correctWeak.join(', ') || 'none listed'}.`);
@@ -5130,6 +7178,7 @@ export class PasswordCrack {
     }
 
     onMultiSelectSuccess() {
+        const copy = this.getHumanLabCopyConfig();
         this.isComplete = true;
         this.audio.playSuccess();
         this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
@@ -5139,7 +7188,7 @@ export class PasswordCrack {
         if (feedback) {
             feedback.innerHTML += this.renderMissionDebrief({
                 tone: 'success',
-                title: 'Weak credential set identified',
+                title: this.interactionMode === 'humanPsychologyLab' ? copy.successTitle : 'Weak credential set identified',
                 summary: this.mission.successFeedback || 'You separated predictable passwords from resilient ones.',
                 details: [
                     `Submissions used: ${this.attempts}`,
@@ -5148,12 +7197,13 @@ export class PasswordCrack {
                 insight: this.mission.knowledgeSummary?.insight || ''
             });
         }
-        this.pushHumanLabLog('ok', 'Weak credential set isolated. Containment report ready for command review.');
+        this.pushHumanLabLog('ok', copy.successLog);
         this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Credential vulnerability identified.', 'success');
         setTimeout(() => this.gameScreen.completePuzzle(true), 1400);
     }
 
     onMultiSelectFailure() {
+        const copy = this.getHumanLabCopyConfig();
         this.isComplete = true;
         this.audio.playFailure();
         document.querySelectorAll('[data-option-id]').forEach(el => el.disabled = true);
@@ -5163,7 +7213,7 @@ export class PasswordCrack {
         if (feedback) {
             feedback.innerHTML += this.renderMissionDebrief({
                 tone: 'error',
-                title: 'Attacker shortcut missed',
+                title: this.interactionMode === 'humanPsychologyLab' ? copy.failureTitle : 'Attacker shortcut missed',
                 summary: this.mission.failureFeedback || 'Security oversight detected.',
                 details: [
                     `Submissions used: ${this.attempts}`,
@@ -5172,7 +7222,7 @@ export class PasswordCrack {
                 insight: this.mission.knowledgeSummary?.insight || ''
             });
         }
-        this.pushHumanLabLog('danger', 'Attacker shortcut preserved. Analyst board closed with unresolved exposure.');
+        this.pushHumanLabLog('danger', copy.failureLog);
         this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Security oversight detected.', 'error');
         setTimeout(() => this.gameScreen.completePuzzle(false), 1700);
     }
@@ -5304,11 +7354,11 @@ export class PasswordCrack {
             const hintsContainer = document.getElementById('password-hints');
             if (hintsContainer) {
                 const newHint = document.createElement('div');
-                newHint.className = this.interactionMode === 'humanPsychologyLab' ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
-                newHint.textContent = this.interactionMode === 'humanPsychologyLab' ? hintText : `→ ${hintText}`;
+                newHint.className = this.isHumanLabShellMode() ? 'l1-hint animate-fadeIn' : 'hint animate-fadeIn';
+                newHint.textContent = this.isHumanLabShellMode() ? hintText : `→ ${hintText}`;
                 hintsContainer.appendChild(newHint);
             }
-            if (this.interactionMode === 'humanPsychologyLab') {
+            if (this.isHumanLabShellMode()) {
                 this.pushHumanLabLog('warn', `Operator requested hint: ${hintText}`);
             }
         }
@@ -5326,10 +7376,10 @@ export class PasswordCrack {
     updateAttemptCounter() {
         const counter = document.getElementById('attempt-counter');
         if (!counter) return;
-        const modeLabels = { multiSelect:'Submissions', humanPsychologyLab:'Submissions', singleChoice:'Decisions', predictionChoice:'Decisions', investigation:'Decisions', inspection:'Decisions', liveDefenseSimulation:'Live defense active', threatHuntSimulation:'Investigation actions', livePatchSimulation:'Patch operations', enterpriseArchitectureSimulation:'Certification evaluations' };
+        const modeLabels = { multiSelect:'Submissions', humanPsychologyLab:'Submissions', breachTriageLab:'Reset waves', singleChoice:'Decisions', predictionChoice:'Decisions', investigation:'Decisions', inspection:'Decisions', liveDefenseSimulation:'Live defense active', threatHuntSimulation:'Investigation actions', livePatchSimulation:'Patch operations', enterpriseArchitectureSimulation:'Certification evaluations' };
         const label = modeLabels[this.interactionMode] || 'Attempts';
         if (label === 'Live defense active') { counter.innerHTML = 'Live defense active'; return; }
-        if (this.interactionMode === 'humanPsychologyLab') {
+        if (this.isHumanLabShellMode()) {
             counter.innerHTML = `${label}: <span class="${this.attempts >= this.maxAttempts - 1 ? 'is-hot' : ''}">${this.attempts}</span> / ${this.maxAttempts}`;
             return;
         }
@@ -5339,6 +7389,7 @@ export class PasswordCrack {
     getStats() { return { attempts: this.attempts, hintsUsed: this.hintsShown, completed: this.isComplete }; }
 
     destroy() {
+        this.clearSaltReuseCompletionTimer();
         this.stopSingleChoiceTimers();
         this.stopPredictionTimer();
         this.stopLiveDefenseSimulation();

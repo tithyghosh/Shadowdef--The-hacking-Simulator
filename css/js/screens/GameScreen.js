@@ -9,8 +9,7 @@ import { AIOpponent } from '../systems/AIOpponent.js';
 import { PasswordCrack } from '../puzzles/PasswordCrack.js';
 import { FirewallBypass } from '../puzzles/FirewallBypass.js';
 import { NetworkNav } from '../puzzles/NetworkNav.js';
-import { MalwareDetect } from '../puzzles/MalwareDetect.js';
-import { PhishingID } from '../puzzles/PhishingID.js';
+import { ZeroDayCountdown } from '../puzzles/ZeroDayCountdown.js';
 
 export class GameScreen {
     constructor(game) {
@@ -51,6 +50,7 @@ export class GameScreen {
         document.getElementById('timer').textContent = timerEnabled ? '00:00' : '--:--';
         document.getElementById('score').textContent = '0';
         document.getElementById('attempts').textContent = '0';
+        document.getElementById('ai-name').textContent = 'CYBER-THREAT';
         document.getElementById('ai-progress').style.width = '0%';
         document.getElementById('ai-progress-text').textContent = '0%';
     }
@@ -73,13 +73,51 @@ export class GameScreen {
         if (objective) objective.classList.add('completed');
     }
 
-    startTimer() {
-        if (!this.isTimerEnabled()) {
-            this.timer = null;
-            this.updateTimerDisplay(null);
-            return;
+    hasNoTimerPressure() {
+        return !!this.currentMission?.puzzle?.noTimerPressure;
+    }
+
+    getMissionTargetTime() {
+        if (this.hasNoTimerPressure()) return 0;
+        const configuredTime = Number(this.currentMission?.puzzle?.timeLimit);
+        return configuredTime > 0 ? configuredTime : CONFIG.TIMING.DEFAULT_MISSION_TIME;
+    }
+
+    setTimerDisplay(label, { isWarning = false } = {}) {
+        const isFreeMode = label === 'FREE';
+        const color = isFreeMode
+            ? 'var(--cyber-green)'
+            : isWarning
+                ? 'var(--cyber-pink)'
+                : 'var(--cyber-blue)';
+        const timerElement = document.getElementById('timer');
+        if (timerElement) {
+            timerElement.textContent = label;
+            timerElement.style.color = color;
         }
 
+        const embeddedTimer = document.getElementById('l1-timer');
+        if (embeddedTimer) {
+            embeddedTimer.textContent = label;
+            embeddedTimer.classList.toggle('danger', isWarning && !isFreeMode);
+        }
+    }
+
+    setAIDisplay({ name = null, progressText = '0%', progressWidth = 0 } = {}) {
+        const aiName = document.getElementById('ai-name');
+        if (aiName && name !== null) aiName.textContent = name;
+
+        const progressBar = document.getElementById('ai-progress');
+        if (progressBar) progressBar.style.width = `${Math.max(0, Math.min(100, progressWidth))}%`;
+
+        const progressTextEl = document.getElementById('ai-progress-text');
+        if (progressTextEl) progressTextEl.textContent = progressText;
+
+        const embeddedAi = document.getElementById('l1-ai-progress');
+        if (embeddedAi) embeddedAi.textContent = progressText;
+    }
+
+    startTimer() {
         const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
         this.timer = new Timer(targetTime, {
             onTick: (time) => this.updateTimerDisplay(time),
@@ -90,45 +128,27 @@ export class GameScreen {
     }
 
     updateTimerDisplay(seconds) {
-        if (seconds == null) {
-            const timerElement = document.getElementById('timer');
-            if (timerElement) {
-                timerElement.textContent = '--:--';
-                timerElement.style.color = 'var(--text-secondary)';
-            }
-
-            const embeddedTimer = document.getElementById('l1-timer');
-            if (embeddedTimer) {
-                embeddedTimer.textContent = '--:--';
-                embeddedTimer.classList.remove('danger');
-            }
-            return;
-        }
-
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         const formatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        const timerElement = document.getElementById('timer');
-        if (timerElement) {
-            timerElement.textContent = formatted;
-            timerElement.style.color = seconds <= CONFIG.TIMING.WARNING_TIME ? 'var(--cyber-pink)' : 'var(--cyber-blue)';
-        }
-
-        const embeddedTimer = document.getElementById('l1-timer');
-        if (embeddedTimer) {
-            embeddedTimer.textContent = formatted;
-            embeddedTimer.classList.toggle('danger', seconds <= CONFIG.TIMING.WARNING_TIME);
-        }
+        this.setTimerDisplay(formatted, { isWarning: seconds <= CONFIG.TIMING.WARNING_TIME });
     }
 
     onTimeExpired() {
         if (this.isComplete) return;
+        if (this.activePuzzle?.handleTimeExpired?.()) return;
         this.ui.showNotification('Time expired!', 'error');
         this.completePuzzle(false);
     }
 
     startAIOpponent() {
-        const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
+        if (this.hasNoTimerPressure()) {
+            this.aiOpponent = null;
+            this.setAIDisplay({ name: 'TRAINING MODE', progressText: 'LAB', progressWidth: 0 });
+            return;
+        }
+
+        const targetTime = this.getMissionTargetTime();
         const aiSpeed = this.currentMission.aiSpeed || 1.0;
         this.aiOpponent = new AIOpponent(targetTime, aiSpeed, {
             onProgress: (progress) => this.updateAIProgress(progress),
@@ -143,17 +163,16 @@ export class GameScreen {
     }
 
     updateAIProgress(progress) {
-        const progressBar = document.getElementById('ai-progress');
-        const progressText = document.getElementById('ai-progress-text');
-        if (progressBar) progressBar.style.width = `${progress}%`;
-        if (progressText) progressText.textContent = `${Math.floor(progress)}%`;
-
-        const embeddedAi = document.getElementById('l1-ai-progress');
-        if (embeddedAi) embeddedAi.textContent = `${Math.floor(progress)}%`;
+        const normalized = Math.max(0, Math.min(100, progress));
+        this.setAIDisplay({
+            progressText: `${Math.floor(normalized)}%`,
+            progressWidth: normalized
+        });
     }
 
     onAIWin() {
         if (this.isComplete) return;
+        if (this.activePuzzle?.handleAIWin?.()) return;
         this.ui.showNotification('AI opponent completed first!', 'error');
         this.completePuzzle(false);
     }
@@ -167,8 +186,11 @@ export class GameScreen {
             case 'password': this.activePuzzle = new PasswordCrack(this.currentMission.puzzle, this, this.currentMission); break;
             case 'firewall': this.activePuzzle = new FirewallBypass(this.currentMission.puzzle, this); break;
             case 'network':  this.activePuzzle = new NetworkNav(this.currentMission.puzzle, this); break;
-            case 'malware':  this.activePuzzle = new MalwareDetect(this.currentMission.puzzle, this); break;
-            case 'phishing': this.activePuzzle = new PhishingID(this.currentMission.puzzle, this); break;
+            case 'zeroday':
+            case 'malware':
+            case 'phishing':
+                this.activePuzzle = new ZeroDayCountdown(this.currentMission.puzzle, this, this.currentMission);
+                break;
             default: console.error(`Unknown puzzle type: ${this.currentMission.type}`); return;
         }
         this.activePuzzle.render(puzzleArea);
@@ -187,6 +209,7 @@ export class GameScreen {
         gameScreen.classList.remove('game-screen--threat-hunt-lab');
         gameScreen.classList.remove('game-screen--patch-lab');
         gameScreen.classList.remove('game-screen--enterprise-finale');
+        gameScreen.classList.remove('game-screen--zero-day-lab');
         if (this.currentMission?.puzzle?.interactionMode === 'humanPsychologyLab') {
             gameScreen.classList.add('game-screen--human-lab');
         }
@@ -216,6 +239,9 @@ export class GameScreen {
         }
         if (this.currentMission?.puzzle?.interactionMode === 'enterpriseArchitectureSimulation') {
             gameScreen.classList.add('game-screen--enterprise-finale');
+        }
+        if (this.currentMission?.puzzle?.interactionMode === 'zeroDayCountdownLab') {
+            gameScreen.classList.add('game-screen--zero-day-lab');
         }
     }
 
@@ -248,12 +274,20 @@ export class GameScreen {
     }
 
     syncEmbeddedMissionHUD() {
-        if (this.timer) {
-            this.updateTimerDisplay(this.timer.getRemaining());
-        }
+        const handledByPuzzle = !!this.activePuzzle?.syncEmbeddedMissionHUD?.();
 
-        if (this.aiOpponent) {
-            this.updateAIProgress(this.aiOpponent.getProgress());
+        if (!handledByPuzzle) {
+            if (this.timer) {
+                this.updateTimerDisplay(this.timer.getRemaining());
+            } else if (this.hasNoTimerPressure()) {
+                this.setTimerDisplay('FREE');
+            }
+
+            if (this.aiOpponent) {
+                this.updateAIProgress(this.aiOpponent.getProgress());
+            } else if (this.hasNoTimerPressure()) {
+                this.setAIDisplay({ name: 'TRAINING MODE', progressText: 'LAB', progressWidth: 0 });
+            }
         }
 
         this.updateScore();
@@ -270,10 +304,10 @@ export class GameScreen {
 
         const stats = {
             success,
-            time: this.timer ? this.timer.getElapsed() : 0,
+            time: this.timer ? this.timer.getElapsed() : this.game.score.getTimeElapsed(),
             attempts: this.game.score.attempts,
             hintsUsed: this.game.score.hintsUsed,
-            targetTime: this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME
+            targetTime: this.getMissionTargetTime()
         };
         const finalScore = this.game.score.calculateFinalScore(stats);
         this.game.completeMission(success, { ...stats, finalScore });

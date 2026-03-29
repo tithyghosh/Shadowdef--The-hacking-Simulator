@@ -962,12 +962,13 @@ export class MissionSelect {
 
     getPuzzleTypeLabel(type) {
         const labels = {
-            password: 'Password Cracking',
-            firewall: 'Firewall Bypass',
-            network: 'Network Navigation',
-            malware: 'Malware Detection',
-            phishing: 'Phishing Analysis',
-            mixed: 'Multi-Stage'
+            password: '🔐 Password Cracking',
+            firewall: '🛡️ Firewall Bypass',
+            network: '🌐 Network Navigation',
+            malware: '🦠 Threat Analysis',
+            zeroday: '⚠️ Zero-Day Countdown',
+            phishing: '📧 Phishing Analysis',
+            mixed: '⚡ Multi-Stage'
         };
         return labels[type] || String(type || '').toUpperCase();
     }

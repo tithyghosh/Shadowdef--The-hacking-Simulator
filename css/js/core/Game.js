@@ -118,6 +118,16 @@ export class Game {
         this.missionSelectScreen.renderCategory(missions, gridId);
     }
 
+    getSectionDisplayName(section) {
+        const labels = {
+            password: 'Password Cracking',
+            malware: 'Zero-Day Countdown',
+            network: 'Network Operations'
+        };
+
+        return labels[section] || String(section || '').toUpperCase();
+    }
+
     /**
      * Update category progress indicators
      */
@@ -140,6 +150,23 @@ export class Game {
         if (networkProgress) {
             networkProgress.textContent = `${networkCompleted}/${this.networkMissions.length} Completed`;
         }
+    }
+
+    normalizeLinearMissionProgression(missions) {
+        if (!Array.isArray(missions) || !missions.length) return;
+
+        const ordered = missions.slice().sort((a, b) => Number(a.level || 0) - Number(b.level || 0));
+        ordered.forEach((mission, index) => {
+            mission.completed = !!mission.completed;
+
+            if (index === 0) {
+                mission.locked = false;
+                return;
+            }
+
+            const previousMission = ordered[index - 1];
+            mission.locked = !(previousMission.completed || mission.completed);
+        });
     }
 
     /**
@@ -297,7 +324,7 @@ export class Game {
         // Set current section based on mission type
         if (mission.type === 'password') {
             this.currentSection = 'password';
-        } else if (mission.type === 'malware') {
+        } else if (mission.type === 'malware' || mission.type === 'zeroday') {
             this.currentSection = 'malware';
         } else if (mission.type === 'network' || mission.type === 'phishing' || mission.type === 'firewall') {
             this.currentSection = 'network';
@@ -336,7 +363,7 @@ export class Game {
             
             if (sectionUnlocked) {
                 this.ui.showNotification(
-                    `🔓 Next level unlocked in ${this.currentSection.toUpperCase()} section!`, 
+                    `🔓 Next level unlocked in ${this.getSectionDisplayName(this.currentSection)}!`, 
                     'success', 
                     3000
                 );
@@ -956,8 +983,9 @@ export class Game {
      */
     loadProgress() {
         // Load from authenticated user first, then fallback to local storage
+        let hasAuthenticatedSession = false;
         if (window.authManager && window.authManager.isUserAuthenticated()) {
-            const userStats = window.authManager.getUserStats();
+            hasAuthenticatedSession = true;
             
             // Apply user preferences to game
             const userPrefs = window.authManager.getUserPreferences();
@@ -968,9 +996,7 @@ export class Game {
                 this.audio.setSfxEnabled(userPrefs.sfxEnabled);
             }
             
-            console.log('📂 User progress loaded from cloud');
-            this.updateCategoryProgress();
-            return;
+            console.log('📂 User session restored from cloud, checking local mission progress...');
         }
         
         // Fallback to local storage for guest users
@@ -1023,10 +1049,14 @@ export class Game {
                 });
             }
 
-            console.log('📂 Local progress loaded');
+            console.log(`📂 ${hasAuthenticatedSession ? 'Local mission progress loaded for authenticated session' : 'Local progress loaded'}`);
         } else {
-            console.log('📭 No saved progress found - starting fresh');
+            console.log(`📭 ${hasAuthenticatedSession ? 'No local mission progress found for authenticated session' : 'No saved progress found - starting fresh'}`);
         }
+
+        this.normalizeLinearMissionProgression(this.passwordMissions);
+        this.normalizeLinearMissionProgression(this.malwareMissions);
+        this.normalizeLinearMissionProgression(this.networkMissions);
         
         this.updateCategoryProgress();
     }

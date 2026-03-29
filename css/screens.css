@@ -6763,7 +6763,8 @@
 #game-screen.game-screen--live-defense-lab,
 #game-screen.game-screen--threat-hunt-lab,
 #game-screen.game-screen--patch-lab,
-#game-screen.game-screen--enterprise-finale {
+#game-screen.game-screen--enterprise-finale,
+#game-screen.game-screen--zero-day-lab {
     background:
         radial-gradient(circle at top left, rgba(23, 216, 255, 0.12), transparent 26%),
         radial-gradient(circle at bottom right, rgba(255, 63, 120, 0.12), transparent 24%),
@@ -6797,7 +6798,10 @@
 #game-screen.game-screen--patch-lab .side-panel,
 #game-screen.game-screen--enterprise-finale > .back-btn,
 #game-screen.game-screen--enterprise-finale .game-header,
-#game-screen.game-screen--enterprise-finale .side-panel {
+#game-screen.game-screen--enterprise-finale .side-panel,
+#game-screen.game-screen--zero-day-lab > .back-btn,
+#game-screen.game-screen--zero-day-lab .game-header,
+#game-screen.game-screen--zero-day-lab .side-panel {
     display: none !important;
 }
 
@@ -6809,7 +6813,8 @@
 #game-screen.game-screen--live-defense-lab .game-content,
 #game-screen.game-screen--threat-hunt-lab .game-content,
 #game-screen.game-screen--patch-lab .game-content,
-#game-screen.game-screen--enterprise-finale .game-content {
+#game-screen.game-screen--enterprise-finale .game-content,
+#game-screen.game-screen--zero-day-lab .game-content {
     gap: 0;
     padding: 0;
     height: 100%;
@@ -6825,7 +6830,8 @@
 #game-screen.game-screen--live-defense-lab .puzzle-area,
 #game-screen.game-screen--threat-hunt-lab .puzzle-area,
 #game-screen.game-screen--patch-lab .puzzle-area,
-#game-screen.game-screen--enterprise-finale .puzzle-area {
+#game-screen.game-screen--enterprise-finale .puzzle-area,
+#game-screen.game-screen--zero-day-lab .puzzle-area {
     background: transparent;
     border: 0;
     border-radius: 0;
@@ -6833,9 +6839,12 @@
     padding: 0;
     align-items: stretch;
     justify-content: stretch;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     height: 100%;
-    max-height: 100%;
+    max-height: none;
+    min-height: 0;
+    min-width: 0;
 }
 
 #game-screen.game-screen--single-choice-lab .puzzle-area > *,
@@ -6846,9 +6855,12 @@
 #game-screen.game-screen--live-defense-lab .puzzle-area > *,
 #game-screen.game-screen--threat-hunt-lab .puzzle-area > *,
 #game-screen.game-screen--patch-lab .puzzle-area > *,
-#game-screen.game-screen--enterprise-finale .puzzle-area > * {
+#game-screen.game-screen--enterprise-finale .puzzle-area > *,
+#game-screen.game-screen--zero-day-lab .puzzle-area > * {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 100%;
+    min-width: 0;
+    width: 100%;
 }
 
 /* Mission Route Board */
