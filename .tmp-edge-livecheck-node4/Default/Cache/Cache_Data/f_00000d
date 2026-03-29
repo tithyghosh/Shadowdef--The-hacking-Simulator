@@ -1,0 +1,1038 @@
+/**
+ * Game Controller - Manages game state and flow
+ */
+
+import { StateManager } from './StateManager.js';
+import { ScoreManager } from './ScoreManager.js';
+import { ScreenManager } from '../screens/ScreenManager.js';
+import { MissionSelect } from '../screens/MissionSelect.js';
+import { GameScreen } from '../screens/GameScreen.js';
+import { 
+    missions, 
+    passwordMissions, 
+    malwareMissions, 
+    networkMissions,
+    getMissionsBySection,
+    getMissionById,
+    unlockNextLevelInSection,
+    getUnlockedMissionsForSection,
+    getCompletedMissionsForSection
+} from '../data/missions.js';
+
+export class Game {
+    constructor(uiManager, audioManager) {
+        this.ui = uiManager;
+        this.audio = audioManager;
+        this.state = new StateManager();
+        this.score = new ScoreManager();
+        this.screens = new ScreenManager();
+        
+        this.currentMission = null;
+        this.activePuzzle = null;
+        this.currentSection = null; // Track current section
+        
+        // Initialize mission data - separate sections
+        this.passwordMissions = passwordMissions;
+        this.malwareMissions = malwareMissions;
+        this.networkMissions = networkMissions;
+        this.missions = missions; // Combined for backward compatibility
+        
+        // Screen instances
+        this.missionSelectScreen = new MissionSelect(this);
+        this.gameScreen = new GameScreen(this);
+        
+        // Load progress and initialize
+        this.init();
+    }
+
+    /**
+     * Initialize the game
+     */
+    init() {
+        this.loadProgress();
+        console.log('🎮 Game initialized');
+    }
+
+    /**
+     * Start a new game
+     */
+    startNewGame() {
+        console.log('🎮 Starting new game...');
+        
+        // Reset progress for all sections
+        this.state.resetProgress();
+        
+        // Ensure first levels are unlocked in each section
+        if (this.passwordMissions[0]) this.passwordMissions[0].locked = false;
+        if (this.malwareMissions[0]) this.malwareMissions[0].locked = false;
+        if (this.networkMissions[0]) this.networkMissions[0].locked = false;
+        
+        // Lock all other levels
+        this.passwordMissions.slice(1).forEach(m => m.locked = true);
+        this.malwareMissions.slice(1).forEach(m => m.locked = true);
+        this.networkMissions.slice(1).forEach(m => m.locked = true);
+        
+        // Show mission categories
+        this.showMissionCategories();
+    }
+
+    /**
+     * Show mission categories screen
+     */
+    showMissionCategories() {
+        this.screens.showScreen('mission-select');
+        this.updateCategoryProgress();
+    }
+
+    /**
+     * Show missions for a specific category
+     */
+    showCategoryMissions(category) {
+        let screenId, gridId, missions;
+        
+        switch (category) {
+            case 'password':
+                screenId = 'password-missions';
+                gridId = 'password-mission-grid';
+                missions = this.passwordMissions;
+                this.currentSection = 'password';
+                break;
+            case 'malware':
+                screenId = 'malware-missions';
+                gridId = 'malware-mission-grid';
+                missions = this.malwareMissions;
+                this.currentSection = 'malware';
+                break;
+            case 'network':
+                screenId = 'network-missions';
+                gridId = 'network-mission-grid';
+                missions = this.networkMissions;
+                this.currentSection = 'network';
+                break;
+            default:
+                console.warn('Unknown category:', category);
+                return;
+        }
+
+        this.screens.showScreen(screenId);
+        this.missionSelectScreen.renderCategory(missions, gridId);
+    }
+
+    getSectionDisplayName(section) {
+        const labels = {
+            password: 'Password Cracking',
+            malware: 'Zero-Day Countdown',
+            network: 'Network Operations'
+        };
+
+        return labels[section] || String(section || '').toUpperCase();
+    }
+
+    /**
+     * Update category progress indicators
+     */
+    updateCategoryProgress() {
+        const passwordCompleted = this.passwordMissions.filter(m => m.completed).length;
+        const malwareCompleted = this.malwareMissions.filter(m => m.completed).length;
+        const networkCompleted = this.networkMissions.filter(m => m.completed).length;
+
+        // Update progress displays
+        const passwordProgress = document.getElementById('password-progress');
+        const malwareProgress = document.getElementById('malware-progress');
+        const networkProgress = document.getElementById('network-progress');
+
+        if (passwordProgress) {
+            passwordProgress.textContent = `${passwordCompleted}/${this.passwordMissions.length} Completed`;
+        }
+        if (malwareProgress) {
+            malwareProgress.textContent = `${malwareCompleted}/${this.malwareMissions.length} Completed`;
+        }
+        if (networkProgress) {
+            networkProgress.textContent = `${networkCompleted}/${this.networkMissions.length} Completed`;
+        }
+    }
+
+    /**
+     * Go back to the current category's level selection screen
+     */
+    backToCurrentCategoryLevels() {
+        if (!this.currentSection) {
+            console.warn('No current section to determine category');
+            this.showMissionCategories();
+            return;
+        }
+
+        this.showCategoryMissions(this.currentSection);
+    }
+
+    /**
+     * Check if there's a next level available in the current section
+     */
+    hasNextLevelInCurrentSection() {
+        if (!this.currentMission || !this.currentSection) {
+            return false;
+        }
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                return false;
+        }
+
+        // Check if there's a next level
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        return nextMission && !nextMission.locked;
+    }
+
+    /**
+     * Go to the next level in the current category
+     */
+    goToNextLevel() {
+        if (!this.currentMission || !this.currentSection) {
+            console.warn('No current mission or section to find next level');
+            return;
+        }
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                console.warn('Unknown section for next level:', this.currentSection);
+                return;
+        }
+
+        // Find next level in the same section
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        if (!nextMission) {
+            // No more missions in this section - should not happen if button is properly disabled
+            console.warn('No next mission available - Continue button should be disabled');
+            this.ui.showNotification('🎉 Section completed! All levels finished!', 'success');
+            return;
+        }
+
+        if (nextMission.locked) {
+            // Should not happen if button is properly disabled
+            console.warn('Next mission is locked - Continue button should be disabled');
+            this.ui.showNotification('Complete current level to unlock the next one!', 'warning');
+            return;
+        }
+
+        // Start the next mission directly
+        console.log(`🎯 Going to next level: ${nextMission.title}`);
+        this.startMission(nextMission);
+    }
+
+    /**
+     * Update the Continue button state based on available next level
+     */
+    updateContinueButton() {
+        const continueBtn = document.getElementById('next-level-btn');
+        if (!continueBtn || !this.currentMission || !this.currentSection) return;
+
+        // Get missions for the current section
+        let sectionMissions;
+        switch (this.currentSection) {
+            case 'password':
+                sectionMissions = this.passwordMissions;
+                break;
+            case 'malware':
+                sectionMissions = this.malwareMissions;
+                break;
+            case 'network':
+                sectionMissions = this.networkMissions;
+                break;
+            default:
+                continueBtn.style.display = 'none';
+                return;
+        }
+
+        // Find next level in the same section
+        const currentLevel = this.currentMission.level;
+        const nextMission = sectionMissions.find(m => m.level === currentLevel + 1);
+        
+        if (!nextMission) {
+            // Last mission in section - hide the button completely
+            continueBtn.style.display = 'none';
+            console.log(`🏁 Last level in ${this.currentSection} section - Continue button hidden`);
+        } else if (nextMission.locked) {
+            // Next level is locked - show disabled button
+            continueBtn.style.display = 'inline-block';
+            continueBtn.disabled = true;
+            continueBtn.textContent = 'COMPLETE TO UNLOCK';
+        } else {
+            // Next level is available - show active button
+            continueBtn.style.display = 'inline-block';
+            continueBtn.disabled = false;
+            continueBtn.textContent = 'CONTINUE';
+        }
+    }
+
+    /**
+     * Start a specific mission
+     */
+    startMission(mission) {
+        if (mission.locked) {
+            this.ui.showNotification('Mission locked!', 'error');
+            return;
+        }
+
+        console.log(`🎯 Starting mission: ${mission.title}`);
+        
+        this.currentMission = mission;
+        this.score.reset();
+        
+        // Set current section based on mission type
+        if (mission.type === 'password') {
+            this.currentSection = 'password';
+        } else if (mission.type === 'malware' || mission.type === 'zeroday') {
+            this.currentSection = 'malware';
+        } else if (mission.type === 'network' || mission.type === 'phishing' || mission.type === 'firewall') {
+            this.currentSection = 'network';
+        }
+        
+        // Show game screen
+        this.screens.showScreen('game-screen');
+        this.gameScreen.loadMission(mission);
+        
+        // Update continue button state
+        this.updateContinueButton();
+    }
+
+    /**
+     * Complete current mission
+     */
+    completeMission(success, stats) {
+        if (!this.currentMission) return;
+
+        console.log(`Mission ${success ? 'completed' : 'failed'}!`);
+
+        // Calculate final score
+        const finalScore = this.score.calculateFinalScore(stats);
+
+        // Update mission status
+        if (success) {
+            this.currentMission.completed = true;
+            this.currentMission.bestScore = Math.max(
+                this.currentMission.bestScore || 0,
+                finalScore
+            );
+
+            // Unlock next level in the same section only
+            const currentLevel = this.currentMission.level;
+            const sectionUnlocked = unlockNextLevelInSection(this.currentSection, currentLevel);
+            
+            if (sectionUnlocked) {
+                this.ui.showNotification(
+                    `🔓 Next level unlocked in ${this.getSectionDisplayName(this.currentSection)}!`, 
+                    'success', 
+                    3000
+                );
+            }
+
+            // Award user experience and credits if authenticated
+            if (window.authManager && window.authManager.isUserAuthenticated()) {
+                // Award XP based on mission difficulty and performance
+                const baseXP = 100;
+                const missionDifficulty = String(this.currentMission.difficulty || '').toLowerCase();
+                const difficultyMultiplier = missionDifficulty === 'pro' ? 1.7 :
+                                           missionDifficulty === 'hard' ? 1.5 :
+                                           missionDifficulty === 'easy' ? 0.8 : 1.0;
+                const performanceBonus = stats.hintsUsed === 0 ? 1.2 : 1.0;
+                const xpAwarded = Math.floor(baseXP * difficultyMultiplier * performanceBonus);
+                
+                // Award credits based on score
+                const creditsAwarded = Math.floor(finalScore * 0.1);
+                
+                // Update user stats
+                window.updateUserStats({
+                    totalScore: (window.authManager.getUserStats().totalScore || 0) + finalScore,
+                    highScore: Math.max(window.authManager.getUserStats().highScore || 0, finalScore),
+                    missionsCompleted: (window.authManager.getUserStats().missionsCompleted || 0) + 1,
+                    totalPlayTime: (window.authManager.getUserStats().totalPlayTime || 0) + stats.timeElapsed,
+                    lastPlayed: Date.now()
+                });
+                
+                // Award XP and credits
+                window.awardExperience(xpAwarded, `Mission: ${this.currentMission.title}`);
+                window.awardCredits(creditsAwarded, 'Mission completion');
+                
+                // Check for achievements
+                this.checkAchievements(stats, finalScore);
+            }
+        }
+
+        // Save progress
+        this.saveProgress();
+        
+        // Update category progress
+        this.updateCategoryProgress();
+        
+        // Update continue button state
+        this.updateContinueButton();
+
+        // Show results
+        this.gameScreen.showResults(success, stats, finalScore);
+    }
+
+    /**
+     * Request a hint
+     */
+    requestHint() {
+        if (this.gameScreen.activePuzzle) {
+            this.gameScreen.activePuzzle.showHint();
+        }
+    }
+
+    /**
+     * Pause game
+     */
+    pauseGame() {
+        if (this.gameScreen) {
+            this.gameScreen.pause();
+        }
+    }
+
+    /**
+     * Handle ESC key
+     */
+    handleEscape() {
+        const currentScreen = this.screens.getCurrentScreen();
+        
+        if (currentScreen === 'game-screen') {
+            this.pauseGame();
+        } else if (currentScreen !== 'main-menu') {
+            this.goBack();
+        }
+    }
+
+    /**
+     * Go back to previous screen
+     */
+    goBack() {
+        const currentScreen = this.screens.getCurrentScreen();
+        
+        if (currentScreen === 'mission-select') {
+            this.screens.showScreen('main-menu');
+        } else if (currentScreen === 'password-missions' || 
+                   currentScreen === 'malware-missions' || 
+                   currentScreen === 'network-missions') {
+            this.showMissionCategories();
+        } else if (currentScreen === 'game-screen') {
+            // Use the new back to levels functionality
+            this.backToCurrentCategoryLevels();
+        } else {
+            const didGoBack = this.screens.goBack();
+            if (!didGoBack && this.ui) {
+                this.ui.showNotification('No previous screen', 'info');
+            }
+        }
+    }
+
+    /**
+     * Handle tab hidden (auto-pause)
+     */
+    handleTabHidden() {
+        if (this.screens.getCurrentScreen() === 'game-screen') {
+            this.pauseGame();
+        }
+    }
+
+    /**
+     * Show settings
+     */
+    showSettings(defaultPage = 'audio') {
+        const audioSettings = this.audio.getSettings();
+        const storedSettings = this.state.loadSettings();
+        const authManager = window.authManager;
+        const user = authManager?.getCurrentUser?.() || null;
+        const isAuthenticated = !!(authManager?.isUserAuthenticated?.() || user);
+        const settings = {
+            musicEnabled: audioSettings.musicEnabled,
+            sfxEnabled: audioSettings.sfxEnabled,
+            musicVolume: Math.round(audioSettings.musicVolume * 100),
+            sfxVolume: Math.round(audioSettings.sfxVolume * 100),
+            timerEnabled: storedSettings.timerEnabled !== false,
+            showHints: storedSettings.showHints !== false
+        };
+
+        this.ui.showModal('Settings', `
+            <div class="settings-shell">
+                <div class="settings-nav">
+                    <div class="settings-brand">
+                        <div class="settings-brand-title">SHADOWDEF</div>
+                        <div class="settings-brand-sub">SETTINGS</div>
+                    </div>
+
+                    <div class="settings-nav-items">
+                        <button class="settings-nav-item ${defaultPage === 'audio' ? 'active' : ''}" type="button" data-settings-page="audio">
+                            <span class="settings-nav-icon">🔊</span>
+                            <span>AUDIO</span>
+                        </button>
+                        <button class="settings-nav-item ${defaultPage === 'gameplay' ? 'active' : ''}" type="button" data-settings-page="gameplay">
+                            <span class="settings-nav-icon">🎮</span>
+                            <span>GAMEPLAY</span>
+                        </button>
+                        <button class="settings-nav-item ${defaultPage === 'account' ? 'active' : ''}" type="button" data-settings-page="account">
+                            <span class="settings-nav-icon">⍟</span>
+                            <span>ACCOUNT</span>
+                        </button>
+                    </div>
+
+                    <div class="settings-status">
+                        <span class="settings-status-dot"></span>
+                        <span>SYSTEM ONLINE</span>
+                    </div>
+                </div>
+
+                <div class="settings-main">
+                    <div class="settings-head">
+                        <div class="settings-head-copy">
+                            <span class="settings-head-icon" id="settings-page-icon">${defaultPage === 'gameplay' ? '🎮' : defaultPage === 'account' ? '⍟' : '🔊'}</span>
+                            <span class="settings-head-title" id="settings-page-title">${defaultPage === 'gameplay' ? 'GAMEPLAY' : defaultPage === 'account' ? 'ACCOUNT ACCESS' : 'AUDIO CONTROLS'}</span>
+                            <span class="settings-head-line"></span>
+                        </div>
+                        <button class="settings-close" type="button" id="settings-close-btn" aria-label="Close settings">✕</button>
+                    </div>
+
+                    <div class="settings-pages">
+                        <div class="settings-page ${defaultPage === 'audio' ? 'active' : ''}" id="settings-page-audio">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Enable Music</div>
+                                    <div class="settings-card-subtitle">Background music during gameplay</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="music-toggle" ${settings.musicEnabled ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-slider-row">
+                                    <div class="settings-slider-top">
+                                        <span class="settings-card-title">Music Volume</span>
+                                        <span class="settings-slider-value" id="music-volume-display">${settings.musicVolume}%</span>
+                                    </div>
+                                    <div class="settings-slider-track">
+                                        <div class="settings-slider-fill" id="music-volume-fill" style="width:${settings.musicVolume}%"></div>
+                                        <input type="range" id="music-volume" min="0" max="100"
+                                               value="${settings.musicVolume}"
+                                               ${!settings.musicEnabled ? 'disabled' : ''}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Enable Sound Effects</div>
+                                    <div class="settings-card-subtitle">In-game SFX and alert sounds</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="sfx-toggle" ${settings.sfxEnabled ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-slider-row settings-slider-row-danger">
+                                    <div class="settings-slider-top">
+                                        <span class="settings-card-title">SFX Volume</span>
+                                        <span class="settings-slider-value settings-slider-value-danger" id="sfx-volume-display">${settings.sfxVolume}%</span>
+                                    </div>
+                                    <div class="settings-slider-track">
+                                        <div class="settings-slider-fill settings-slider-fill-danger" id="sfx-volume-fill" style="width:${settings.sfxVolume}%"></div>
+                                        <input type="range" id="sfx-volume" class="settings-range-danger" min="0" max="100"
+                                               value="${settings.sfxVolume}"
+                                               ${!settings.sfxEnabled ? 'disabled' : ''}>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-page ${defaultPage === 'gameplay' ? 'active' : ''}" id="settings-page-gameplay">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Timer</div>
+                                    <div class="settings-card-subtitle">Countdown clock on each level</div>
+                                </div>
+                                <div class="settings-select">
+                                    <select id="timer-setting">
+                                        <option value="on" ${settings.timerEnabled ? 'selected' : ''}>ENABLED</option>
+                                        <option value="off" ${!settings.timerEnabled ? 'selected' : ''}>DISABLED</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Show Hints</div>
+                                    <div class="settings-card-subtitle">Display clues when player is stuck</div>
+                                </div>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" id="hints-toggle" ${settings.showHints ? 'checked' : ''}>
+                                    <span class="settings-toggle-track"></span>
+                                    <span class="settings-toggle-knob"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-page ${defaultPage === 'account' ? 'active' : ''}" id="settings-page-account">
+                            <div class="settings-card">
+                                <div class="settings-copy">
+                                    <div class="settings-card-title">Account Access</div>
+                                    <div class="settings-card-subtitle" id="settings-auth-subtitle">
+                                        ${isAuthenticated
+                                            ? `Signed in as ${(user?.displayName || user?.username || user?.email || 'Operator')}`
+                                            : 'Authenticate your operator profile from settings'}
+                                    </div>
+                                </div>
+                                <button class="settings-auth-btn ${isAuthenticated ? 'is-logout' : ''}" type="button" id="settings-auth-btn">
+                                    ${isAuthenticated ? 'LOGOUT' : 'LOGIN'}
+                                </button>
+                            </div>
+
+                            <div class="settings-card settings-card-stack">
+                                <div class="settings-account-panel">
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">STATUS</span>
+                                        <span class="settings-account-badge ${isAuthenticated ? 'online' : 'offline'}">
+                                            ${isAuthenticated ? 'AUTHENTICATED' : 'GUEST MODE'}
+                                        </span>
+                                    </div>
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">OPERATOR</span>
+                                        <span class="settings-account-value">
+                                            ${isAuthenticated
+                                                ? (user?.displayName || user?.username || user?.email || 'Operator')
+                                                : 'Not signed in'}
+                                        </span>
+                                    </div>
+                                    <div class="settings-account-row">
+                                        <span class="settings-account-label">ACCESS</span>
+                                        <span class="settings-account-value">
+                                            ${isAuthenticated
+                                                ? 'Profile data and progress sync enabled'
+                                                : 'Login required for cloud save and synced progress'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer">
+                        <button class="settings-save-btn" type="button" id="settings-save-btn">SAVE & CLOSE</button>
+                        <button class="settings-discard-btn" type="button" id="settings-discard-btn">DISCARD</button>
+                    </div>
+                </div>
+            </div>
+        `, {
+            closable: false,
+            width: 'min(1220px, 94vw)',
+            modalClass: 'settings-modal',
+            contentClass: 'settings-modal-content'
+        });
+
+        // Setup settings event listeners
+        this.setupSettingsListeners(settings);
+    }
+
+    /**
+     * Setup settings event listeners
+     */
+    setupSettingsListeners(initialSettings) {
+        const musicToggle = document.getElementById('music-toggle');
+        const sfxToggle = document.getElementById('sfx-toggle');
+        const hintsToggle = document.getElementById('hints-toggle');
+        const timerSetting = document.getElementById('timer-setting');
+        const musicVolume = document.getElementById('music-volume');
+        const sfxVolume = document.getElementById('sfx-volume');
+        const musicVolumeDisplay = document.getElementById('music-volume-display');
+        const sfxVolumeDisplay = document.getElementById('sfx-volume-display');
+        const musicVolumeFill = document.getElementById('music-volume-fill');
+        const sfxVolumeFill = document.getElementById('sfx-volume-fill');
+        const authBtn = document.getElementById('settings-auth-btn');
+        const saveBtn = document.getElementById('settings-save-btn');
+        const discardBtn = document.getElementById('settings-discard-btn');
+        const closeBtn = document.getElementById('settings-close-btn');
+        const pageTitle = document.getElementById('settings-page-title');
+        const pageIcon = document.getElementById('settings-page-icon');
+        const navItems = document.querySelectorAll('[data-settings-page]');
+
+        const pageInfo = {
+            audio: { icon: '🔊', title: 'AUDIO CONTROLS' },
+            gameplay: { icon: '🎮', title: 'GAMEPLAY' },
+            account: { icon: '⍟', title: 'ACCOUNT ACCESS' }
+        };
+
+        const updateSlider = (input, display, fill) => {
+            if (!input || !display || !fill) return;
+            display.textContent = `${input.value}%`;
+            fill.style.width = `${input.value}%`;
+        };
+
+        const switchPage = (pageName) => {
+            navItems.forEach((item) => {
+                item.classList.toggle('active', item.dataset.settingsPage === pageName);
+            });
+            document.querySelectorAll('.settings-page').forEach((page) => {
+                page.classList.toggle('active', page.id === `settings-page-${pageName}`);
+            });
+            if (pageTitle) pageTitle.textContent = pageInfo[pageName].title;
+            if (pageIcon) pageIcon.textContent = pageInfo[pageName].icon;
+        };
+
+        const persistSettings = () => {
+            const currentStoredSettings = this.state.loadSettings();
+            this.state.saveSettings({
+                ...currentStoredSettings,
+                musicEnabled: musicToggle?.checked ?? initialSettings.musicEnabled,
+                sfxEnabled: sfxToggle?.checked ?? initialSettings.sfxEnabled,
+                volume: {
+                    music: Number(musicVolume?.value ?? initialSettings.musicVolume) / 100,
+                    sfx: Number(sfxVolume?.value ?? initialSettings.sfxVolume) / 100
+                },
+                musicVolume: Number(musicVolume?.value ?? initialSettings.musicVolume) / 100,
+                sfxVolume: Number(sfxVolume?.value ?? initialSettings.sfxVolume) / 100,
+                difficulty: 'medium',
+                timerEnabled: timerSetting?.value !== 'off',
+                showHints: hintsToggle?.checked ?? initialSettings.showHints
+            });
+        };
+
+        const discardChanges = () => {
+            this.audio.applySettings({
+                musicEnabled: initialSettings.musicEnabled,
+                sfxEnabled: initialSettings.sfxEnabled,
+                musicVolume: initialSettings.musicVolume / 100,
+                sfxVolume: initialSettings.sfxVolume / 100
+            });
+            this.ui.closeModal();
+        };
+
+        navItems.forEach((item) => {
+            item.addEventListener('click', () => switchPage(item.dataset.settingsPage));
+        });
+
+        // Music toggle
+        if (musicToggle) {
+            musicToggle.addEventListener('change', (e) => {
+                this.audio.setMusicEnabled(e.target.checked);
+                
+                // Enable/disable volume slider
+                if (musicVolume) {
+                    musicVolume.disabled = !e.target.checked;
+                }
+            });
+        }
+
+        // SFX toggle
+        if (sfxToggle) {
+            sfxToggle.addEventListener('change', (e) => {
+                this.audio.setSfxEnabled(e.target.checked);
+                
+                // Enable/disable volume slider
+                if (sfxVolume) {
+                    sfxVolume.disabled = !e.target.checked;
+                }
+            });
+        }
+
+        // Music volume slider
+        if (musicVolume && musicVolumeDisplay) {
+            musicVolume.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                this.audio.setMusicVolume(volume);
+                updateSlider(musicVolume, musicVolumeDisplay, musicVolumeFill);
+            });
+        }
+
+        // SFX volume slider
+        if (sfxVolume && sfxVolumeDisplay) {
+            sfxVolume.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value) / 100;
+                this.audio.setSfxVolume(volume);
+                updateSlider(sfxVolume, sfxVolumeDisplay, sfxVolumeFill);
+                
+                // Play test sound
+                this.audio.playButtonClick();
+            });
+        }
+
+        if (authBtn) {
+            authBtn.addEventListener('click', async () => {
+                const authManager = window.authManager;
+                if (!authManager) return;
+
+                if (authManager.isUserAuthenticated()) {
+                    this.ui.showLogoutConfirm(async () => {
+                        await authManager.logout();
+                        setTimeout(() => {
+                            this.showSettings('account');
+                        }, 1250);
+                    });
+                    return;
+                }
+
+                this.ui.closeModal();
+                this.screens.showScreen('login-screen');
+                window.loginScreen?.render?.();
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                persistSettings();
+                this.ui.closeModal();
+            });
+        }
+
+        if (discardBtn) {
+            discardBtn.addEventListener('click', discardChanges);
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', discardChanges);
+        }
+
+        updateSlider(musicVolume, musicVolumeDisplay, musicVolumeFill);
+        updateSlider(sfxVolume, sfxVolumeDisplay, sfxVolumeFill);
+    }
+
+    /**
+     * Show credits
+     */
+    showCredits() {
+        this.ui.showModal('Credits', `
+            <div style="text-align: center; padding: 20px;">
+                <h2 style="color: var(--cyber-blue); margin-bottom: 20px;">SHADOWDEF</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 30px;">
+                    A cybersecurity learning experience
+                </p>
+                <p style="margin-bottom: 10px;">Game Design & Development</p>
+                <p style="color: var(--cyber-pink); margin-bottom: 30px;">Your Team</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Built with determination and lots of caffeine
+                </p>
+                <button class="btn" onclick="game.ui.closeModal()" style="margin-top: 30px;">CLOSE</button>
+            </div>
+        `, { panel: true, panelPosition: 'right' });
+    }
+
+    /**
+     * Save game progress
+     */
+    saveProgress() {
+        const data = {
+            passwordMissions: this.passwordMissions.map(m => ({
+                id: m.id,
+                level: m.level,
+                completed: m.completed,
+                locked: m.locked,
+                bestScore: m.bestScore || 0
+            })),
+            malwareMissions: this.malwareMissions.map(m => ({
+                id: m.id,
+                level: m.level,
+                completed: m.completed,
+                locked: m.locked,
+                bestScore: m.bestScore || 0
+            })),
+            networkMissions: this.networkMissions.map(m => ({
+                id: m.id,
+                level: m.level,
+                completed: m.completed,
+                locked: m.locked,
+                bestScore: m.bestScore || 0
+            })),
+            timestamp: Date.now()
+        };
+
+        this.state.saveData('progress', data);
+        console.log('💾 Progress saved for all sections');
+    }
+
+    /**
+     * Check for achievements after mission completion
+     */
+    checkAchievements(stats, finalScore) {
+        if (!window.authManager || !window.authManager.isUserAuthenticated()) return;
+        
+        const userStats = window.authManager.getUserStats();
+        const achievements = userStats.achievements || [];
+        const newAchievements = [];
+
+        // First mission achievement
+        if (!achievements.includes('first_mission') && userStats.missionsCompleted >= 1) {
+            newAchievements.push('first_mission');
+            window.awardCredits(100, 'First Steps achievement');
+        }
+
+        // Speed demon achievement (complete mission in under 2 minutes)
+        if (!achievements.includes('speed_demon') && stats.timeElapsed < 120) {
+            newAchievements.push('speed_demon');
+            window.awardCredits(250, 'Speed Demon achievement');
+        }
+
+        // Perfectionist achievement (no hints used)
+        if (!achievements.includes('perfectionist') && stats.hintsUsed === 0) {
+            newAchievements.push('perfectionist');
+            window.awardCredits(200, 'Perfectionist achievement');
+        }
+
+        // High scorer achievement
+        if (!achievements.includes('high_scorer') && finalScore >= 10000) {
+            newAchievements.push('high_scorer');
+            window.awardCredits(500, 'High Scorer achievement');
+        }
+
+        // Dedicated player achievement (5 hours total play time)
+        if (!achievements.includes('dedicated') && userStats.totalPlayTime >= 300) {
+            newAchievements.push('dedicated');
+            window.awardCredits(300, 'Dedicated Player achievement');
+        }
+
+        // Credit collector achievement
+        if (!achievements.includes('collector') && userStats.credits >= 5000) {
+            newAchievements.push('collector');
+            window.awardCredits(1000, 'Credit Collector achievement');
+        }
+
+        // Update achievements if any new ones were earned
+        if (newAchievements.length > 0) {
+            window.authManager.updateGameStats({
+                achievements: [...achievements, ...newAchievements]
+            });
+
+            // Show achievement notifications
+            newAchievements.forEach(achievement => {
+                const achievementNames = {
+                    'first_mission': 'First Steps',
+                    'speed_demon': 'Speed Demon',
+                    'perfectionist': 'Perfectionist',
+                    'high_scorer': 'High Scorer',
+                    'dedicated': 'Dedicated Player',
+                    'collector': 'Credit Collector'
+                };
+                
+                this.ui.showNotification(
+                    `🏆 Achievement Unlocked: ${achievementNames[achievement]}!`, 
+                    'success', 
+                    5000
+                );
+            });
+        }
+    }
+
+    /**
+     * Load game progress
+     */
+    loadProgress() {
+        // Load from authenticated user first, then fallback to local storage
+        if (window.authManager && window.authManager.isUserAuthenticated()) {
+            const userStats = window.authManager.getUserStats();
+            
+            // Apply user preferences to game
+            const userPrefs = window.authManager.getUserPreferences();
+            if (userPrefs.musicEnabled !== undefined) {
+                this.audio.setMusicEnabled(userPrefs.musicEnabled);
+            }
+            if (userPrefs.sfxEnabled !== undefined) {
+                this.audio.setSfxEnabled(userPrefs.sfxEnabled);
+            }
+            
+            console.log('📂 User progress loaded from cloud');
+            this.updateCategoryProgress();
+            return;
+        }
+        
+        // Fallback to local storage for guest users
+        const data = this.state.loadData('progress');
+        
+        if (data) {
+            // Load section-based progress if available
+            if (data.passwordMissions) {
+                data.passwordMissions.forEach(saved => {
+                    const mission = this.passwordMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            if (data.malwareMissions) {
+                data.malwareMissions.forEach(saved => {
+                    const mission = this.malwareMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            if (data.networkMissions) {
+                data.networkMissions.forEach(saved => {
+                    const mission = this.networkMissions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+            
+            // Legacy support for old progress format
+            if (data.missions && !data.passwordMissions) {
+                data.missions.forEach(saved => {
+                    const mission = this.missions.find(m => m.id === saved.id);
+                    if (mission) {
+                        mission.completed = saved.completed;
+                        mission.locked = saved.locked;
+                        mission.bestScore = saved.bestScore || 0;
+                    }
+                });
+            }
+
+            console.log('📂 Local progress loaded');
+        } else {
+            console.log('📭 No saved progress found - starting fresh');
+        }
+        
+        this.updateCategoryProgress();
+    }
+
+    /**
+     * Show mission select screen (legacy method for compatibility)
+     */
+    showMissionSelect() {
+        this.showMissionCategories();
+    }
+}

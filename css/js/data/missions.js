@@ -1079,120 +1079,143 @@ const level7 = {
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
-   LEVEL 7 — Enterprise Threat Hunt
-   Status: SOLID — knowledge summary added
+   LEVEL 7 — Signal Intercept
+   Status: LIVE packet interception scenario
    ══════════════════════════════════════════════════════════════════════════ */
 const level8 = {
   id: 17, level: 7,
-  title: "LEVEL 7: Enterprise Threat Hunt — Silent Intrusion Analysis",
-  desc: "Investigate enterprise logs, detect a quiet attacker path, and contain the breach before escalation.",
+  title: "LEVEL 7: Signal Intercept - Operation Signal Intercept",
+  desc: "Intercept hostile packets across five escalating waves while preserving server integrity.",
   difficulty: "Hard", type: "password",
-  estimatedTime: "10-12 min",
-  objective: "Detect and contain a silent intrusion by analyzing evidence and taking precise containment actions.",
-  scenario: "An attacker has already gained initial access and is operating quietly. No loud alerts were triggered.",
-  userTask: "Review evidence panels, identify malicious steps, and apply containment actions while minimizing false positives.",
-  simulationLogic: "Threat hunting simulation focused on investigation, attacker tracing, and controlled containment decisions.",
+  estimatedTime: "5-7 min",
+  objective: "Block malicious traffic, allow legitimate packets, and keep the corporate server online through the full attack window.",
+  scenario: "A live intrusion is mixing hostile traffic with normal business packets on the same network lanes. One bad click can hurt the server as much as one missed threat.",
+  userTask: "Click hostile packets before they reach the server, let legitimate traffic pass, and survive all five waves of escalation.",
+  simulationLogic: "Real-time network interception drill with escalating attack waves, packet recognition, combo scoring, and server-integrity management.",
   visualMode: "2D",
-  successCondition: "Contain at least 3 major malicious events, keep attacker escalation under control, and keep Vault Health above 30%.",
-  successFeedback: "Threat hunting operation successful. Intrusion path contained before critical compromise.",
-  failureFeedback: "Threat hunting operation failed. Intrusion escalation exceeded acceptable limits.",
+  successCondition: "Survive all five waves with the server still online.",
+  successFeedback: "Operation Signal Intercept complete. Hostile traffic was disrupted before the attacker could establish control.",
+  failureFeedback: "Server breached. Too many malicious packets reached the core system.",
   objectives: [
-    "Analyze enterprise logs for subtle malicious behavior",
-    "Confirm attacker movement across systems and accounts",
-    "Contain the intrusion with low false-positive impact",
+    "Block hostile C2, exfiltration, tunneling, ransomware, and APT packets",
+    "Avoid false positives on normal traffic such as auth, HTTP, DNS, and NTP",
+    "Preserve server integrity through five attack waves"
   ],
   hintSystem: {
-    hint1: "Focus on behavior patterns across multiple logs, not isolated events.",
-    hint2: "Not every anomaly is malicious. Validate context before containment.",
-    hint3: "Repeated suspicious access and privilege changes often indicate attacker movement.",
+    hint1: "Red, orange, and purple threat packets are hostile and should be intercepted before they reach the server.",
+    hint2: "Blue and green packets are normal business traffic. Clicking them hurts your integrity as a false positive.",
+    hint3: "Long streaks and wave-clear bonuses help your score, but integrity preservation is what keeps the mission alive."
   },
   knowledgeSummary: {
-    title: "Modern intrusions begin small and escalate slowly",
+    title: "Good defenders distinguish hostile traffic from normal activity under pressure",
     bullets: [
-      "The initial phishing login looked identical to a routine access — no alert fired.",
-      "Privilege escalation without an approval ticket is the key signal most defenders miss.",
-      "Lateral movement between accounts is the attacker's way of widening access without triggering new alerts.",
+      "Not every packet moving fast across the network is malicious. Response quality depends on classification, not panic.",
+      "False positives waste defender effort and damage business operations just like missed threats damage security.",
+      "Wave-based pressure rewards both rapid response and restraint when legitimate traffic is mixed into the attack stream."
     ],
-    insight: "Early detection at step 1 or 2 prevents the full kill chain. Missing the first signal forces a far harder containment at step 5.",
+    insight: "Network defense is not only about blocking more. It is about blocking the right things at the right time without breaking healthy traffic."
   },
   puzzle: {
-    interactionMode: "threatHuntSimulation",
-    baseStats: { vaultHealth: 100, systemIntegrity: 100, falsePositiveCount: 0, attackerProgress: 0 },
-    evidencePanels: [
-      {
-        id: "login_activity", title: "Login Activity Log",
-        entries: [
-          { id:"L-101", timestamp:"02:14:08", user:"r.khan",    action:"Successful login",  locationOrIP:"198.51.100.27 (new region)", status:"anomalous" },
-          { id:"L-102", timestamp:"08:31:12", user:"a.rahman",  action:"Successful login",  locationOrIP:"10.10.4.21 (HQ)",            status:"normal" },
-          { id:"L-103", timestamp:"02:16:44", user:"r.khan",    action:"Mailbox access",    locationOrIP:"198.51.100.27",               status:"anomalous" },
-          { id:"L-104", timestamp:"09:02:19", user:"svc.backup",action:"Scheduled service login", locationOrIP:"10.10.8.9",            status:"normal" },
-        ],
-      },
-      {
-        id: "privilege_change", title: "Privilege Change Log",
-        entries: [
-          { id:"P-201", timestamp:"02:21:03", user:"r.khan",  action:"Role changed to Admin (no approval ticket)", locationOrIP:"IAM-Core",   status:"anomalous" },
-          { id:"P-202", timestamp:"11:15:40", user:"it.ops",  action:"Temporary admin granted (approved CR-7742)", locationOrIP:"IAM-Portal", status:"normal" },
-          { id:"P-203", timestamp:"02:23:55", user:"r.khan",  action:"Policy edit attempt",                        locationOrIP:"IAM-Core",   status:"anomalous" },
-        ],
-      },
-      {
-        id: "database_access", title: "Database Access Log",
-        entries: [
-          { id:"D-301", timestamp:"02:33:11", user:"r.khan",      action:"SELECT * FROM customer_master (45,000 rows)", locationOrIP:"DB-PRD-01",  status:"anomalous" },
-          { id:"D-302", timestamp:"10:12:09", user:"data.analyst", action:"Daily KPI query (aggregate only)",            locationOrIP:"DB-REP-02",  status:"normal" },
-          { id:"D-303", timestamp:"02:36:28", user:"r.khan",      action:"Export job started: customer_master_full.csv", locationOrIP:"DB-PRD-01", status:"anomalous" },
-        ],
-      },
-      {
-        id: "network_traffic", title: "Network Traffic Log",
-        entries: [
-          { id:"N-401", timestamp:"02:39:07", user:"r.khan",   action:"Outbound TLS session", locationOrIP:"203.0.113.52:443", status:"anomalous" },
-          { id:"N-402", timestamp:"02:40:14", user:"r.khan",   action:"Outbound TLS session", locationOrIP:"203.0.113.52:443", status:"anomalous" },
-          { id:"N-403", timestamp:"02:41:26", user:"cdn.sync", action:"Vendor sync",           locationOrIP:"192.0.2.18:443",  status:"normal" },
-        ],
-      },
-      {
-        id: "account_activity", title: "Account Activity Log",
-        entries: [
-          { id:"A-501", timestamp:"02:27:50", user:"r.khan",  action:"Session token used to access account: m.sen", locationOrIP:"APP-AUTH-03", status:"anomalous" },
-          { id:"A-502", timestamp:"14:05:33", user:"hr.bot",  action:"Bulk profile updates",                        locationOrIP:"APP-HR-01",   status:"normal" },
-          { id:"A-503", timestamp:"02:29:02", user:"m.sen",   action:"New API key generated",                       locationOrIP:"APP-AUTH-03", status:"anomalous" },
-        ],
-      },
-    ],
-    hiddenAttackChain: [
-      { step:1, key:"phishing_login",       label:"Phishing-based login",        linkedEvidence:["L-101","L-103"], explanation:"A routine-looking login at an unusual hour from an unfamiliar region." },
-      { step:2, key:"privilege_escalation", label:"Privilege escalation",         linkedEvidence:["P-201","P-203"], explanation:"Admin rights granted without normal approval." },
-      { step:3, key:"lateral_movement",     label:"Lateral movement",             linkedEvidence:["A-501","A-503"], explanation:"The attacker moving between accounts inside the system." },
-      { step:4, key:"database_escalation",  label:"Database query escalation",    linkedEvidence:["D-301","D-303"], explanation:"Large, unusual data queries and export behavior." },
-      { step:5, key:"data_exfiltration",    label:"Data exfiltration attempt",    linkedEvidence:["N-401","N-402"], explanation:"Repeated outbound encrypted traffic to a suspicious external host." },
-    ],
-    playerActions: [
-      { id:"mark_suspicious", label:"Mark as Suspicious" },
-      { id:"investigate",     label:"Investigate", revealsContext: true },
-      { id:"isolate_account", label:"Isolate Account" },
-      { id:"block_ip",        label:"Block IP" },
-      { id:"ignore",          label:"Ignore" },
-    ],
-    progressionLogic: {
-      attackerProgressRules: { missedMaliciousEventIncrease:1, correctMajorDetectionDecrease:1, criticalThreshold:5, maxEscalation:7, rapidVaultDrainOnCritical:12 },
-      falsePositiveRules: { incorrectFlagIncrease:1, systemIntegrityDropPerFalsePositive:8, systemIntegrityDropOnWrongContainment:10 },
-      containmentEffects: { isolateAccountStops:["phishing_login","privilege_escalation","lateral_movement"], blockIPStops:["data_exfiltration"], investigateReveals:"linked evidence, sequence relationship, and confidence note", ignoreOnMalicious:"attacker advances to next step" },
-      operationalFeedback: { privilegeAlert:"Suspicious privilege escalation detected.", exportAlert:"Unauthorized data export attempt identified.", falseAlert:"False alert logged. Operational efficiency reduced.", lateralMove:"Attacker lateral movement confirmed.", criticalEscalation:"Warning: attacker progression has reached critical escalation level." },
-      passiveRisk: { enabledWhenUndetected:true, vaultHealthDropPerCycle:4, cycleTurns:2 },
-      noRealTimeWavePressure: true,
+    interactionMode: "signalInterceptSimulation",
+    timeLimit: 420,
+    laneLabels: ["PORT 443", "PORT 80", "PORT 53", "PORT 8080", "PORT 22"],
+    server: { label: "CORP-SRV", integrity: 100 },
+    attacker: { label: "ATTACKER" },
+    legendOrder: ["c2", "exfil", "dnstun", "http", "auth"],
+    packetTypes: {
+      c2:     { label: "C2 BEACON",   color: "#ff1744", glow: "rgba(255,23,68,.6)",   malicious: true,  shape: "diamond", points: 100, damage: 18 },
+      exfil:  { label: "DATA EXFIL",  color: "#ff9100", glow: "rgba(255,145,0,.6)",  malicious: true,  shape: "hex",     points: 120, damage: 22 },
+      dnstun: { label: "DNS TUNNEL",  color: "#c060ff", glow: "rgba(192,96,255,.6)", malicious: true,  shape: "tri",     points: 150, damage: 15 },
+      ransom: { label: "RANSOMWARE",  color: "#ff1744", glow: "rgba(255,0,0,.8)",    malicious: true,  shape: "skull",   points: 200, damage: 35 },
+      apt:    { label: "APT PAYLOAD", color: "#ff2d6b", glow: "rgba(255,45,107,.7)", malicious: true,  shape: "star",    points: 250, damage: 40 },
+      http:   { label: "HTTP REQ",    color: "#448aff", glow: "rgba(68,138,255,.4)", malicious: false, shape: "circle",  points:   0, damage: 20 },
+      auth:   { label: "AUTH TOKEN",  color: "#00e676", glow: "rgba(0,230,118,.4)",  malicious: false, shape: "circle",  points:   0, damage: 20 },
+      dns:    { label: "DNS QUERY",   color: "#00ffe7", glow: "rgba(0,255,231,.3)",  malicious: false, shape: "circle",  points:   0, damage: 15 },
+      ntp:    { label: "NTP SYNC",    color: "#448aff", glow: "rgba(68,138,255,.3)", malicious: false, shape: "circle",  points:   0, damage: 12 }
     },
-    winCondition: { majorMaliciousEventsContainedMin:3, attackerProgressBelowCritical:true, vaultHealthAbovePercent:30 },
-    failCondition: { any: [
-      { metric:"vaultHealth",      operator:"<=", value:0 },
-      { metric:"systemIntegrity",  operator:"<",  value:40 },
-      { metric:"attackerProgress", operator:">=", value:7 },
-    ]},
-    educationalSummary: { reveal:"Initial access originated from a single phishing login that appeared routine.", message:"Modern cyber intrusions often begin with small, unnoticed events. Early detection prevents escalation into full data compromise." },
+    waves: [
+      {
+        name: "WAVE 1",
+        subtitle: "RECON SWEEP",
+        phaseLabel: "Wave 1 - Recon",
+        duration: 30,
+        spawnRateMs: 1800,
+        desc: "Enemy reconnaissance is probing the edge. Block C2 beacon traffic and let standard auth and HTTP requests pass.",
+        threats: "C2 Beacons, Port Scans",
+        friendly: "Auth, HTTP",
+        pool: ["c2", "c2", "c2", "http", "auth", "http", "dns", "c2", "auth"],
+        speed: 1.8
+      },
+      {
+        name: "WAVE 2",
+        subtitle: "DATA EXFILTRATION",
+        phaseLabel: "Wave 2 - Exfil",
+        duration: 35,
+        spawnRateMs: 1400,
+        desc: "The attacker is pushing outbound theft attempts. Multiple hostile packet families are now active.",
+        threats: "C2 Beacons, Data Exfil",
+        friendly: "Auth, HTTP, NTP",
+        pool: ["c2", "exfil", "exfil", "http", "auth", "c2", "ntp", "exfil", "http", "c2"],
+        speed: 2.2
+      },
+      {
+        name: "WAVE 3",
+        subtitle: "C2 STORM",
+        phaseLabel: "Wave 3 - C2 Storm",
+        duration: 40,
+        spawnRateMs: 1100,
+        desc: "DNS tunneling joins the flood. Traffic density rises and hostile packets are designed to bait false positives.",
+        threats: "C2, DNS Tunnel, Exfil",
+        friendly: "HTTP, Auth, NTP",
+        pool: ["c2", "dnstun", "exfil", "http", "c2", "auth", "dnstun", "c2", "ntp", "http", "dnstun"],
+        speed: 2.8
+      },
+      {
+        name: "WAVE 4",
+        subtitle: "RANSOMWARE PAYLOAD",
+        phaseLabel: "Wave 4 - Ransomware",
+        duration: 40,
+        spawnRateMs: 900,
+        desc: "Critical payloads are now inbound. One missed ransomware packet can strip a huge chunk of server integrity.",
+        threats: "Ransomware, C2, DNS Tunnel, Exfil",
+        friendly: "Auth",
+        pool: ["ransom", "c2", "http", "dnstun", "ransom", "auth", "exfil", "c2", "ransom", "dns"],
+        speed: 3.3
+      },
+      {
+        name: "WAVE 5",
+        subtitle: "APT FINAL PUSH",
+        phaseLabel: "Wave 5 - APT Final",
+        duration: 45,
+        spawnRateMs: 700,
+        desc: "The final coordinated surge is underway. Maximum packet speed, mixed vectors, and almost no room for mistakes.",
+        threats: "APT Payloads, Ransomware, Multi-Vector Storm",
+        friendly: "Auth (rare)",
+        pool: ["apt", "ransom", "c2", "exfil", "dnstun", "apt", "http", "ransom", "apt", "c2", "auth", "apt", "exfil"],
+        speed: 4.0
+      }
+    ],
+    scoring: {
+      waveEndHigh: 500,
+      waveEndMid: 250,
+      waveEndLow: 100,
+      integrityMultiplier: 8,
+      accuracy90: 1000,
+      accuracy75: 500,
+      accuracyFallback: 200,
+      comboMultiplier: 50,
+      falsePositivePenalty: 30,
+      missedPenalty: 50
+    },
+    waveTransitionDelayMs: 1500,
+    completionDelayMs: 1900,
+    educationalSummary: {
+      reveal: "Hostile packet floods are hardest when good traffic is mixed into the stream",
+      message: "This exercise showed how defenders must rapidly classify live traffic, intercept malicious packets, and avoid harming normal business flows under pressure."
+    }
   },
-  aiSpeed: 1.27,
-  rewards: { xp: 380, credits: 185 },
+  aiSpeed: 1.0,
+  rewards: { xp: 395, credits: 190 },
   completed: false, locked: true, bestScore: 0,
 };
 
@@ -1487,7 +1510,6 @@ const level10 = {
 
 export const passwordMissions = [
   level1, level2, level3, level4, level5,
-  level7, level8, level9, level10,
 ];
 
 const zeroDayCountdownBlueprints = [
@@ -1745,7 +1767,7 @@ const buildZeroDayKnowledgeSummary = (mission) => ({
   insight: mission.insight
 });
 
-export const malwareMissions = zeroDayCountdownBlueprints.map((mission, index) => ({
+export const malwareMissions = zeroDayCountdownBlueprints.slice(0, 5).map((mission, index) => ({
   id: 101 + index,
   level: index + 1,
   title: `LEVEL ${index + 1}: ${mission.name}`,

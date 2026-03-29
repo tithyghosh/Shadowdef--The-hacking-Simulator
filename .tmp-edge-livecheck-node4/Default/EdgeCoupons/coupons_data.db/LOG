@@ -1,0 +1,5 @@
+2026/03/28-21:32:02.780 8050 Creating DB c:\Shadowdef--The-hacking-Simulator\.tmp-edge-livecheck-node4\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/03/28-21:32:02.815 8050 Reusing MANIFEST c:\Shadowdef--The-hacking-Simulator\.tmp-edge-livecheck-node4\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/03/28-21:32:09.757 38a4 Level-0 table #5: started
+2026/03/28-21:32:09.765 38a4 Level-0 table #5: 681961 bytes OK
+2026/03/28-21:32:09.769 38a4 Delete type=0 #3

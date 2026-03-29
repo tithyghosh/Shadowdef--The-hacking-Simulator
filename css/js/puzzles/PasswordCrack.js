@@ -69,6 +69,39 @@ export class PasswordCrack {
         this.liveEnergyTimerId = null;
         this.liveDurationTimerId = null;
         this.liveCooldownTimerId = null;
+        this.signalIntegrity = 100;
+        this.signalBlocked = 0;
+        this.signalMissed = 0;
+        this.signalFalsePositives = 0;
+        this.signalCombo = 0;
+        this.signalMaxCombo = 0;
+        this.signalCurrentWaveIndex = 0;
+        this.signalWaveSeconds = 0;
+        this.signalWaveRunning = false;
+        this.signalAnnouncementVisible = true;
+        this.signalGameOver = false;
+        this.signalPacketId = 0;
+        this.signalPackets = [];
+        this.signalClickEffects = [];
+        this.signalSpawnAccumulatorMs = 0;
+        this.signalLastFrameTime = 0;
+        this.signalAnimationFrameId = null;
+        this.signalWaveTimerId = null;
+        this.signalTransitionTimeoutId = null;
+        this.signalCompletionTimerId = null;
+        this.signalAutoStartTimerId = null;
+        this.signalToastTimerId = null;
+        this.signalServerFlashTimerId = null;
+        this.signalCanvas = null;
+        this.signalCtx = null;
+        this.signalResizeHandler = null;
+        this.signalScoreBreakdown = {
+            blocked: 0,
+            wave: 0,
+            integrity: 0,
+            accuracy: 0,
+            combo: 0
+        };
         this.threatVaultHealth = 100;
         this.threatSystemIntegrity = 100;
         this.threatFalsePositiveCount = 0;
@@ -81,6 +114,14 @@ export class PasswordCrack {
         this.threatActionHistory = new Set();
         this.threatActivityLog = [];
         this.threatTurn = 0;
+        this.threatCasePhase = 1;
+        this.threatChainSelection = [];
+        this.threatChainValidated = false;
+        this.threatChainValidationResult = null;
+        this.threatContainmentSelection = { account: '', action: '', ip: '', escalate: '' };
+        this.threatContainmentResult = null;
+        this.threatContainmentResolved = false;
+        this.threatCompletionTimerId = null;
         this.patchMetrics = {
             vaultHealth: 100,
             exploitSuccessRate: 62,
@@ -178,12 +219,66 @@ export class PasswordCrack {
             this.overallAnswerHint = null;
             this.dynamicScenario = null;
             this.dynamicUserTask = null;
+        } else if (this.interactionMode === 'signalInterceptSimulation') {
+            const server = this.puzzleData.server || {};
+            const waves = Array.isArray(this.puzzleData.waves) ? this.puzzleData.waves : [];
+            this.signalIntegrity = Number(server.integrity || 100);
+            this.signalBlocked = 0;
+            this.signalMissed = 0;
+            this.signalFalsePositives = 0;
+            this.signalCombo = 0;
+            this.signalMaxCombo = 0;
+            this.signalCurrentWaveIndex = 0;
+            this.signalWaveSeconds = Number(waves[0]?.duration || 0);
+            this.signalWaveRunning = false;
+            this.signalAnnouncementVisible = true;
+            this.signalGameOver = false;
+            this.signalPacketId = 0;
+            this.signalPackets = [];
+            this.signalClickEffects = [];
+            this.signalSpawnAccumulatorMs = 0;
+            this.signalLastFrameTime = 0;
+            this.signalWaveTimerId = null;
+            this.signalTransitionTimeoutId = null;
+            this.signalCompletionTimerId = null;
+            this.signalAutoStartTimerId = null;
+            this.signalToastTimerId = null;
+            this.signalServerFlashTimerId = null;
+            this.signalScoreBreakdown = {
+                blocked: 0,
+                wave: 0,
+                integrity: 0,
+                accuracy: 0,
+                combo: 0
+            };
+            this.password = '';
+            this.hints = [];
+            this.overallAnswerHint = null;
+            this.dynamicScenario = null;
+            this.dynamicUserTask = null;
         } else if (this.interactionMode === 'threatHuntSimulation') {
             const base = this.puzzleData.baseStats || {};
             this.threatVaultHealth = Number(base.vaultHealth || 100);
             this.threatSystemIntegrity = Number(base.systemIntegrity || 100);
             this.threatFalsePositiveCount = Number(base.falsePositiveCount || 0);
             this.threatAttackerProgress = Number(base.attackerProgress || 0);
+            this.threatDetectedMajor = new Set();
+            this.threatContainedMajor = new Set();
+            this.threatInvestigatedEvents = new Set();
+            this.threatMarkedEvents = new Set();
+            this.threatSelectedEventId = null;
+            this.threatActionHistory = new Set();
+            this.threatActivityLog = [{
+                message: 'Incoming: SOC case active. Review the evidence panels before you escalate the response.',
+                tone: 'info'
+            }];
+            this.threatCasePhase = 1;
+            this.threatChainSelection = [];
+            this.threatChainValidated = false;
+            this.threatChainValidationResult = null;
+            this.threatContainmentSelection = { account: '', action: '', ip: '', escalate: '' };
+            this.threatContainmentResult = null;
+            this.threatContainmentResolved = false;
             this.password = '';
             this.hints = [];
             this.overallAnswerHint = null;
@@ -355,6 +450,13 @@ export class PasswordCrack {
         }
     }
 
+    clearThreatCompletionTimer() {
+        if (this.threatCompletionTimerId) {
+            clearTimeout(this.threatCompletionTimerId);
+            this.threatCompletionTimerId = null;
+        }
+    }
+
     rerenderSaltReuseLab(options = {}) {
         const extraSelectors = Array.from(new Set([
             '.srl-shell',
@@ -383,6 +485,25 @@ export class PasswordCrack {
 
         this.rerenderWithPreservedScroll(
             () => this.renderPredictionChoicePuzzle(this.visualizerElement),
+            {
+                primarySelector: options.primarySelector || '__root__',
+                anchorSelector: options.anchorSelector || '',
+                extraSelectors
+            }
+        );
+    }
+
+    rerenderThreatHuntSimulation(options = {}) {
+        const extraSelectors = Array.from(new Set([
+            '.thx-panel',
+            '.thx-phase-view',
+            '.thx-detail-card',
+            '.thx-log-body',
+            ...(options.extraSelectors || [])
+        ]));
+
+        this.rerenderWithPreservedScroll(
+            () => this.renderThreatHuntSimulationPuzzle(this.visualizerElement),
             {
                 primarySelector: options.primarySelector || '__root__',
                 anchorSelector: options.anchorSelector || '',
@@ -513,6 +634,7 @@ export class PasswordCrack {
             case 'investigation':             return this.renderInvestigationPuzzle(container);
             case 'inspection':                return this.renderInspectionPuzzle(container);
             case 'liveDefenseSimulation':     return this.renderLiveDefenseSimulationPuzzle(container);
+            case 'signalInterceptSimulation': return this.renderSignalInterceptSimulationPuzzle(container);
             case 'threatHuntSimulation':      return this.renderThreatHuntSimulationPuzzle(container);
             case 'livePatchSimulation':       return this.renderLivePatchSimulationPuzzle(container);
             case 'enterpriseArchitectureSimulation': return this.renderEnterpriseArchitectureSimulationPuzzle(container);
@@ -5585,10 +5707,11 @@ export class PasswordCrack {
         container.innerHTML = `
             <style>
                 .ld-shell{padding:24px;min-height:0}
-                .ld-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;height:100%;min-height:0}
-                .ld-side,.ld-main{display:flex;flex-direction:column;gap:16px;min-height:0}
-                .ld-panel-card,.ld-wave-bar,.ld-log-panel,.ld-control-card,.ld-intel-live,.ld-intel-list{background:rgba(2,10,24,.68);border:1px solid rgba(23,216,255,.14);box-shadow:0 20px 48px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
-                .ld-panel-card,.ld-log-panel{padding:16px}
+                .ld-layout{display:grid;grid-template-columns:minmax(280px,320px) minmax(0,1fr);gap:18px;min-height:100%;align-items:start}
+                .ld-side{display:flex;flex-direction:column;gap:16px;min-height:0}
+                .ld-main{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-content:start;min-height:0}
+                .ld-panel-card,.ld-wave-bar,.ld-control-section,.ld-log-panel,.ld-control-card,.ld-intel-live,.ld-intel-list{background:rgba(2,10,24,.68);border:1px solid rgba(23,216,255,.14);box-shadow:0 20px 48px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
+                .ld-panel-card,.ld-control-section,.ld-log-panel{padding:16px}
                 .ld-section-title,.ld-wave-label,.ld-wave-energy,.ld-intel-live__kicker,.ld-control-card__cost,.ld-control-card__meta,.ld-control-card__status,.ld-stat-label{font-family:'Share Tech Mono',monospace;letter-spacing:.18em;text-transform:uppercase}
                 .ld-section-title{font-size:.72rem;color:rgba(23,216,255,.72);margin-bottom:12px}
                 .ld-brief-copy{color:rgba(225,239,248,.82);line-height:1.65;font-size:.88rem}
@@ -5619,32 +5742,35 @@ export class PasswordCrack {
                 .ld-intel-row strong{display:block;color:#eef7ff;margin-bottom:4px}
                 .ld-intel-row div{font-size:.82rem;line-height:1.5;color:rgba(168,216,232,.58)}
                 .ld-intel-row__damage{color:#ff7e92;font-size:.74rem;flex-shrink:0}
-                .ld-wave-bar{display:flex;align-items:center;gap:12px;padding:12px 16px}
+                .ld-brief-panel,.ld-wave-bar{grid-column:1 / -1}
+                .ld-wave-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap}
                 .ld-wave-label{font-size:.64rem;color:#18e4ff}
-                .ld-wave-info{font-size:1rem;color:#eef7ff;font-weight:700;line-height:1.4}
-                .ld-wave-energy{margin-left:auto;font-size:.7rem;color:#18e4ff}
+                .ld-wave-info{flex:1 1 280px;min-width:0;font-size:1rem;color:#eef7ff;font-weight:700;line-height:1.4}
+                .ld-wave-energy{margin-left:auto;display:inline-flex;align-items:baseline;gap:8px;font-size:.7rem;color:#18e4ff}
                 .ld-wave-energy strong{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.08em;color:#ffdd57}
-                .ld-control-section{display:flex;flex-direction:column;min-height:0}
-                .ld-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-height:0}
-                .ld-control-card{padding:14px;text-align:left;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;color:#eef7ff}
+                .ld-control-section{grid-column:1 / span 8;display:flex;flex-direction:column;gap:12px;min-height:0;align-self:start}
+                .ld-control-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;min-height:0}
+                .ld-control-card{display:flex;flex-direction:column;min-height:100%;padding:14px;text-align:left;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;color:#eef7ff;overflow:hidden}
                 .ld-control-card:hover{transform:translateY(-2px);border-color:rgba(23,216,255,.34);box-shadow:0 18px 34px rgba(0,0,0,.22)}
                 .ld-control-card.disabled,.ld-control-card:disabled{opacity:.42;cursor:not-allowed;transform:none}
-                .ld-control-card__head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+                .ld-control-card__head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
                 .ld-control-card__name{font-weight:700;font-size:.98rem;line-height:1.35}
-                .ld-control-card__cost{font-size:.66rem;color:#18e4ff}
+                .ld-control-card__cost{flex-shrink:0;font-size:.66rem;color:#18e4ff}
                 .ld-control-card__meta{margin-top:8px;font-size:.64rem;color:rgba(168,216,232,.54)}
-                .ld-control-card__desc{margin-top:8px;color:rgba(225,239,248,.72);font-size:.84rem;line-height:1.55;min-height:52px}
+                .ld-control-card__desc{flex:1;margin-top:8px;color:rgba(225,239,248,.72);font-size:.84rem;line-height:1.55;min-height:52px}
                 .ld-control-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
                 .ld-control-card__tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(23,216,255,.14);background:rgba(23,216,255,.07);color:#8beeff;font-size:.68rem}
                 .ld-control-card__status{margin-top:12px;font-size:.66rem;color:#00ff88}
-                .ld-log-panel{display:flex;flex-direction:column;min-height:180px}
-                .ld-log-body{flex:1;overflow:auto;color:rgba(225,239,248,.8);font-size:.82rem;line-height:1.5}
+                .ld-control-section .ld-section-title,.ld-log-panel .ld-section-title{margin-bottom:0}
+                .ld-log-panel{grid-column:9 / -1;display:flex;flex-direction:column;gap:12px;min-height:0;align-self:stretch}
+                .ld-log-body{flex:1;min-height:240px;max-height:420px;overflow:auto;margin:0;padding-right:4px;color:rgba(225,239,248,.8);font-size:.82rem;line-height:1.5}
                 .ld-log-line{margin-bottom:6px}
                 .ld-log-line.good{color:#00ff88}
                 .ld-log-line.bad{color:#ff6d88}
                 .ld-log-line.warn{color:#ffcc66}
-                @media (max-width:1180px){.ld-layout{grid-template-columns:1fr}.ld-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-                @media (max-width:760px){.ld-shell{padding:16px}.ld-control-grid{grid-template-columns:1fr}.ld-wave-bar{flex-wrap:wrap}.ld-wave-energy{margin-left:0}}
+                @media (max-width:1380px){.ld-main{grid-template-columns:1fr}.ld-brief-panel,.ld-wave-bar,.ld-control-section,.ld-log-panel{grid-column:1}.ld-log-body{min-height:180px;max-height:none}}
+                @media (max-width:1180px){.ld-layout{grid-template-columns:1fr}}
+                @media (max-width:760px){.ld-shell{padding:16px}.ld-main{gap:14px}.ld-control-grid{grid-template-columns:1fr}.ld-wave-energy{margin-left:0}}
             </style>
             ${this.renderSharedPasswordLabThemeStyles()}
             ${this.renderSharedPasswordLabFrame({
@@ -5704,7 +5830,7 @@ export class PasswordCrack {
                                     <span class="ld-wave-info" id="wave-info">${waveLabel}</span>
                                     <span class="ld-wave-energy">Energy <strong id="en-num">${Math.floor(this.liveEnergy)}</strong></span>
                                 </section>
-                                <section class="ld-panel-card">
+                                <section class="ld-panel-card ld-brief-panel">
                                     <div class="ld-section-title">Command Brief</div>
                                     <div class="ld-brief-copy">${this.mission.userTask || this.mission.objective || 'Defend the vault through coordinated attack waves.'}</div>
                                 </section>
@@ -6369,6 +6495,844 @@ export class PasswordCrack {
         if (metric === 'attackerProgress') return this.threatAttackerProgress;
         if (metric === 'maxEscalation') return maxEscalation;
         return 0;
+    }
+
+    getThreatEvidencePanels() {
+        return Array.isArray(this.puzzleData.evidencePanels) ? this.puzzleData.evidencePanels : [];
+    }
+
+    getThreatEvidenceEntries() {
+        return this.getThreatEvidencePanels().flatMap((panel, index) =>
+            (panel.entries || []).map(entry => ({
+                ...entry,
+                panelId: panel.id,
+                panelTitle: panel.title,
+                panelColumn: Number(panel.column || ((index % 2) + 1))
+            }))
+        );
+    }
+
+    getThreatEvidenceDetail(eventId) {
+        const entry = this.getThreatEvidenceEntries().find(item => item.id === eventId);
+        if (!entry) return null;
+        const detailMap = this.puzzleData.evidenceDetails || {};
+        const detail = detailMap[eventId] || {};
+        return {
+            ...entry,
+            title: detail.title || entry.action,
+            highlight: detail.highlight || 'Evidence packet loaded.',
+            body: detail.body || 'No analyst context attached.',
+            analyst: detail.analyst || 'Analyst read unavailable.',
+            suspicious: typeof detail.suspicious === 'boolean' ? detail.suspicious : entry.status !== 'normal'
+        };
+    }
+
+    getThreatCorrectChain() {
+        return Array.isArray(this.puzzleData.correctChain) ? this.puzzleData.correctChain : [];
+    }
+
+    getThreatContainmentConfig() {
+        return this.puzzleData.containmentOptions || {};
+    }
+
+    getThreatCaseworkSummary() {
+        const correctFlags = Array.from(this.threatMarkedEvents).filter(id => this.getThreatEvidenceDetail(id)?.suspicious).length;
+        return {
+            marked: this.threatMarkedEvents.size,
+            correctFlags,
+            investigated: this.threatInvestigatedEvents.size,
+            chainLinks: this.getThreatCorrectChain().length,
+            chainValidated: this.threatChainValidated,
+            contained: this.threatContainmentResolved
+        };
+    }
+
+    adjustThreatScore(points) {
+        const value = Number(points || 0);
+        if (!value) return;
+        if (value > 0) this.gameScreen.game.score.addPoints(value);
+        else this.gameScreen.game.score.subtractPoints(Math.abs(value));
+        this.gameScreen.updateScore();
+    }
+
+    setThreatPhase(phase) {
+        if (this.isComplete || this.threatContainmentResolved) return;
+        this.threatCasePhase = Math.max(1, Math.min(3, Number(phase || 1)));
+        this.rerenderThreatHuntSimulation();
+    }
+
+    renderThreatHuntSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const panels = this.getThreatEvidencePanels();
+        const entries = this.getThreatEvidenceEntries();
+        if (!this.threatSelectedEventId && entries[0]) this.threatSelectedEventId = entries[0].id;
+
+        const selectedEvent = this.getThreatEvidenceDetail(this.threatSelectedEventId) || null;
+        const summary = this.getThreatCaseworkSummary();
+        const logsHtml = this.threatActivityLog.length
+            ? this.threatActivityLog.map(item => {
+                const entry = typeof item === 'string' ? { message: item, tone: 'info' } : item;
+                return `<div class="thx-log-line ${entry.tone || 'info'}">> ${entry.message}</div>`;
+            }).join('')
+            : '<div class="thx-log-line info">> SOC case initialized. Review the evidence panels before you act.</div>';
+
+        const panelColumns = [1, 2].map(column =>
+            panels.filter((panel, index) => Number(panel.column || ((index % 2) + 1)) === column)
+        );
+        const badgeClass = (status = 'normal') => status === 'critical' ? 'critical' : status === 'anomalous' ? 'anomalous' : 'normal';
+        const buildEvidenceCard = (entry) => {
+            const detail = this.getThreatEvidenceDetail(entry.id);
+            const tags = [];
+            if (this.threatMarkedEvents.has(entry.id)) tags.push(detail?.suspicious ? 'THREAT FLAGGED' : 'FALSE POSITIVE');
+            if (this.threatInvestigatedEvents.has(entry.id)) tags.push('INVESTIGATED');
+            return `
+                <button class="thx-card ${this.threatSelectedEventId === entry.id ? 'selected' : ''} ${this.threatMarkedEvents.has(entry.id) ? (detail?.suspicious ? 'flagged' : 'benign') : ''}" data-threat-event="${entry.id}" type="button">
+                    <div class="thx-row"><span class="thx-mono">${entry.id}</span><span class="thx-badge ${badgeClass(entry.status)}">${String(entry.status || 'normal').toUpperCase()}</span></div>
+                    <div class="thx-title">${entry.action}</div>
+                    <div class="thx-meta">${entry.timestamp} · ${entry.user} · ${entry.locationOrIP}</div>
+                    ${tags.length ? `<div class="thx-tags">${tags.map(tag => `<span>${tag}</span>`).join('')}</div>` : ''}
+                </button>`;
+        };
+        const panelMarkup = panelColumns.map(columnPanels => `
+            <div class="thx-stack">
+                ${columnPanels.map(panel => `
+                    <section class="thx-panel">
+                        <div class="thx-row thx-panel-head"><strong>${panel.title}</strong><span class="thx-mono">${(panel.entries || []).length} EVENTS</span></div>
+                        <div class="thx-list">${(panel.entries || []).map(buildEvidenceCard).join('')}</div>
+                    </section>`).join('')}
+            </div>`).join('');
+        const detailMarkup = selectedEvent ? `
+            <div class="thx-kicker">Selected Evidence</div>
+            <div class="thx-detail-title">${selectedEvent.title}</div>
+            <div class="thx-meta">${selectedEvent.id} · ${selectedEvent.panelTitle}<br>${selectedEvent.timestamp} · ${selectedEvent.user} · ${selectedEvent.locationOrIP}</div>
+            <div class="thx-highlight">${selectedEvent.highlight}</div>
+            <div class="thx-body-copy">${selectedEvent.body}</div>
+            <div class="thx-note-box">${selectedEvent.analyst}</div>
+            <div class="thx-actions">
+                <button class="thx-btn danger" data-threat-action="mark_suspicious" data-event-id="${selectedEvent.id}" type="button" ${this.threatMarkedEvents.has(selectedEvent.id) || this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}>${this.threatMarkedEvents.has(selectedEvent.id) ? 'Flagged' : 'Mark Suspicious'}</button>
+                <button class="thx-btn success" data-threat-action="investigate" data-event-id="${selectedEvent.id}" type="button" ${this.threatInvestigatedEvents.has(selectedEvent.id) || this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}>${this.threatInvestigatedEvents.has(selectedEvent.id) ? 'Investigated' : 'Investigate'}</button>
+            </div>`
+            : '<div class="thx-empty">Select an evidence card to inspect the case details.</div>';
+        const chainMarkup = entries.map(entry => {
+            const index = this.threatChainSelection.indexOf(entry.id);
+            return `
+                <button class="thx-card ${index >= 0 ? 'selected' : ''}" data-threat-chain="${entry.id}" type="button" ${this.isComplete ? 'disabled' : ''}>
+                    ${index >= 0 ? `<span class="thx-order">${index + 1}</span>` : ''}
+                    <div class="thx-row"><span class="thx-mono">${entry.id}</span><span class="thx-badge ${badgeClass(entry.status)}">${String(entry.status || 'normal').toUpperCase()}</span></div>
+                    <div class="thx-title">${entry.action}</div>
+                    <div class="thx-meta">${entry.panelTitle} · ${entry.timestamp} · ${entry.user}</div>
+                </button>`;
+        }).join('');
+        const chainResult = this.threatChainValidationResult ? `<div class="thx-result ${this.threatChainValidationResult.tone}">${this.threatChainValidationResult.message}</div>` : '';
+        const containment = this.getThreatContainmentConfig();
+        const options = (items, selected) => (Array.isArray(items) ? items : []).map(option => {
+            const value = typeof option === 'string' ? option : option.value;
+            const label = typeof option === 'string' ? option : option.label;
+            return `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`;
+        }).join('');
+        const containmentResult = this.threatContainmentResult ? `<div class="thx-result ${this.threatContainmentResult.tone}">${this.threatContainmentResult.message}</div>` : '';
+
+        container.innerHTML = `
+            <style>
+                .thx-shell{padding:24px;display:grid;gap:16px}.thx-brief,.thx-nav,.thx-phase,.thx-panel,.thx-detail,.thx-log{background:rgba(2,10,24,.68);border:1px solid rgba(23,216,255,.14);box-shadow:0 20px 48px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
+                .thx-kicker,.thx-mono,.thx-navbtn,.thx-log-line{font-family:'Share Tech Mono',monospace;letter-spacing:.18em;text-transform:uppercase}.thx-kicker{font-size:.68rem;color:rgba(23,216,255,.72)}.thx-row{display:flex;justify-content:space-between;gap:10px;align-items:center}.thx-meta{font-size:.82rem;line-height:1.6;color:rgba(168,216,232,.58)}.thx-title{margin-top:10px;font-weight:700;line-height:1.45;color:#eef7ff}
+                .thx-brief,.thx-panel,.thx-detail,.thx-log,.thx-phase{padding:16px}.thx-brief-grid,.thx-summary,.thx-chain-grid,.thx-form-grid,.thx-actions{display:grid;gap:12px}.thx-brief-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.thx-brief-card{padding:12px;border:1px solid rgba(23,216,255,.1);background:rgba(255,255,255,.02);display:grid;gap:8px}.thx-brief-card strong{line-height:1.6;color:#eef7ff}
+                .thx-nav{padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}.thx-tabs{display:flex;flex-wrap:wrap;gap:10px}.thx-navbtn,.thx-btn,.thx-primary{padding:10px 14px;border:1px solid rgba(23,216,255,.22);background:rgba(23,216,255,.06);color:#eef7ff;cursor:pointer;font-size:.72rem}.thx-navbtn.active{border-color:#17d8ff;background:rgba(23,216,255,.12)}.thx-navbtn.done{border-color:rgba(0,255,136,.28);color:#8ff5c8}.thx-summary{margin-left:auto;grid-template-columns:repeat(4,minmax(110px,1fr))}.thx-chip{padding:10px 12px;border:1px solid rgba(23,216,255,.12);background:rgba(255,255,255,.02);display:grid;gap:4px}.thx-chip strong{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;line-height:1;color:#eef7ff}
+                .thx-phase{display:none}.thx-phase.active{display:block}.thx-heading{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(23,216,255,.72);margin-bottom:16px}.thx-evidence{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(290px,340px);gap:16px;align-items:start}.thx-stack,.thx-list{display:grid;gap:12px}.thx-card{position:relative;padding:12px;border:1px solid rgba(23,216,255,.1);background:rgba(255,255,255,.02);text-align:left;color:#eef7ff;cursor:pointer;transition:border-color .2s ease,background .2s ease,transform .2s ease}.thx-card:hover{border-color:rgba(23,216,255,.34);background:rgba(23,216,255,.06);transform:translateY(-1px)}.thx-card.selected{border-color:#17d8ff;background:rgba(23,216,255,.08)}.thx-card.flagged{border-color:rgba(255,79,139,.34)}.thx-card.benign{border-color:rgba(0,224,144,.3)}
+                .thx-badge{display:inline-flex;padding:3px 8px;border:1px solid;font-size:.62rem}.thx-badge.normal{color:#00e090;border-color:rgba(0,224,144,.28);background:rgba(0,224,144,.06)}.thx-badge.anomalous{color:#ffd600;border-color:rgba(255,214,0,.28);background:rgba(255,214,0,.06)}.thx-badge.critical{color:#ff4f8b;border-color:rgba(255,79,139,.28);background:rgba(255,79,139,.06)}.thx-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.thx-tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(23,216,255,.14);background:rgba(23,216,255,.07);color:#8beeff;font-size:.68rem}.thx-panel-head strong,.thx-detail-title{color:#eef7ff}
+                .thx-detail-title{font-family:'Orbitron',sans-serif;font-size:1.1rem;line-height:1.35}.thx-highlight{padding:12px;border-left:3px solid #17d8ff;background:rgba(23,216,255,.07);color:#17d8ff;font-weight:700}.thx-body-copy{line-height:1.7;color:rgba(225,239,248,.8)}.thx-note-box{padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(255,255,255,.02);font-size:.8rem;line-height:1.7;color:rgba(168,216,232,.68)}.thx-actions{grid-template-columns:1fr 1fr;margin-top:auto}.thx-btn.danger{border-color:rgba(255,79,139,.3);color:#ff9fbe;background:rgba(255,79,139,.08)}.thx-btn.success{border-color:rgba(0,224,144,.28);color:#8ff5c8;background:rgba(0,224,144,.08)}.thx-btn:disabled,.thx-primary:disabled,.thx-navbtn:disabled,.thx-card:disabled{opacity:.42;cursor:not-allowed;transform:none}
+                .thx-empty{display:flex;align-items:center;justify-content:center;min-height:240px;text-align:center;color:rgba(168,216,232,.46);font-family:'Share Tech Mono',monospace;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}.thx-chain-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.thx-order{position:absolute;top:10px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#17d8ff}.thx-foot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}.thx-result{margin-top:16px;padding:14px 16px;border:1px solid;font-family:'Share Tech Mono',monospace;font-size:.76rem;line-height:1.7}.thx-result.ok{border-color:rgba(0,224,144,.34);background:rgba(0,224,144,.08);color:#8ff5c8}.thx-result.fail{border-color:rgba(255,214,0,.34);background:rgba(255,214,0,.08);color:#ffe97c}.thx-result.err{border-color:rgba(255,79,139,.34);background:rgba(255,79,139,.08);color:#ff9fbe}
+                .thx-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.thx-field{display:grid;gap:10px}.thx-select{width:100%;padding:12px 14px;border:1px solid rgba(23,216,255,.18);background:rgba(255,255,255,.03);color:#eef7ff;font-family:'Share Tech Mono',monospace}.thx-select option{background:#07111d;color:#eef7ff}.thx-log{display:flex;flex-direction:column;gap:12px;min-height:220px}.thx-log-body{flex:1;min-height:180px;max-height:260px;overflow:auto;margin:0;padding-right:4px}.thx-log-line{font-size:.74rem;line-height:1.7;color:rgba(225,239,248,.78);margin-bottom:8px}.thx-log-line.good{color:#8ff5c8}.thx-log-line.bad{color:#ff9fbe}.thx-log-line.warn{color:#ffe97c}.thx-log-line.info{color:#8beeff}
+                @media (max-width:1320px){.thx-brief-grid,.thx-summary,.thx-chain-grid,.thx-form-grid,.thx-actions{grid-template-columns:1fr}.thx-evidence{grid-template-columns:1fr}}
+                @media (max-width:760px){.thx-shell{padding:16px}.thx-nav{padding:12px}.thx-phase,.thx-panel,.thx-detail,.thx-log{padding:14px}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - SOC CASEWORK`,
+                title: 'ENTERPRISE THREAT<br>HUNT',
+                status: 'SOC CASE ACTIVE',
+                phases: [
+                    { label: 'RECONSTRUCT', active: this.threatCasePhase === 1, done: summary.marked > 0 || summary.investigated > 0 },
+                    { label: 'MARK CHAIN', active: this.threatCasePhase === 2, done: this.threatChainValidated },
+                    { label: 'CONTAIN', active: this.threatCasePhase === 3, done: this.threatContainmentResolved }
+                ],
+                content: `
+                    <div class="thx-shell">
+                        <section class="thx-brief">
+                            <div class="thx-kicker">Command Brief</div>
+                            <div class="thx-brief-grid">
+                                <div class="thx-brief-card"><div class="thx-kicker">Objective</div><strong>${this.mission.objective || ''}</strong></div>
+                                <div class="thx-brief-card"><div class="thx-kicker">Scenario</div><strong>${this.mission.scenario || ''}</strong></div>
+                                <div class="thx-brief-card"><div class="thx-kicker">Task</div><strong>${this.mission.userTask || ''}</strong></div>
+                            </div>
+                        </section>
+                        <section class="thx-nav">
+                            <div class="thx-tabs">
+                                <button class="thx-navbtn ${this.threatCasePhase === 1 ? 'active' : ''} ${summary.marked || summary.investigated ? 'done' : ''}" data-threat-phase="1" type="button">01 Reconstruct</button>
+                                <button class="thx-navbtn ${this.threatCasePhase === 2 ? 'active' : ''} ${this.threatChainValidated ? 'done' : ''}" data-threat-phase="2" type="button">02 Mark Chain</button>
+                                <button class="thx-navbtn ${this.threatCasePhase === 3 ? 'active' : ''} ${this.threatContainmentResolved ? 'done' : ''}" data-threat-phase="3" type="button">03 Contain</button>
+                            </div>
+                            <div class="thx-summary">
+                                <div class="thx-chip"><span class="thx-kicker">Flagged</span><strong>${summary.marked}</strong></div>
+                                <div class="thx-chip"><span class="thx-kicker">Investigated</span><strong>${summary.investigated}</strong></div>
+                                <div class="thx-chip"><span class="thx-kicker">Chain</span><strong>${this.threatChainSelection.length}/${summary.chainLinks}</strong></div>
+                                <div class="thx-chip"><span class="thx-kicker">Status</span><strong>${this.threatContainmentResolved ? 'LOCKED' : this.threatChainValidated ? 'READY' : 'OPEN'}</strong></div>
+                            </div>
+                        </section>
+                        <section class="thx-phase ${this.threatCasePhase === 1 ? 'active' : ''}">
+                            <div class="thx-heading">// 01 RECONSTRUCT - INSPECT THE CASE DATA, FLAG THREATS, AND INVESTIGATE BEFORE YOU ESCALATE.</div>
+                            <div class="thx-evidence">${panelMarkup}<aside class="thx-detail">${detailMarkup}</aside></div>
+                        </section>
+                        <section class="thx-phase ${this.threatCasePhase === 2 ? 'active' : ''}">
+                            <div class="thx-heading">// 02 MARK CHAIN - SELECT THE EVENTS THAT FORM THE REAL ATTACK SEQUENCE.</div>
+                            <div class="thx-chain-grid">${chainMarkup}</div>
+                            <div class="thx-foot">
+                                <button class="thx-primary" id="threat-validate-chain" type="button" ${this.isComplete || this.threatChainValidated || this.threatContainmentResolved ? 'disabled' : ''}>Validate Chain</button>
+                                <span class="thx-mono">${this.threatChainSelection.length} selected</span>
+                                ${this.threatChainValidated ? '<button class="thx-primary" data-threat-phase="3" type="button">Proceed to Containment</button>' : ''}
+                            </div>
+                            ${chainResult}
+                        </section>
+                        <section class="thx-phase ${this.threatCasePhase === 3 ? 'active' : ''}">
+                            <div class="thx-heading">// 03 CONTAIN - APPLY THE CORRECT RESPONSE PLAN TO THE COMPROMISED ACCOUNT AND HOSTILE IP.</div>
+                            <div class="thx-form-grid">
+                                <div class="thx-field"><label class="thx-kicker" for="threat-account">Compromised Account</label><select class="thx-select" id="threat-account" data-threat-select="account" ${this.isComplete ? 'disabled' : ''}><option value=\"\">-- SELECT ACCOUNT --</option>${options(containment.accountOptions, this.threatContainmentSelection.account)}</select></div>
+                                <div class="thx-field"><label class="thx-kicker" for="threat-action">Response Action</label><select class="thx-select" id="threat-action" data-threat-select="action" ${this.isComplete ? 'disabled' : ''}><option value=\"\">-- SELECT ACTION --</option>${options(containment.actionOptions, this.threatContainmentSelection.action)}</select></div>
+                                <div class="thx-field"><label class="thx-kicker" for="threat-ip">Block External IP</label><select class="thx-select" id="threat-ip" data-threat-select="ip" ${this.isComplete ? 'disabled' : ''}><option value=\"\">-- SELECT IP --</option>${options(containment.ipOptions, this.threatContainmentSelection.ip)}</select></div>
+                                <div class="thx-field"><label class="thx-kicker" for="threat-escalate">Escalate To</label><select class="thx-select" id="threat-escalate" data-threat-select="escalate" ${this.isComplete ? 'disabled' : ''}><option value=\"\">-- SELECT TEAM --</option>${options(containment.escalateOptions, this.threatContainmentSelection.escalate)}</select></div>
+                            </div>
+                            <div class="thx-foot">
+                                <button class="thx-primary" id="threat-submit-containment" type="button" ${this.isComplete || !this.threatChainValidated || this.threatContainmentResolved ? 'disabled' : ''}>Execute Containment</button>
+                                <span class="thx-mono">${this.threatChainValidated ? 'Attack chain verified.' : 'Validate phase 2 before containment.'}</span>
+                            </div>
+                            ${containmentResult}
+                        </section>
+                        <section class="thx-log">
+                            <div class="thx-kicker">Command Log</div>
+                            <div class="thx-log-body guess-feedback" id="guess-feedback">${logsHtml}</div>
+                            <div id="attempt-counter" style="text-align:center;color:var(--text-secondary);">Case submissions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}</div>
+                        </section>
+                    </div>`
+            })}`;
+
+        this.setupThreatHuntEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    setupThreatHuntEventListeners() {
+        document.querySelectorAll('[data-threat-event]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.threatSelectedEventId = btn.dataset.threatEvent || null;
+                this.audio.playButtonClick();
+                this.rerenderThreatHuntSimulation({
+                    primarySelector: '__root__',
+                    anchorSelector: `[data-threat-event="${btn.dataset.threatEvent}"]`
+                });
+            });
+        });
+
+        document.querySelectorAll('[data-threat-phase]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.audio.playButtonClick();
+                this.setThreatPhase(btn.dataset.threatPhase);
+            });
+        });
+
+        document.querySelectorAll('[data-threat-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.threatAction;
+                const eventId = btn.dataset.eventId;
+                if (actionId && eventId) this.handleThreatAction(actionId, eventId);
+            });
+        });
+
+        document.querySelectorAll('[data-threat-chain]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const eventId = btn.dataset.threatChain;
+                if (eventId) this.handleThreatChainToggle(eventId);
+            });
+        });
+
+        document.getElementById('threat-validate-chain')?.addEventListener('click', () => this.validateThreatChain());
+
+        document.querySelectorAll('select[data-threat-select]').forEach(select => {
+            select.addEventListener('change', () => {
+                this.updateThreatContainmentSelection(select.dataset.threatSelect, select.value);
+            });
+        });
+
+        document.getElementById('threat-submit-containment')?.addEventListener('click', () => this.submitThreatContainment());
+    }
+
+    handleThreatAction(actionId, eventId) {
+        if (this.isComplete || this.threatContainmentResolved) return;
+        const detail = this.getThreatEvidenceDetail(eventId);
+        if (!detail) return;
+
+        if (actionId === 'mark_suspicious') {
+            if (this.threatMarkedEvents.has(eventId)) {
+                this.gameScreen.ui.showNotification('That evidence is already flagged.', 'warning');
+                return;
+            }
+            this.threatMarkedEvents.add(eventId);
+            const points = detail.suspicious
+                ? Number(this.puzzleData.scoring?.markCorrect || 150)
+                : Number(this.puzzleData.scoring?.markIncorrect || -100);
+            this.adjustThreatScore(points);
+            this.appendThreatLog(
+                detail.suspicious
+                    ? `${eventId} flagged as suspicious. Good catch on the malicious clue.`
+                    : `${eventId} flagged, but the evidence appears benign.`,
+                detail.suspicious ? 'good' : 'bad'
+            );
+            this.audio.playButtonClick();
+            this.rerenderThreatHuntSimulation({
+                primarySelector: '__root__',
+                anchorSelector: `[data-threat-event="${eventId}"]`
+            });
+            return;
+        }
+
+        if (actionId === 'investigate') {
+            if (this.threatInvestigatedEvents.has(eventId)) {
+                this.gameScreen.ui.showNotification('That evidence has already been investigated.', 'warning');
+                return;
+            }
+            this.threatInvestigatedEvents.add(eventId);
+            this.adjustThreatScore(Number(this.puzzleData.scoring?.investigate || 30));
+            this.appendThreatLog(`${eventId} investigated. ${detail.analyst}`, detail.suspicious ? 'warn' : 'info');
+            this.audio.playButtonClick();
+            this.rerenderThreatHuntSimulation({
+                primarySelector: '__root__',
+                anchorSelector: `[data-threat-event="${eventId}"]`
+            });
+        }
+    }
+
+    handleThreatChainToggle(eventId) {
+        if (this.isComplete || this.threatContainmentResolved) return;
+        if (this.threatChainValidated) {
+            this.gameScreen.ui.showNotification('Attack chain already validated.', 'info');
+            return;
+        }
+
+        const index = this.threatChainSelection.indexOf(eventId);
+        if (index >= 0) this.threatChainSelection.splice(index, 1);
+        else this.threatChainSelection.push(eventId);
+
+        this.audio.playButtonClick();
+        this.rerenderThreatHuntSimulation({
+            primarySelector: '__root__',
+            anchorSelector: `[data-threat-chain="${eventId}"]`
+        });
+    }
+
+    validateThreatChain() {
+        if (this.isComplete || this.threatContainmentResolved) return;
+        if (this.threatChainValidated) {
+            this.gameScreen.ui.showNotification('Attack chain already validated.', 'info');
+            return;
+        }
+        if (!this.threatChainSelection.length) {
+            this.gameScreen.ui.showNotification('Select the attack-chain evidence first.', 'warning');
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const correctChain = this.getThreatCorrectChain();
+        const matched = JSON.stringify(correctChain.slice().sort()) === JSON.stringify(this.threatChainSelection.slice().sort());
+
+        if (matched) {
+            const points = Number(this.puzzleData.scoring?.chainCorrect || 400);
+            this.threatChainValidated = true;
+            this.threatCasePhase = 3;
+            this.threatChainValidationResult = {
+                tone: 'ok',
+                message: `// CHAIN VALIDATED - ATTACK SEQUENCE RECONSTRUCTED. +${points} PTS. PROCEED TO CONTAINMENT.`
+            };
+            this.adjustThreatScore(points);
+            this.appendThreatLog('Attack chain validated. Proceed to containment.', 'good');
+            this.audio.playSuccess();
+        } else {
+            const missed = correctChain.filter(id => !this.threatChainSelection.includes(id)).length;
+            const extra = this.threatChainSelection.filter(id => !correctChain.includes(id)).length;
+            const penalty = Math.abs(Number(this.puzzleData.scoring?.chainIncorrect || -150));
+            this.threatChainValidationResult = {
+                tone: 'fail',
+                message: `// CHAIN MISMATCH - ${missed} MISSED, ${extra} FALSE POSITIVES. -${penalty} PTS. REVIEW THE EVIDENCE.`
+            };
+            this.adjustThreatScore(-penalty);
+            this.appendThreatLog(`Attack chain mismatch. ${missed} malicious clue(s) missed and ${extra} false positive(s) added.`, 'bad');
+            this.audio.playFailure();
+        }
+
+        this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+    }
+
+    updateThreatContainmentSelection(field, value) {
+        if (!field) return;
+        this.threatContainmentSelection = {
+            ...this.threatContainmentSelection,
+            [field]: value
+        };
+    }
+
+    submitThreatContainment() {
+        if (this.isComplete || this.threatContainmentResolved) return;
+
+        if (!this.threatChainValidated) {
+            this.threatContainmentResult = {
+                tone: 'err',
+                message: '// ATTACK CHAIN NOT VERIFIED - VALIDATE PHASE 2 BEFORE CONTAINMENT.'
+            };
+            this.audio.playFailure();
+            this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+            return;
+        }
+
+        const selection = this.threatContainmentSelection || {};
+        if (!selection.account || !selection.action || !selection.ip || !selection.escalate) {
+            this.threatContainmentResult = {
+                tone: 'err',
+                message: '// INCOMPLETE - SELECT EVERY CONTAINMENT OPTION BEFORE EXECUTING.'
+            };
+            this.audio.playFailure();
+            this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+            return;
+        }
+
+        this.attempts++;
+        this.updateAttemptCounter();
+        this.gameScreen.updateAttempts(this.attempts);
+
+        const config = this.getThreatContainmentConfig();
+        const solution = config.solution || {};
+        const accountOk = selection.account === solution.account;
+        const actionOk = Array.isArray(solution.actions) ? solution.actions.includes(selection.action) : selection.action === solution.action;
+        const ipOk = selection.ip === solution.ip;
+        const escalateOk = Array.isArray(solution.escalate) ? solution.escalate.includes(selection.escalate) : selection.escalate === solution.escalate;
+        const correctCount = [accountOk, actionOk, ipOk, escalateOk].filter(Boolean).length;
+
+        if (correctCount === 4) {
+            const points = Number(this.puzzleData.scoring?.containmentSuccess || 600);
+            this.threatContainmentResolved = true;
+            this.threatContainmentResult = {
+                tone: 'ok',
+                message: `// CONTAINMENT EXECUTED - ALL SYSTEMS SECURED. THREAT ACTOR LOCKED OUT. +${points} PTS.`
+            };
+            this.adjustThreatScore(points);
+            this.appendThreatLog('Containment executed successfully. The hostile account path and exfiltration route are shut down.', 'good');
+            this.audio.playSuccess();
+            this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+            this.clearThreatCompletionTimer();
+            this.threatCompletionTimerId = setTimeout(() => {
+                this.threatCompletionTimerId = null;
+                this.finishThreatHunt(true);
+            }, 1200);
+            return;
+        }
+
+        if (correctCount >= 2) {
+            const penalty = Math.abs(Number(this.puzzleData.scoring?.containmentPartial || -100));
+            this.threatContainmentResult = {
+                tone: 'fail',
+                message: `// PARTIAL CONTAINMENT (${correctCount}/4 CORRECT) - THREAT NOT FULLY NEUTRALIZED. -${penalty} PTS.`
+            };
+            this.adjustThreatScore(-penalty);
+            this.appendThreatLog(`Containment only partially landed (${correctCount}/4 correct). Review the compromised account and hostile IP choices.`, 'warn');
+            this.audio.playFailure();
+        } else {
+            const penalty = Math.abs(Number(this.puzzleData.scoring?.containmentFailure || -200));
+            this.threatContainmentResult = {
+                tone: 'err',
+                message: `// CONTAINMENT FAILED - INCORRECT RESPONSE PLAN. ATTACKER MAY STILL HAVE ACCESS. -${penalty} PTS.`
+            };
+            this.adjustThreatScore(-penalty);
+            this.appendThreatLog('Containment failed. The selected response would leave the attacker path open.', 'bad');
+            this.audio.playFailure();
+        }
+
+        this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+    }
+
+    appendThreatLog(message, tone = 'info') {
+        const entry = { message, tone };
+        this.threatActivityLog = [entry, ...this.threatActivityLog].slice(0, 36);
+        const feedback = document.getElementById('guess-feedback');
+        if (!feedback) return;
+
+        const line = document.createElement('div');
+        line.className = `thx-log-line ${tone}`.trim();
+        line.textContent = `> ${message}`;
+        feedback.prepend(line);
+
+        while (feedback.children.length > 36) {
+            feedback.removeChild(feedback.lastChild);
+        }
+    }
+
+    finishThreatHunt(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        this.clearThreatCompletionTimer();
+
+        const summary = this.puzzleData.educationalSummary || {};
+        const feedback = document.getElementById('guess-feedback');
+        const caseSummary = this.getThreatCaseworkSummary();
+        if (feedback) {
+            feedback.innerHTML += this.renderMissionDebrief({
+                tone: success ? 'success' : 'error',
+                title: summary.reveal || (success ? 'SOC case closed' : 'SOC case unresolved'),
+                summary: summary.message || '',
+                details: [
+                    `Suspicious events flagged: ${caseSummary.marked}`,
+                    `Evidence investigated: ${caseSummary.investigated}`,
+                    `Attack chain validated: ${this.threatChainValidated ? 'Yes' : 'No'}`,
+                    `Containment response: ${this.threatContainmentResolved ? 'Precise' : 'Incomplete'}`
+                ],
+                insight: this.mission.knowledgeSummary?.insight || ''
+            });
+        }
+
+        if (success) {
+            this.audio.playSuccess();
+            this.gameScreen.ui.flashScreen('rgba(0,255,65,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.successFeedback || 'Threat hunt complete.', 'success');
+            this.threatCompletionTimerId = setTimeout(() => {
+                this.threatCompletionTimerId = null;
+                this.gameScreen.completePuzzle(true);
+            }, 1300);
+        } else {
+            this.audio.playFailure();
+            this.gameScreen.ui.flashScreen('rgba(255,0,110,0.2)', 300);
+            this.gameScreen.ui.showNotification(this.mission.failureFeedback || 'Threat hunt failed.', 'error');
+            this.threatCompletionTimerId = setTimeout(() => {
+                this.threatCompletionTimerId = null;
+                this.gameScreen.completePuzzle(false);
+            }, 1300);
+        }
+    }
+
+    syncEmbeddedMissionHUD() {
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            const waves = this.getLiveDefenseWaves();
+            const totalWaves = Math.max(1, waves.length);
+            const visibleWave = Math.min(totalWaves, Math.max(1, this.liveWaveIndex + 1));
+            const timerEl = document.getElementById('l1-timer');
+            const timerLabel = document.getElementById('lab-shared-time-label');
+            const auxLabel = document.getElementById('lab-shared-aux-label');
+            const auxValue = document.getElementById('l1-ai-progress');
+
+            if (timerLabel) timerLabel.textContent = 'Timer';
+            if (timerEl) {
+                timerEl.textContent = `${Math.max(0, Math.floor(this.liveRemainingTime))}S`;
+                timerEl.classList.toggle('danger', this.liveRemainingTime <= 10);
+            }
+
+            if (auxLabel) auxLabel.textContent = 'Wave';
+            if (auxValue) {
+                auxValue.textContent = `${visibleWave}/${totalWaves}`;
+                auxValue.className = 'lab-shared-value lab-shared-value--safe';
+                auxValue.style.color = '';
+            }
+
+            return true;
+        }
+
+        if (this.interactionMode === 'threatHuntSimulation') {
+            const totalTime = Math.max(1, Number(this.puzzleData?.timeLimit || this.mission?.puzzle?.timeLimit || 180));
+            const rawRemaining = this.gameScreen?.timer?.getRemaining?.();
+            const remaining = Number.isFinite(rawRemaining) ? Math.max(0, Math.floor(rawRemaining)) : totalTime;
+            const elapsedPercent = Math.min(100, Math.max(0, Math.round(((totalTime - remaining) / totalTime) * 100)));
+            const timerEl = document.getElementById('l1-timer');
+            const timerLabel = document.getElementById('lab-shared-time-label');
+            const auxLabel = document.getElementById('lab-shared-aux-label');
+            const auxValue = document.getElementById('l1-ai-progress');
+
+            if (timerLabel) timerLabel.textContent = 'Time';
+            if (timerEl) {
+                const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+                const seconds = String(remaining % 60).padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+                timerEl.classList.toggle('danger', remaining <= 30);
+            }
+
+            if (auxLabel) auxLabel.textContent = 'AI';
+            if (auxValue) {
+                auxValue.textContent = `${elapsedPercent}%`;
+                auxValue.className = 'lab-shared-value lab-shared-value--safe';
+                auxValue.style.color = '#ff4f8b';
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    buildThreatEvidenceCard(entry, badgeClass) {
+        const detail = this.getThreatEvidenceDetail(entry.id);
+        const tags = [];
+        if (this.threatMarkedEvents.has(entry.id)) tags.push(detail?.suspicious ? 'THREAT FLAGGED' : 'FALSE POSITIVE');
+        if (this.threatInvestigatedEvents.has(entry.id)) tags.push('INVESTIGATED');
+
+        return `
+            <button class="soc7-evidence-card ${this.threatSelectedEventId === entry.id ? 'selected' : ''} ${this.threatMarkedEvents.has(entry.id) ? (detail?.suspicious ? 'flagged-bad' : 'flagged-good') : ''}" data-threat-event="${entry.id}" type="button">
+                <div class="soc7-card-top"><span class="soc7-card-id">${entry.id}</span><span class="soc7-badge ${badgeClass(entry.status)}">${String(entry.status || 'normal').toUpperCase()}</span></div>
+                <div class="soc7-card-title">${entry.action}</div>
+                <div class="soc7-card-meta">${entry.timestamp} · ${entry.user} · ${entry.locationOrIP}</div>
+                ${tags.length ? `<div class="soc7-card-tags">${tags.map(tag => `<span>${tag}</span>`).join('')}</div>` : ''}
+            </button>`;
+    }
+
+    buildThreatPanelColumn(columnPanels, badgeClass) {
+        return `
+            <div class="soc7-panel-column">
+                <div class="soc7-section-label">EVIDENCE PANELS</div>
+                ${columnPanels.map((panel, index) => `
+                    ${index ? '<div class="soc7-divider"></div>' : ''}
+                    <section class="soc7-panel">
+                        <div class="soc7-panel-header"><div class="soc7-panel-title">${panel.title}</div><div class="soc7-event-count">${(panel.entries || []).length} EVENTS</div></div>
+                        <div class="soc7-card-stack">${(panel.entries || []).map(entry => this.buildThreatEvidenceCard(entry, badgeClass)).join('')}</div>
+                    </section>`).join('')}
+            </div>`;
+    }
+
+    buildThreatDetailMarkup(selectedEvent) {
+        if (!selectedEvent) return '<div class="soc7-detail-empty">CLICK ANY CARD TO INSPECT</div>';
+
+        return `
+            <div class="soc7-detail-label">SELECTED EVIDENCE</div>
+            <div class="soc7-detail-title">${selectedEvent.title}</div>
+            <div class="soc7-detail-meta">${selectedEvent.id} · ${selectedEvent.panelTitle}<br>${selectedEvent.timestamp} · ${selectedEvent.user} · ${selectedEvent.locationOrIP}</div>
+            <div class="soc7-detail-highlight">${selectedEvent.highlight}</div>
+            <div class="soc7-detail-body">${selectedEvent.body}</div>
+            <div class="soc7-detail-analyst">${selectedEvent.analyst}</div>
+            <div class="soc7-detail-actions">
+                <button class="soc7-action-btn soc7-action-btn--danger" data-threat-action="mark_suspicious" data-event-id="${selectedEvent.id}" type="button" ${this.threatMarkedEvents.has(selectedEvent.id) || this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}>${this.threatMarkedEvents.has(selectedEvent.id) ? 'FLAGGED' : 'MARK SUSPICIOUS'}</button>
+                <button class="soc7-action-btn soc7-action-btn--success" data-threat-action="investigate" data-event-id="${selectedEvent.id}" type="button" ${this.threatInvestigatedEvents.has(selectedEvent.id) || this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}>${this.threatInvestigatedEvents.has(selectedEvent.id) ? 'INVESTIGATED' : 'INVESTIGATE'}</button>
+            </div>`;
+    }
+
+    buildThreatChainCard(entry, badgeClass) {
+        const index = this.threatChainSelection.indexOf(entry.id);
+        return `
+            <button class="soc7-chain-card ${index >= 0 ? 'selected' : ''}" data-threat-chain="${entry.id}" type="button" ${this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}>
+                ${index >= 0 ? `<span class="soc7-chain-num">${index + 1}</span>` : ''}
+                <div class="soc7-card-top"><span class="soc7-card-id">${entry.id}</span><span class="soc7-badge ${badgeClass(entry.status)}">${String(entry.status || 'normal').toUpperCase()}</span></div>
+                <div class="soc7-card-title">${entry.action}</div>
+                <div class="soc7-card-meta">${entry.panelTitle} · ${entry.timestamp} · ${entry.user}</div>
+            </button>`;
+    }
+
+    buildThreatSelectOptions(items, selected) {
+        return (Array.isArray(items) ? items : []).map(option => {
+            const value = typeof option === 'string' ? option : option.value;
+            const label = typeof option === 'string' ? option : option.label;
+            return `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`;
+        }).join('');
+    }
+
+    renderThreatHuntSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const panels = this.getThreatEvidencePanels();
+        const entries = this.getThreatEvidenceEntries();
+        if (!this.threatSelectedEventId && entries[0]) this.threatSelectedEventId = entries[0].id;
+
+        const selectedEvent = this.getThreatEvidenceDetail(this.threatSelectedEventId) || null;
+        const summary = this.getThreatCaseworkSummary();
+        const totalTime = Math.max(1, Number(this.puzzleData.timeLimit || this.mission?.puzzle?.timeLimit || 180));
+        const rawRemaining = this.gameScreen?.timer?.getRemaining?.();
+        const remaining = Number.isFinite(rawRemaining) ? Math.max(0, Math.floor(rawRemaining)) : totalTime;
+        const timeDisplay = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
+        const progressPercent = Math.max(0, Math.min(100, (remaining / totalTime) * 100));
+        const aiPercent = Math.min(100, Math.max(0, Math.round(((totalTime - remaining) / totalTime) * 100)));
+        const falsePositiveCount = Math.max(0, this.threatMarkedEvents.size - summary.correctFlags);
+        const caseStatus = this.threatContainmentResolved ? 'CASE CLOSED' : this.threatChainValidated ? 'READY TO CONTAIN' : 'SOC CASE ACTIVE';
+        const phaseTitles = { 1: 'RECONSTRUCT', 2: 'MARK CHAIN', 3: 'CONTAIN' };
+        const phaseBriefs = {
+            1: 'Review each evidence panel, separate attacker activity from normal operations, and inspect the case details before you escalate.',
+            2: 'Select the exact evidence chain that reconstructs the intrusion from initial access through exfiltration.',
+            3: 'Apply the correct containment actions to the compromised account, hostile IP, and escalation path.'
+        };
+        const hintKeys = ['hint1', 'hint2', 'hint3'];
+        const lastHint = this.hintsShown > 0 ? this.mission?.hintSystem?.[hintKeys[this.hintsShown - 1]] : '';
+        const logsHtml = this.threatActivityLog.length
+            ? this.threatActivityLog.map(item => {
+                const entry = typeof item === 'string' ? { message: item, tone: 'info' } : item;
+                return `<div class="soc7-log-line ${entry.tone || 'info'}">&gt; ${entry.message}</div>`;
+            }).join('')
+            : '<div class="soc7-log-line info">&gt; Incoming: SOC case active. Review the evidence panels before you act.</div>';
+        const panelColumns = [1, 2].map(column =>
+            panels.filter((panel, index) => Number(panel.column || ((index % 2) + 1)) === column)
+        );
+        const badgeClass = (status = 'normal') => status === 'critical' ? 'critical' : status === 'anomalous' ? 'anomalous' : 'normal';
+        const panelMarkup = panelColumns.map(columnPanels => this.buildThreatPanelColumn(columnPanels, badgeClass)).join('');
+        const detailMarkup = this.buildThreatDetailMarkup(selectedEvent);
+        const chainMarkup = entries.map(entry => this.buildThreatChainCard(entry, badgeClass)).join('');
+        const chainResult = this.threatChainValidationResult ? `<div class="soc7-result ${this.threatChainValidationResult.tone}">${this.threatChainValidationResult.message}</div>` : '';
+        const containment = this.getThreatContainmentConfig();
+        const containmentResult = this.threatContainmentResult ? `<div class="soc7-result ${this.threatContainmentResult.tone}">${this.threatContainmentResult.message}</div>` : '';
+
+        container.innerHTML = `
+            <style>
+                #l1-ai-progress{color:#ff4f8b !important;text-shadow:0 0 18px rgba(255,79,139,.25)}
+                .soc7-shell{display:flex;flex-direction:column;gap:16px;padding:22px;height:100%;min-height:0;overflow:auto}
+                .soc7-progress-rail,.soc7-banner,.soc7-brief,.soc7-summary-grid,.soc7-hint-box,.soc7-phase,.soc7-panel,.soc7-detail-panel,.soc7-log-panel{background:rgba(2,10,24,.68);border:1px solid rgba(23,216,255,.14);box-shadow:0 18px 42px rgba(0,0,0,.24);backdrop-filter:blur(12px)}
+                .soc7-section-label,.soc7-card-id,.soc7-event-count,.soc7-detail-label,.soc7-summary-label,.soc7-banner-label,.soc7-log-line,.soc7-phase-heading,.soc7-field-label,.soc7-attempts,.soc7-hint-label,.soc7-note{font-family:'Share Tech Mono',monospace;letter-spacing:.18em;text-transform:uppercase}
+                .soc7-progress-rail{padding:0;height:4px;overflow:hidden}.soc7-progress-bar{height:100%;background:linear-gradient(90deg,#00e5ff 0%,#ffd600 55%,#ff4f8b 100%);transition:width 1s linear}
+                .soc7-banner,.soc7-brief,.soc7-phase,.soc7-detail-panel,.soc7-log-panel{padding:18px}
+                .soc7-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+                .soc7-banner-label{font-size:.72rem;color:rgba(23,216,255,.74)}
+                .soc7-banner-title{font-family:'Orbitron',sans-serif;font-size:1.08rem;font-weight:700;line-height:1.4;color:#eef7ff}
+                .soc7-banner-status{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:2px;color:#00e090}
+                .soc7-brief-copy{margin-top:12px;font-size:1rem;line-height:1.7;color:rgba(232,244,255,.82)}
+                .soc7-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding:1px;background:rgba(23,216,255,.08)}
+                .soc7-summary-card{padding:14px 16px;background:rgba(0,8,20,.84);display:grid;gap:6px}
+                .soc7-summary-label{font-size:.64rem;color:rgba(23,216,255,.62)}
+                .soc7-summary-value{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;line-height:1;color:#eef7ff;letter-spacing:2px}
+                .soc7-summary-value--cyan{color:#00e5ff}.soc7-summary-value--gold{color:#ffd600}.soc7-summary-value--green{color:#00e090}.soc7-summary-value--pink{color:#ff4f8b}
+                .soc7-hint-box{padding:14px 16px;border-color:rgba(0,229,255,.28);background:rgba(0,229,255,.06)}
+                .soc7-hint-label{font-size:.66rem;color:#00e5ff;margin-bottom:10px}.soc7-hint-copy{color:#b8efff;line-height:1.7}
+                .soc7-phase{display:none}.soc7-phase.active{display:block}
+                .soc7-phase-heading{font-size:.72rem;color:rgba(23,216,255,.74);margin-bottom:16px}
+                .soc7-evidence-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(300px,340px);gap:16px;align-items:start}
+                .soc7-panel-column{display:grid;gap:14px}.soc7-section-label{font-size:.66rem;color:rgba(168,216,232,.42)}.soc7-divider{height:1px;background:rgba(23,216,255,.12)}
+                .soc7-panel{padding:0;overflow:hidden}.soc7-panel-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 16px 0}.soc7-panel-title{font-size:1rem;font-weight:700;color:#eef7ff}.soc7-event-count{font-size:.68rem;color:#00e5ff}
+                .soc7-card-stack{display:grid;gap:10px;padding:16px}
+                .soc7-evidence-card,.soc7-chain-card{position:relative;padding:12px 13px;border:1px solid rgba(23,216,255,.12);background:rgba(255,255,255,.02);text-align:left;color:#eef7ff;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+                .soc7-evidence-card::before,.soc7-chain-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent;transition:background .18s ease}
+                .soc7-evidence-card:hover,.soc7-chain-card:hover{border-color:rgba(23,216,255,.3);background:rgba(23,216,255,.06);transform:translateY(-1px)}
+                .soc7-evidence-card:hover::before,.soc7-chain-card:hover::before{background:#00e5ff}
+                .soc7-evidence-card.selected,.soc7-chain-card.selected{border-color:#00e5ff;background:rgba(0,229,255,.08)}
+                .soc7-evidence-card.selected::before,.soc7-chain-card.selected::before{background:#00e5ff}
+                .soc7-evidence-card.flagged-bad{border-color:rgba(255,79,139,.42)}.soc7-evidence-card.flagged-bad::before{background:#ff4f8b}
+                .soc7-evidence-card.flagged-good{border-color:rgba(0,224,144,.38)}.soc7-evidence-card.flagged-good::before{background:#00e090}
+                .soc7-card-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+                .soc7-card-id{font-size:.74rem;color:#00e5ff}.soc7-card-title{margin-top:8px;font-size:1rem;font-weight:700;color:#eef7ff;line-height:1.45}
+                .soc7-card-meta{margin-top:6px;font-size:.82rem;line-height:1.6;color:rgba(168,216,232,.58)}
+                .soc7-badge{display:inline-flex;padding:3px 8px;border:1px solid;font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase}
+                .soc7-badge.anomalous{color:#ffb347;border-color:rgba(255,179,71,.34);background:rgba(255,179,71,.08)}
+                .soc7-badge.normal{color:#00e090;border-color:rgba(0,224,144,.34);background:rgba(0,224,144,.08)}
+                .soc7-badge.critical{color:#ff4f8b;border-color:rgba(255,79,139,.34);background:rgba(255,79,139,.08)}
+                .soc7-card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.soc7-card-tags span{display:inline-flex;padding:4px 8px;border:1px solid rgba(23,216,255,.14);background:rgba(23,216,255,.07);color:#8beeff;font-size:.68rem}
+                .soc7-detail-panel{display:flex;flex-direction:column;min-height:100%}
+                .soc7-detail-label{font-size:.66rem;color:#00e5ff;padding-bottom:10px;border-bottom:1px solid rgba(23,216,255,.12);margin-bottom:16px}
+                .soc7-detail-title{font-family:'Orbitron',sans-serif;font-size:1.02rem;font-weight:700;color:#fff;line-height:1.4}
+                .soc7-detail-meta{margin-top:10px;font-size:.82rem;line-height:1.8;color:#00e5ff}
+                .soc7-detail-highlight{margin-top:14px;padding:12px;border-left:3px solid #00e5ff;background:rgba(0,229,255,.08);font-family:'Orbitron',sans-serif;font-size:.84rem;font-weight:700;color:#00e5ff}
+                .soc7-detail-body{margin-top:14px;font-size:.92rem;line-height:1.75;color:rgba(232,244,255,.8)}
+                .soc7-detail-analyst{margin-top:14px;padding:12px;border:1px solid rgba(23,216,255,.12);background:rgba(255,255,255,.02);font-size:.8rem;line-height:1.7;color:rgba(168,216,232,.72)}
+                .soc7-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto;padding-top:18px;border-top:1px solid rgba(23,216,255,.12)}
+                .soc7-action-btn,.soc7-primary-btn{padding:11px 12px;border:1px solid rgba(23,216,255,.22);background:rgba(23,216,255,.06);color:#eef7ff;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .18s ease}
+                .soc7-action-btn--danger{border-color:rgba(255,79,139,.36);color:#ff9fbe;background:rgba(255,79,139,.08)}
+                .soc7-action-btn--success{border-color:rgba(0,224,144,.34);color:#8ff5c8;background:rgba(0,224,144,.08)}
+                .soc7-action-btn:hover,.soc7-primary-btn:hover,.soc7-select:hover,.soc7-select:focus{border-color:#00e5ff}
+                .soc7-action-btn:disabled,.soc7-primary-btn:disabled,.soc7-evidence-card:disabled,.soc7-chain-card:disabled,.soc7-select:disabled{opacity:.42;cursor:not-allowed;transform:none}
+                .soc7-detail-empty{display:flex;align-items:center;justify-content:center;min-height:260px;text-align:center;color:rgba(168,216,232,.46);font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase}
+                .soc7-chain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+                .soc7-chain-num{position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#00e5ff}
+                .soc7-phase-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+                .soc7-primary-btn{padding:12px 20px}.soc7-note{font-size:.72rem;color:rgba(168,216,232,.58)}
+                .soc7-result{margin-top:16px;padding:14px 16px;border:1px solid;font-family:'Share Tech Mono',monospace;font-size:.76rem;line-height:1.7}
+                .soc7-result.ok{border-color:rgba(0,224,144,.34);background:rgba(0,224,144,.08);color:#8ff5c8}
+                .soc7-result.fail{border-color:rgba(255,214,0,.34);background:rgba(255,214,0,.08);color:#ffe97c}
+                .soc7-result.err{border-color:rgba(255,79,139,.34);background:rgba(255,79,139,.08);color:#ff9fbe}
+                .soc7-contain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+                .soc7-contain-grid + .soc7-contain-grid{margin-top:16px}
+                .soc7-field{display:grid;gap:8px}.soc7-field-label{font-size:.66rem;color:rgba(168,216,232,.58)}
+                .soc7-select{width:100%;padding:12px 14px;border:1px solid rgba(23,216,255,.18);background:rgba(255,255,255,.03);color:#eef7ff;font-family:'Share Tech Mono',monospace;font-size:.8rem;outline:none}
+                .soc7-select option{background:#07111d;color:#eef7ff}
+                .soc7-log-panel{display:flex;flex-direction:column;gap:12px;min-height:220px}
+                .soc7-log-body{flex:1;min-height:180px;max-height:260px;overflow:auto;padding-right:4px}
+                .soc7-log-line{font-size:.76rem;line-height:1.75;color:rgba(232,244,255,.78);margin-bottom:8px}
+                .soc7-log-line.good{color:#8ff5c8}.soc7-log-line.bad{color:#ff9fbe}.soc7-log-line.warn{color:#ffe97c}.soc7-log-line.info{color:#8beeff}
+                .soc7-attempts{text-align:center;color:rgba(168,216,232,.58);font-size:.72rem}
+                @media (max-width:1320px){.soc7-summary-grid,.soc7-chain-grid,.soc7-contain-grid,.soc7-detail-actions{grid-template-columns:1fr}.soc7-evidence-layout{grid-template-columns:1fr}}
+                @media (max-width:900px){.soc7-shell{padding:16px}.soc7-banner,.soc7-brief,.soc7-phase,.soc7-detail-panel,.soc7-log-panel{padding:14px}.soc7-summary-card{padding:12px 14px}}
+            </style>
+            ${this.renderSharedPasswordLabThemeStyles()}
+            ${this.renderSharedPasswordLabFrame({
+                levelLabel: `// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - SOC CASEWORK`,
+                title: 'ENTERPRISE THREAT<br>HUNT',
+                status: caseStatus,
+                phases: [
+                    { label: 'RECONSTRUCT', active: this.threatCasePhase === 1, done: summary.marked > 0 || summary.investigated > 0 },
+                    { label: 'MARK CHAIN', active: this.threatCasePhase === 2, done: this.threatChainValidated },
+                    { label: 'CONTAIN', active: this.threatCasePhase === 3, done: this.threatContainmentResolved }
+                ],
+                timeDisplayOverride: timeDisplay,
+                auxiliaryLabel: 'AI',
+                auxiliaryValue: `${aiPercent}%`,
+                auxiliaryTone: 'safe',
+                content: `
+                    <div class="soc7-shell">
+                        <div class="soc7-progress-rail"><div class="soc7-progress-bar" style="width:${progressPercent}%"></div></div>
+                        <section class="soc7-banner">
+                            <div>
+                                <div class="soc7-banner-label">PHASE ${this.threatCasePhase} / 3</div>
+                                <div class="soc7-banner-title">${phaseTitles[this.threatCasePhase]} - ENTERPRISE THREAT HUNT</div>
+                            </div>
+                            <div class="soc7-banner-status">${caseStatus}</div>
+                        </section>
+                        <section class="soc7-brief">
+                            <div class="soc7-section-label">COMMAND BRIEF</div>
+                            <div class="soc7-brief-copy">${phaseBriefs[this.threatCasePhase]}</div>
+                        </section>
+                        <section class="soc7-summary-grid">
+                            <div class="soc7-summary-card"><div class="soc7-summary-label">CONFIRMED THREATS</div><div class="soc7-summary-value soc7-summary-value--cyan">${summary.correctFlags}/${summary.chainLinks}</div></div>
+                            <div class="soc7-summary-card"><div class="soc7-summary-label">INVESTIGATED</div><div class="soc7-summary-value soc7-summary-value--gold">${summary.investigated}</div></div>
+                            <div class="soc7-summary-card"><div class="soc7-summary-label">FALSE POSITIVES</div><div class="soc7-summary-value soc7-summary-value--pink">${falsePositiveCount}</div></div>
+                            <div class="soc7-summary-card"><div class="soc7-summary-label">CHAIN SELECTED</div><div class="soc7-summary-value soc7-summary-value--green">${this.threatChainSelection.length}</div></div>
+                        </section>
+                        ${lastHint ? `<section class="soc7-hint-box"><div class="soc7-hint-label">// ANALYST HINT</div><div class="soc7-hint-copy">${lastHint}</div></section>` : ''}
+                        <section class="soc7-phase ${this.threatCasePhase === 1 ? 'active' : ''}">
+                            <div class="soc7-phase-heading">// 01 RECONSTRUCT - REVIEW THE EVIDENCE PANELS, MARK MALICIOUS EVENTS, AND INVESTIGATE BEFORE ESCALATION.</div>
+                            <div class="soc7-evidence-layout">${panelMarkup}<aside class="soc7-detail-panel">${detailMarkup}</aside></div>
+                        </section>
+                        <section class="soc7-phase ${this.threatCasePhase === 2 ? 'active' : ''}">
+                            <div class="soc7-phase-heading">// 02 MARK ATTACK CHAIN - SELECT ALL ANOMALOUS EVENTS THAT FORM THE ATTACK SEQUENCE.</div>
+                            <div class="soc7-chain-grid">${chainMarkup}</div>
+                            <div class="soc7-phase-actions">
+                                <button class="soc7-primary-btn" id="threat-validate-chain" type="button" ${this.isComplete || this.threatChainValidated || this.threatContainmentResolved ? 'disabled' : ''}>[ VALIDATE CHAIN ]</button>
+                                <span class="soc7-note">${this.threatChainSelection.length} SELECTED</span>
+                                ${this.threatChainValidated ? '<button class="soc7-primary-btn" data-threat-phase="3" type="button">[ PROCEED TO CONTAINMENT ]</button>' : ''}
+                            </div>
+                            ${chainResult}
+                        </section>
+                        <section class="soc7-phase ${this.threatCasePhase === 3 ? 'active' : ''}">
+                            <div class="soc7-phase-heading">// 03 CONTAINMENT - APPLY RESPONSE ACTIONS TO NEUTRALIZE THE THREAT.</div>
+                            <div class="soc7-contain-grid">
+                                <div class="soc7-field"><label class="soc7-field-label" for="threat-account">COMPROMISED ACCOUNT</label><select class="soc7-select" id="threat-account" data-threat-select="account" ${this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}><option value="">-- SELECT ACCOUNT --</option>${this.buildThreatSelectOptions(containment.accountOptions, this.threatContainmentSelection.account)}</select></div>
+                                <div class="soc7-field"><label class="soc7-field-label" for="threat-action">RESPONSE ACTION</label><select class="soc7-select" id="threat-action" data-threat-select="action" ${this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}><option value="">-- SELECT ACTION --</option>${this.buildThreatSelectOptions(containment.actionOptions, this.threatContainmentSelection.action)}</select></div>
+                                <div class="soc7-field"><label class="soc7-field-label" for="threat-ip">BLOCK EXTERNAL IP</label><select class="soc7-select" id="threat-ip" data-threat-select="ip" ${this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}><option value="">-- SELECT IP --</option>${this.buildThreatSelectOptions(containment.ipOptions, this.threatContainmentSelection.ip)}</select></div>
+                            </div>
+                            <div class="soc7-contain-grid">
+                                <div class="soc7-field"><label class="soc7-field-label" for="threat-escalate">ESCALATE TO</label><select class="soc7-select" id="threat-escalate" data-threat-select="escalate" ${this.isComplete || this.threatContainmentResolved ? 'disabled' : ''}><option value="">-- SELECT TEAM --</option>${this.buildThreatSelectOptions(containment.escalateOptions, this.threatContainmentSelection.escalate)}</select></div>
+                                <div class="soc7-field" style="align-content:end;">
+                                    <button class="soc7-primary-btn" id="threat-submit-containment" type="button" ${this.isComplete || !this.threatChainValidated || this.threatContainmentResolved ? 'disabled' : ''}>[ EXECUTE CONTAINMENT ]</button>
+                                </div>
+                                <div class="soc7-field" style="align-content:end;">
+                                    <div class="soc7-note">${this.threatChainValidated ? 'ATTACK CHAIN VERIFIED.' : 'VALIDATE PHASE 2 BEFORE CONTAINMENT.'}</div>
+                                </div>
+                            </div>
+                            ${containmentResult}
+                        </section>
+                        <section class="soc7-log-panel">
+                            <div class="soc7-section-label">COMMAND LOG</div>
+                            <div class="soc7-log-body guess-feedback" id="guess-feedback">${logsHtml}</div>
+                            <div class="soc7-attempts" id="attempt-counter">Case submissions: <span style="color:var(--cyber-blue);">${this.attempts}</span> / ${this.maxAttempts}</div>
+                        </section>
+                    </div>`
+            })}`;
+
+        this.setupThreatHuntEventListeners();
+        this.startHumanLabMatrixAnimation();
+        this.gameScreen.syncEmbeddedMissionHUD();
     }
 
     // ─── LEVEL 9: patch simulation with tiered win condition ─────────────────
@@ -7227,6 +8191,1235 @@ export class PasswordCrack {
         setTimeout(() => this.gameScreen.completePuzzle(false), 1700);
     }
 
+    getSignalInterceptConfig() {
+        return {
+            laneLabels: Array.isArray(this.puzzleData.laneLabels) && this.puzzleData.laneLabels.length
+                ? this.puzzleData.laneLabels
+                : ['PORT 443', 'PORT 80', 'PORT 53', 'PORT 8080', 'PORT 22'],
+            packetTypes: this.puzzleData.packetTypes || {},
+            waves: Array.isArray(this.puzzleData.waves) ? this.puzzleData.waves : [],
+            server: {
+                label: this.puzzleData.server?.label || 'CORP-SRV',
+                integrity: Number(this.puzzleData.server?.integrity || 100)
+            },
+            attacker: {
+                label: this.puzzleData.attacker?.label || 'ATTACKER'
+            },
+            legendOrder: Array.isArray(this.puzzleData.legendOrder) && this.puzzleData.legendOrder.length
+                ? this.puzzleData.legendOrder
+                : ['c2', 'exfil', 'dnstun', 'http', 'auth'],
+            scoring: {
+                waveEndHigh: Number(this.puzzleData.scoring?.waveEndHigh || 500),
+                waveEndMid: Number(this.puzzleData.scoring?.waveEndMid || 250),
+                waveEndLow: Number(this.puzzleData.scoring?.waveEndLow || 100),
+                integrityMultiplier: Number(this.puzzleData.scoring?.integrityMultiplier || 8),
+                accuracy90: Number(this.puzzleData.scoring?.accuracy90 || 1000),
+                accuracy75: Number(this.puzzleData.scoring?.accuracy75 || 500),
+                accuracyFallback: Number(this.puzzleData.scoring?.accuracyFallback || 200),
+                comboMultiplier: Number(this.puzzleData.scoring?.comboMultiplier || 50),
+                falsePositivePenalty: Number(this.puzzleData.scoring?.falsePositivePenalty || 30),
+                missedPenalty: Number(this.puzzleData.scoring?.missedPenalty || 50)
+            },
+            waveTransitionDelayMs: Number(this.puzzleData.waveTransitionDelayMs || 1500),
+            completionDelayMs: Number(this.puzzleData.completionDelayMs || 1800)
+        };
+    }
+
+    getSignalCurrentWave() {
+        return this.getSignalInterceptConfig().waves[this.signalCurrentWaveIndex] || null;
+    }
+
+    renderSignalInterceptLevelOneStyles() {
+        return `<style>
+            .l1-body{grid-template-columns:minmax(0,1fr) 300px}
+            .l1-arena-scroll{padding:12px 18px 10px;display:flex;flex-direction:column;gap:10px}
+            .l1-feedback.sigl-card,.l1-feedback.sigl-arena-card{margin-bottom:0}
+            .l1-console{min-width:280px}
+            .l1-phase.done{color:var(--l1-green)}
+            .l1-phase.done .l1-phase__dot{background:var(--l1-green);box-shadow:0 0 14px rgba(0,255,136,.3)}
+            .sigl-brief-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,280px);gap:10px}
+            .sigl-card,.sigl-arena-card{padding:0}
+            .sigl-kicker,.sig-node-label,.sig-feed-time,.sig-feed-type,.sig-overlay-sub,.sig-overlay-threats,.sigl-legend-item{font-family:'Courier Prime','Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.18em}
+            .sigl-kicker{font-size:10px;color:var(--l1-text-low);margin-bottom:8px}
+            .sigl-copy{font-size:11px;line-height:1.7;color:var(--l1-text-mid)}
+            .sigl-legend-grid{display:grid;gap:8px}
+            .sigl-legend-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(23,216,255,.12);background:rgba(255,255,255,.02);font-size:9px;color:var(--l1-text)}
+            .sigl-legend-item strong{margin-left:auto;color:var(--l1-cyan);font-size:8px}
+            .sigl-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+            .sigl-legend-name{flex:1}
+            .sigl-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}
+            .sigl-panel-title{font-family:'Teko',sans-serif;font-size:32px;letter-spacing:2px;line-height:1;color:var(--l1-cyan)}
+            .sigl-panel-copy{max-width:340px;font-size:10px;line-height:1.7;color:var(--l1-text-mid);text-align:right}
+            .sigl-arena-stage{position:relative;min-height:clamp(600px,72vh,820px);border:1px solid rgba(23,216,255,.14);background:linear-gradient(180deg,#020c14 0%,#040e18 100%);overflow:hidden}
+            .sig-arena{position:relative;overflow:hidden;min-height:clamp(600px,72vh,820px);background:linear-gradient(180deg,#020c14 0%,#040e18 100%)}
+            .sig-arena::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(0,255,231,.025) 40px,rgba(0,255,231,.025) 41px),repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(0,255,231,.02) 60px,rgba(0,255,231,.02) 61px);pointer-events:none}
+            .sig-canvas{position:absolute;inset:0;width:100%;height:100%}
+            .sig-sweep{position:absolute;top:0;bottom:0;width:2px;background:linear-gradient(180deg,transparent,rgba(0,255,231,.15),transparent);animation:sigSweep 4s linear infinite;pointer-events:none;z-index:3}
+            .sig-atk-node,.sig-server-node{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:5}
+            .sig-atk-node{left:16px}.sig-server-node{right:30px}
+            .sig-atk-box{width:44px;height:60px;border:2px solid rgba(255,23,68,.35);background:rgba(20,4,8,.8);display:flex;align-items:center;justify-content:center}
+            .sig-server-box{width:52px;height:70px;border:2px solid rgba(0,255,231,.4);background:rgba(0,20,32,.8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:border-color .2s,box-shadow .2s}
+            .sig-server-box.hit{border-color:#ff1744 !important;box-shadow:0 0 30px rgba(255,23,68,.55) !important}
+            .sig-server-box.ok{border-color:#00e676;box-shadow:0 0 16px rgba(0,230,118,.32)}
+            .sig-node-label{font-size:8px;color:rgba(160,200,216,.48)}
+            .sig-led,.sig-led-ok{width:6px;height:6px;border-radius:50%}
+            .sig-led{background:#00ffe7;box-shadow:0 0 6px #00ffe7;animation:sigBlink .8s infinite}
+            .sig-led-ok{background:#00e676;box-shadow:0 0 6px #00e676}
+            .sig-lane-labels{position:absolute;left:72px;top:0;bottom:0;z-index:4;pointer-events:none}
+            .sig-lane-label{position:absolute;font-size:8px;color:rgba(160,200,216,.24)}
+            .sig-wave-overlay,.sig-outcome-overlay{position:absolute;inset:18px;display:flex;align-items:center;justify-content:center;z-index:8;background:rgba(4,12,16,.86);opacity:0;pointer-events:none;transition:opacity .35s}
+            .sig-wave-overlay.show,.sig-outcome-overlay.show{opacity:1;pointer-events:auto}
+            .sig-wave-card,.sig-outcome-card{padding:28px 34px;max-width:520px;width:min(92%,520px);text-align:center;background:rgba(7,21,32,.96);border:1px solid var(--l1-rim2)}
+            .sig-overlay-sub{font-size:10px;color:rgba(23,216,255,.5);margin-bottom:10px}
+            .sig-overlay-title{font-family:'Bebas Neue',sans-serif;font-size:46px;font-weight:700;color:var(--l1-cyan);letter-spacing:.16em;text-shadow:0 0 24px rgba(23,216,255,.28);margin-bottom:6px}
+            .sig-overlay-subtitle{font-family:'Teko',sans-serif;font-size:20px;color:var(--l1-red);letter-spacing:.14em;margin-bottom:8px}
+            .sig-overlay-desc{font-size:11px;color:rgba(160,200,216,.55);line-height:1.9;letter-spacing:.12em;margin-bottom:16px}
+            .sig-overlay-threats{font-size:10px;color:rgba(160,200,216,.38);margin-bottom:18px}
+            .sig-overlay-note{margin-top:10px;font-size:9px;color:rgba(168,216,232,.54);letter-spacing:.18em;text-transform:uppercase}
+            .sig-overlay-threats span{color:var(--l1-red)}
+            .sig-overlay-threats strong{color:var(--l1-green);font-weight:400}
+            .sig-wave-btn{font-family:'Courier Prime','Share Tech Mono',monospace;font-size:11px;letter-spacing:.22em;padding:12px 28px;border:1px solid var(--l1-cyan);background:rgba(23,216,255,.08);color:var(--l1-cyan);cursor:pointer}
+            .sig-wave-btn:hover{background:rgba(23,216,255,.16);box-shadow:0 0 18px rgba(23,216,255,.2)}
+            .sig-outcome-card.fail{border-color:rgba(255,23,68,.28)}
+            .sig-outcome-card.fail .sig-overlay-title{color:#ff1744;text-shadow:0 0 28px rgba(255,23,68,.28)}
+            .sig-outcome-score{font-family:'Orbitron',monospace;font-size:28px;color:#ffd600;margin-bottom:8px}
+            .sig-outcome-body{font-size:10px;color:rgba(160,200,216,.52);letter-spacing:.1em;line-height:1.9;margin-bottom:16px}
+            .sig-outcome-rows{display:grid;gap:6px;text-align:left}
+            .sig-outcome-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(0,255,231,.08);font-size:9px}
+            .sig-outcome-key{color:rgba(160,200,216,.42)}
+            .sig-outcome-value{color:#ffd600}
+            .sig-outcome-value.neg{color:#ff1744}
+            .sig-combo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-size:28px;font-weight:900;letter-spacing:.2em;pointer-events:none;z-index:7;opacity:0}
+            .sig-toast{position:absolute;right:18px;bottom:18px;max-width:280px;padding:9px 14px;font-size:9px;letter-spacing:.1em;border:1px solid;background:#040c10;transform:translateX(140%);transition:transform .25s;z-index:10}
+            .sig-toast.show{transform:translateX(0)}
+            .sig-toast.good{border-color:#00e676;color:#00e676}
+            .sig-toast.bad{border-color:#ff1744;color:#ff1744}
+            .sig-toast.info{border-color:#00ffe7;color:#00ffe7}
+            .sig-toast.warn{border-color:#ff9100;color:#ff9100}
+            .sig-feed{display:flex;flex-direction:column;gap:5px}
+            .sig-feed-item{padding:5px 8px;border:1px solid rgba(0,255,231,.06);font-size:9px;line-height:1.7;letter-spacing:.04em;border-left:2px solid}
+            .sig-feed-item.blocked{border-left-color:#00e676;background:rgba(0,230,118,.04)}
+            .sig-feed-item.missed{border-left-color:#ff1744;background:rgba(255,23,68,.04)}
+            .sig-feed-item.false{border-left-color:#c060ff;background:rgba(192,96,255,.04)}
+            .sig-feed-type{color:#00ffe7}
+            .sig-feed-item.blocked .sig-feed-type{color:#00e676}
+            .sig-feed-item.missed .sig-feed-type{color:#ff1744}
+            .sig-feed-item.false .sig-feed-type{color:#c060ff}
+            .sig-feed-time{color:var(--l1-text-low)}
+            .l1-flag-slot.done{border-color:var(--l1-green);background:rgba(0,255,136,.08);color:var(--l1-green)}
+            .l1-flag-slot.current{border-color:var(--l1-cyan);background:rgba(23,216,255,.08);color:var(--l1-cyan);box-shadow:0 0 10px rgba(23,216,255,.16)}
+            @keyframes sigBlink{0%,100%{opacity:1}50%{opacity:.15}}
+            @keyframes sigSweep{0%{left:-2px}100%{left:100%}}
+            @media (max-width:1080px){
+                .l1-body{grid-template-columns:1fr}
+                .l1-arena-scroll{padding:12px 16px 10px}
+                .sigl-brief-grid{grid-template-columns:1fr}
+                .sigl-panel-head{flex-direction:column;align-items:flex-start}
+                .sigl-panel-copy{text-align:left;max-width:none}
+                .sig-arena,.sigl-arena-stage{min-height:520px}
+            }
+        </style>`;
+    }
+
+    renderSignalInterceptLevelOneMarkup({
+        config,
+        currentWave,
+        totalWaves,
+        visibleWave,
+        hintsRemaining,
+        scoreDisplay,
+        accuracy,
+        timeDisplay,
+        statusText,
+        phaseMarkup,
+        threatMarkup,
+        legendMarkup,
+        waveTimerPercent,
+        startLabel,
+        briefText,
+        scenarioText,
+        taskText
+    }) {
+        return `
+            ${this.renderHumanPsychologyLabStyles()}
+            ${this.renderSignalInterceptLevelOneStyles()}
+            <div class="l1-shell">
+                <canvas class="l1-matrix" id="l1-matrix" aria-hidden="true"></canvas>
+                <div class="l1-crt" aria-hidden="true"></div>
+                <div class="l1-scanline" aria-hidden="true"></div>
+
+                <header class="l1-top-hud">
+                    <div class="l1-hud-logo">
+                        <div class="l1-logo-badge">⬡</div>
+                        <div class="l1-logo-text">SHADOWDEF</div>
+                    </div>
+                    <div class="l1-hud-mission">
+                        <div class="l1-hud-kicker">// LEVEL ${String(this.mission.level || 0).padStart(2, '0')} - NETWORK OPERATIONS</div>
+                        <div class="l1-hud-title">OPERATION<br>SIGNAL INTERCEPT</div>
+                    </div>
+                    <div class="l1-hud-stats">
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Time</div>
+                            <div class="l1-hud-value" id="l1-timer">${timeDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Score</div>
+                            <div class="l1-hud-value l1-hud-value--cyan" id="l1-score">${scoreDisplay}</div>
+                        </div>
+                        <div class="l1-hud-stat">
+                            <div class="l1-hud-label">Wave</div>
+                            <div class="l1-hud-value l1-hud-value--red" id="l1-combo">${visibleWave}/${totalWaves}</div>
+                        </div>
+                        <div class="l1-hud-meter">
+                            <div class="l1-hud-label">Integrity</div>
+                            <div class="l1-hud-track">
+                                <div class="l1-hud-fill" id="l1-xp-fill" style="width:${this.signalIntegrity}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="l1-hud-actions">
+                        <button class="l1-hud-btn" data-action="pause" type="button">[ PAUSE ]</button>
+                        <button class="l1-hud-btn" data-action="back-to-levels" type="button">[ BACK ]</button>
+                    </div>
+                </header>
+
+                <div class="l1-mission-strip">
+                    ${phaseMarkup}
+                    <div class="l1-mission-status" id="signal-mission-status">
+                        <span class="l1-mission-status__dot"></span>
+                        ${statusText}
+                    </div>
+                </div>
+
+                <div class="l1-body">
+                    <section class="l1-arena">
+                        <div class="l1-arena-header">
+                            <div>
+                                <div class="l1-arena-title">SIGNAL <span>INTERCEPT</span></div>
+                                <div class="l1-arena-sub" id="signal-wave-info">${currentWave ? `${visibleWave} / ${totalWaves} - ${currentWave.name}` : `1 / ${totalWaves} - Briefing`}</div>
+                            </div>
+                            <div class="l1-arena-hint" id="signal-header-hint">
+                                <b>Status:</b> ${statusText}<br>
+                                ${currentWave?.subtitle || 'Prepare to intercept the incoming traffic wave.'}
+                            </div>
+                        </div>
+
+                        <div class="l1-arena-scroll">
+                            <div class="l1-feedback guess-feedback" id="guess-feedback">Scenario: ${scenarioText}<br>Task: ${taskText}</div>
+                            <div class="sigl-brief-grid">
+                                <div class="l1-feedback sigl-card">
+                                    <div class="sigl-kicker">Command Brief</div>
+                                    <div class="sigl-copy" id="signal-brief-copy">${briefText}</div>
+                                </div>
+                                <div class="l1-feedback sigl-card">
+                                    <div class="sigl-kicker">Traffic Legend</div>
+                                    <div class="sigl-legend-grid">${legendMarkup}</div>
+                                </div>
+                            </div>
+                            <div class="l1-feedback sigl-arena-card">
+                                <div class="sigl-panel-head">
+                                    <div>
+                                        <div class="sigl-kicker">Intercept Grid</div>
+                                        <div class="sigl-panel-title" id="signal-intel-title">${currentWave?.subtitle || 'SIGNAL INTERCEPT'}</div>
+                                    </div>
+                                    <div class="sigl-panel-copy" id="signal-intel-copy">${briefText}</div>
+                                </div>
+                                <div class="sigl-arena-stage">
+                                    <div class="sig-arena" id="signal-arena">
+                                        <canvas class="sig-canvas" id="signal-canvas"></canvas>
+                                        <div class="sig-sweep"></div>
+                                        <div class="sig-atk-node">
+                                            <div class="sig-atk-box"><div style="font-size:22px;">💀</div></div>
+                                            <div class="sig-node-label">${config.attacker.label}</div>
+                                        </div>
+                                        <div class="sig-server-node">
+                                            <div class="sig-server-box" id="signal-server-box">
+                                                <div class="sig-led"></div>
+                                                <div class="sig-led-ok"></div>
+                                                <div style="font-size:18px;margin:2px 0;">🖥</div>
+                                                <div class="sig-led"></div>
+                                            </div>
+                                            <div class="sig-node-label" id="signal-server-hp">HP: ${this.signalIntegrity}%</div>
+                                        </div>
+                                        <div class="sig-lane-labels" id="signal-lane-labels"></div>
+                                        <div class="sig-wave-overlay ${this.signalAnnouncementVisible && !this.signalWaveRunning && !this.signalGameOver ? 'show' : ''}" id="signal-wave-announce">
+                                            <div class="sig-wave-card">
+                                                <div class="sig-overlay-sub">// INCOMING WAVE</div>
+                                                <div class="sig-overlay-title" id="signal-wave-title">${currentWave?.name || 'WAVE 1'}</div>
+                                                <div class="sig-overlay-subtitle" id="signal-wave-subtitle">${currentWave?.subtitle || 'SIGNAL INTERCEPT'}</div>
+                                                <div class="sig-overlay-desc" id="signal-wave-desc">${briefText}</div>
+                                                <div class="sig-overlay-threats" id="signal-wave-threats">Threats: <span>${currentWave?.threats || 'Unknown'}</span> | Friendly: <strong>${currentWave?.friendly || 'Unknown'}</strong></div>
+                                                <button class="sig-wave-btn" id="signal-overlay-start-wave" type="button" ${this.signalWaveRunning || this.signalGameOver ? 'disabled' : ''}>▶ INTERCEPT</button>
+                                                <div class="sig-overlay-note" id="signal-overlay-note">AUTO DEPLOY IN 2.4S</div>
+                                            </div>
+                                        </div>
+                                        <div class="sig-outcome-overlay" id="signal-outcome-overlay">
+                                            <div class="sig-outcome-card" id="signal-outcome-card">
+                                                <div class="sig-overlay-sub" id="signal-outcome-sub">// RESULT</div>
+                                                <div class="sig-overlay-title" id="signal-outcome-title">NETWORK SECURED</div>
+                                                <div class="sig-outcome-score" id="signal-outcome-score">0 PTS</div>
+                                                <div class="sig-outcome-body" id="signal-outcome-body"></div>
+                                                <div class="sig-outcome-rows" id="signal-outcome-rows"></div>
+                                            </div>
+                                        </div>
+                                        <div class="sig-combo" id="signal-combo-flash"></div>
+                                        <div class="sig-toast" id="signal-toast"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="l1-submit-dock">
+                            <div class="l1-submit-cluster">
+                                <span class="l1-submit-label">Waves</span>
+                                <div class="l1-flag-slots" id="signal-wave-dots"></div>
+                            </div>
+                            <div class="l1-submit-cluster l1-submit-cluster--summary">
+                                <div class="l1-submit-value" id="ptsPreview">${accuracy}%</div>
+                                <div class="l1-submit-points-label">Accuracy</div>
+                            </div>
+                            <div class="l1-submit-meta">
+                                <div class="l1-attempts" id="attempt-counter">Signal intercept live</div>
+                                <div class="l1-attempts"><span id="signal-dock-status">${statusText}</span></div>
+                            </div>
+                            <button class="l1-btn l1-btn-primary l1-fire-btn" id="signal-start-wave" type="button" ${this.signalWaveRunning || this.signalGameOver ? 'disabled' : ''}>${startLabel}</button>
+                        </div>
+                    </section>
+
+                    <aside class="l1-console">
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">Defense Telemetry</div>
+                            <div class="l1-dial-wrap">
+                                <svg class="l1-dial-svg" viewBox="0 0 140 140" aria-hidden="true">
+                                    <circle class="l1-dial-bg" cx="70" cy="70" r="65"></circle>
+                                    <circle class="l1-dial-ring" cx="70" cy="70" r="65" id="l1-dial-ring"></circle>
+                                </svg>
+                                <div class="l1-dial-inner">
+                                    <div class="l1-dial-num" id="l1-dial-num">${this.signalIntegrity}</div>
+                                    <div class="l1-dial-sub">Integrity</div>
+                                </div>
+                            </div>
+                            <div class="l1-threat-bars" id="signal-threat-bars">${threatMarkup}</div>
+                        </section>
+
+                        <section class="l1-console-panel">
+                            <div class="l1-console-title">Wave Board</div>
+                            <div class="l1-objective-list" id="signal-wave-board"></div>
+                        </section>
+
+                        <section class="l1-console-panel l1-console-panel--fill">
+                            <div class="l1-console-head">
+                                <div class="l1-console-title">Packet Log</div>
+                                <div class="l1-console-chip">HINTS <span id="l1-hints-remaining">${hintsRemaining}</span>/3</div>
+                            </div>
+                            <div class="l1-risk-row">
+                                <span>Wave Timer</span>
+                                <div class="l1-risk-track">
+                                    <div class="l1-risk-fill" id="signal-timer-fill" style="width:${waveTimerPercent}%;"></div>
+                                </div>
+                                <span class="l1-risk-text" id="signal-wave-timer">${timeDisplay}</span>
+                            </div>
+                            <div class="l1-hint-stack" id="password-hints">
+                                <div class="l1-hint" id="signal-threat-summary">Threats: ${currentWave?.threats || 'Unknown'}</div>
+                                <div class="l1-hint" id="signal-friendly-summary">Friendly: ${currentWave?.friendly || 'Unknown'}</div>
+                            </div>
+                            <div class="l1-log-body sig-feed" id="signal-packet-feed"></div>
+                        </section>
+                    </aside>
+                </div>
+            </div>`;
+    }
+
+    renderSignalInterceptSimulationPuzzle(container) {
+        this.visualizerElement = container;
+        const config = this.getSignalInterceptConfig();
+        const waves = config.waves;
+        const currentWave = this.getSignalCurrentWave();
+        const totalWaves = Math.max(1, waves.length);
+        const visibleWave = this.signalGameOver ? totalWaves : Math.min(totalWaves, this.signalCurrentWaveIndex + 1);
+        const hintsRemaining = Math.max(0, CONFIG.HINTS.MAX_HINTS_PER_MISSION - this.gameScreen.game.score.hintsUsed);
+        const scoreDisplay = String(this.gameScreen?.game?.score?.getScore?.() || 0).padStart(3, '0');
+        const accuracy = this.signalBlocked + this.signalMissed > 0
+            ? Math.round((this.signalBlocked / (this.signalBlocked + this.signalMissed)) * 100)
+            : 100;
+        const timeDisplay = this.signalWaveRunning
+            ? `${String(Math.max(0, this.signalWaveSeconds)).padStart(2, '0')}S`
+            : currentWave
+                ? `${String(Math.max(0, Number(currentWave.duration || 0))).padStart(2, '0')}S`
+                : '--';
+        const statusText = this.signalGameOver
+            ? (this.signalIntegrity > 0 ? 'NETWORK SECURED' : 'SERVER BREACHED')
+            : this.signalWaveRunning
+                ? 'INTRUSION ACTIVE'
+                : 'WAVE BRIEFING';
+        const phaseShortLabels = ['RECON', 'EXFIL', 'C2 STORM', 'RANSOM', 'APT FINAL'];
+        const legendMarkup = config.legendOrder
+            .map(key => ({ key, type: config.packetTypes[key] }))
+            .filter(item => item.type)
+            .map(item => `
+                <div class="sigl-legend-item">
+                    <span class="sigl-legend-dot" style="background:${item.type.color};"></span>
+                    <span class="sigl-legend-name">${item.type.label}</span>
+                    <strong>${item.type.malicious ? 'BLOCK' : 'ALLOW'}</strong>
+                </div>`).join('');
+        const threatBars = [
+            { label: 'Blocked', value: Math.min(100, this.signalBlocked * 10), tone: 'safe' },
+            { label: 'Missed', value: Math.min(100, this.signalMissed * 14), tone: 'danger' },
+            { label: 'False +', value: Math.min(100, this.signalFalsePositives * 14), tone: 'warn' },
+            { label: 'Accuracy', value: accuracy, tone: accuracy >= 80 ? 'safe' : accuracy >= 60 ? 'warn' : 'danger' }
+        ];
+        const threatMarkup = threatBars.map(bar => `
+            <div class="l1-threat-row">
+                <div class="l1-threat-top">
+                    <span>${bar.label}</span>
+                    <span class="tone-${bar.tone}">${bar.value}%</span>
+                </div>
+                <div class="l1-threat-track">
+                    <div class="l1-threat-fill tone-${bar.tone}" style="width:${bar.value}%"></div>
+                </div>
+            </div>`).join('');
+        const phaseMarkup = waves.map((wave, index) => `
+            ${index > 0 ? '<div class="l1-phase-sep">//</div>' : ''}
+            <div class="l1-phase ${!this.signalGameOver && index === this.signalCurrentWaveIndex ? 'active' : ''} ${(this.signalGameOver ? this.signalIntegrity > 0 || index < this.signalCurrentWaveIndex : index < this.signalCurrentWaveIndex) ? 'done' : ''}">
+                <span class="l1-phase__dot"></span>
+                <strong>${String(index + 1).padStart(2, '0')}</strong>${phaseShortLabels[index] || String(wave.phaseLabel || wave.subtitle || wave.name || `WAVE ${index + 1}`).toUpperCase()}
+            </div>`).join('');
+        const waveTimerPercent = currentWave && Number(currentWave.duration || 0) > 0
+            ? Math.max(0, Math.min(100, ((this.signalWaveRunning ? this.signalWaveSeconds : Number(currentWave.duration || 0)) / Number(currentWave.duration || 1)) * 100))
+            : 0;
+        const startLabel = this.signalWaveRunning ? '[ INTERCEPT LIVE ]' : '[ ARM INTERCEPT ]';
+        const briefText = currentWave?.desc || this.mission.userTask || 'Intercept hostile packets and protect the server core.';
+        const scenarioText = this.mission.scenario || 'Hostile traffic is moving across open lanes toward the corporate server.';
+        const taskText = this.mission.userTask || 'Block malicious packets and allow legitimate traffic to pass.';
+
+        container.innerHTML = this.renderSignalInterceptLevelOneMarkup({
+            config,
+            currentWave,
+            totalWaves,
+            visibleWave,
+            hintsRemaining,
+            scoreDisplay,
+            accuracy,
+            timeDisplay,
+            statusText,
+            phaseMarkup,
+            threatMarkup,
+            legendMarkup,
+            waveTimerPercent,
+            startLabel,
+            briefText,
+            scenarioText,
+            taskText
+        });
+
+        this.setupSignalInterceptEventListeners();
+        this.renderSignalLaneLabels();
+        this.renderSignalThreatIntel();
+        this.updateSignalInterceptUI();
+        this.startSignalInterceptAnimation();
+        this.startHumanLabMatrixAnimation();
+        this.appendSignalPacketLog('INFO', 'Signal intercept grid online. Review the incoming wave brief.', 'blocked');
+        this.scheduleSignalWaveAutoStart();
+    }
+
+    setupSignalInterceptEventListeners() {
+        this.signalCanvas = document.getElementById('signal-canvas');
+        this.signalCtx = this.signalCanvas?.getContext('2d') || null;
+        this.signalCanvas?.addEventListener('click', event => this.handleSignalInterceptCanvasClick(event));
+        document.getElementById('signal-start-wave')?.addEventListener('click', () => this.startSignalWave());
+        document.getElementById('signal-overlay-start-wave')?.addEventListener('click', () => this.startSignalWave());
+
+        if (!this.signalResizeHandler) {
+            this.signalResizeHandler = () => {
+                this.resizeSignalInterceptCanvas();
+                this.renderSignalLaneLabels();
+            };
+            window.addEventListener('resize', this.signalResizeHandler);
+        }
+
+        this.resizeSignalInterceptCanvas();
+    }
+
+    resizeSignalInterceptCanvas() {
+        const arena = document.getElementById('signal-arena');
+        if (!arena || !this.signalCanvas) return;
+        this.signalCanvas.width = arena.clientWidth;
+        this.signalCanvas.height = arena.clientHeight;
+    }
+
+    renderSignalLaneLabels() {
+        const labels = document.getElementById('signal-lane-labels');
+        if (!labels) return;
+        const config = this.getSignalInterceptConfig();
+        labels.innerHTML = '';
+        config.laneLabels.forEach((label, index) => {
+            const item = document.createElement('div');
+            item.className = 'sig-lane-label';
+            item.style.top = `${this.getSignalLaneY(index) - 6}px`;
+            item.textContent = label;
+            labels.appendChild(item);
+        });
+    }
+
+    getSignalLaneY(laneIndex) {
+        const laneCount = Math.max(1, this.getSignalInterceptConfig().laneLabels.length);
+        const canvasHeight = this.signalCanvas?.height || 600;
+        const pad = 80;
+        if (laneCount === 1) return canvasHeight / 2;
+        return pad + (laneIndex / (laneCount - 1)) * Math.max(0, canvasHeight - pad * 2);
+    }
+
+    renderSignalThreatIntel() {
+        const currentWave = this.getSignalCurrentWave();
+        const list = document.getElementById('signal-wave-board') || document.getElementById('signal-threat-list');
+        if (!list) return;
+        if (!currentWave) {
+            list.innerHTML = `
+                <div class="l1-objective done">
+                    <div class="l1-objective__icon">OK</div>
+                    <div class="l1-objective__text">${this.signalIntegrity > 0 ? 'All traffic waves were contained.' : 'Threat traffic reached the server core.'}</div>
+                </div>`;
+            return;
+        }
+        const packetTypes = this.getSignalInterceptConfig().packetTypes;
+        const types = Array.from(new Set(Array.isArray(currentWave.pool) ? currentWave.pool : []))
+            .map(key => ({ key, config: packetTypes[key] }))
+            .filter(item => item.config);
+
+        list.innerHTML = types.map(item => `
+            <div class="l1-objective ${item.config.malicious ? 'on' : ''}">
+                <div class="l1-objective__icon" style="border-color:${item.config.color};color:${item.config.color};">${item.config.malicious ? '!' : '>'}</div>
+                <div class="l1-objective__text">${item.config.label} ${item.config.malicious ? 'must be blocked' : 'should be allowed'}.</div>
+            </div>`).join('');
+    }
+
+    startSignalInterceptAnimation() {
+        if (this.signalAnimationFrameId) cancelAnimationFrame(this.signalAnimationFrameId);
+        this.signalLastFrameTime = 0;
+        const frame = timestamp => {
+            if (this.interactionMode !== 'signalInterceptSimulation' || this.isComplete) return;
+            this.signalInterceptFrame(timestamp);
+            this.signalAnimationFrameId = requestAnimationFrame(frame);
+        };
+        this.signalAnimationFrameId = requestAnimationFrame(frame);
+    }
+
+    signalInterceptFrame(timestamp) {
+        if (!this.signalCtx || !this.signalCanvas) return;
+
+        const dt = this.signalLastFrameTime ? Math.min((timestamp - this.signalLastFrameTime) / 1000, 0.08) : 0;
+        this.signalLastFrameTime = timestamp;
+        this.drawSignalArenaGrid();
+
+        if (this.signalWaveRunning && !this.gameScreen?.isPaused) {
+            const currentWave = this.getSignalCurrentWave();
+            if (currentWave) {
+                this.signalSpawnAccumulatorMs += dt * 1000;
+                while (this.signalSpawnAccumulatorMs >= Number(currentWave.spawnRateMs || currentWave.spawnRate || 1800)) {
+                    this.signalSpawnAccumulatorMs -= Number(currentWave.spawnRateMs || currentWave.spawnRate || 1800);
+                    this.signalPackets.push(this.createSignalPacket(currentWave));
+                }
+            }
+
+            const targetX = (this.signalCanvas.width || 0) - 95;
+            this.signalPackets.forEach(packet => {
+                if (!packet.alive) return;
+                packet.x += packet.speed;
+                packet.glowPulse += dt * 3;
+                if (packet.x < targetX) return;
+
+                packet.alive = false;
+                if (packet.type.malicious) {
+                    this.signalMissed++;
+                    this.signalCombo = 0;
+                    this.signalIntegrity = Math.max(0, this.signalIntegrity - Number(packet.type.damage || 0));
+                    this.flashSignalServer(false);
+                    this.appendSignalPacketLog('MISSED', `${packet.type.label} hit the server.`, 'missed');
+                    this.showSignalToast(`Missed ${packet.type.label}! Integrity -${packet.type.damage}%`, 'bad');
+                    this.updateSignalInterceptUI();
+                    if (this.signalIntegrity <= 0) this.finishSignalIntercept(false);
+                } else {
+                    this.flashSignalServer(true);
+                }
+            });
+            this.signalPackets = this.signalPackets.filter(packet => packet.alive);
+        }
+
+        this.signalPackets.forEach(packet => this.drawSignalPacket(packet));
+        this.drawSignalClickEffects(dt);
+    }
+
+    drawSignalArenaGrid() {
+        const ctx = this.signalCtx;
+        const canvas = this.signalCanvas;
+        if (!ctx || !canvas) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const laneCount = Math.max(1, this.getSignalInterceptConfig().laneLabels.length);
+        for (let lane = 0; lane < laneCount; lane++) {
+            const y = this.getSignalLaneY(lane);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0,255,231,0.04)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 8]);
+            ctx.beginPath();
+            ctx.moveTo(68, y);
+            ctx.lineTo(canvas.width - 95, y);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    createSignalPacket(currentWave) {
+        const config = this.getSignalInterceptConfig();
+        const pool = Array.isArray(currentWave?.pool) ? currentWave.pool : [];
+        const typeKey = pool[Math.floor(Math.random() * pool.length)];
+        const type = config.packetTypes[typeKey];
+        const lane = Math.floor(Math.random() * Math.max(1, config.laneLabels.length));
+        const sizeMap = { ransom: 18, apt: 20 };
+
+        return {
+            id: this.signalPacketId++,
+            typeKey,
+            type,
+            x: 68,
+            y: this.getSignalLaneY(lane),
+            speed: Number(currentWave?.speed || 2) * (0.85 + Math.random() * 0.3),
+            size: sizeMap[typeKey] || 14,
+            lane,
+            alive: true,
+            clicked: false,
+            opacity: 1,
+            glowPulse: Math.random() * Math.PI * 2
+        };
+    }
+
+    drawSignalPacket(packet) {
+        const ctx = this.signalCtx;
+        if (!ctx || !packet?.alive || !packet.type) return;
+        const { x, y, size } = packet;
+
+        ctx.save();
+        ctx.globalAlpha = packet.opacity;
+        const pulse = (Math.sin(packet.glowPulse) + 1) * 0.5;
+        const glowSize = size * 1.8 + pulse * size * 0.5;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowSize);
+        gradient.addColorStop(0, packet.type.glow);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = packet.type.color;
+        ctx.strokeStyle = packet.type.color;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = packet.type.color;
+        ctx.shadowBlur = 12;
+
+        if (packet.type.shape === 'diamond') {
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size * 0.7, y);
+            ctx.lineTo(x, y + size);
+            ctx.lineTo(x - size * 0.7, y);
+            ctx.closePath();
+            ctx.fill();
+        } else if (packet.type.shape === 'hex') {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - Math.PI / 6;
+                const px = x + size * Math.cos(angle);
+                const py = y + size * Math.sin(angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else if (packet.type.shape === 'tri') {
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size * 0.87, y + size * 0.5);
+            ctx.lineTo(x - size * 0.87, y + size * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        } else if (packet.type.shape === 'star') {
+            ctx.beginPath();
+            for (let i = 0; i < 10; i++) {
+                const radius = i % 2 === 0 ? size : size * 0.45;
+                const angle = (Math.PI / 5) * i - Math.PI / 2;
+                const px = x + radius * Math.cos(angle);
+                const py = y + radius * Math.sin(angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else if (packet.type.shape === 'skull') {
+            ctx.beginPath();
+            ctx.arc(x, y - 1, size * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(x - size * 0.5, y + size * 0.35, size, size * 0.4);
+        } else {
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.78)';
+        ctx.font = "7px 'Share Tech Mono', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText(packet.typeKey.toUpperCase(), x, y + size + 10);
+        ctx.restore();
+    }
+
+    drawSignalClickEffects(dt) {
+        const ctx = this.signalCtx;
+        if (!ctx) return;
+
+        this.signalClickEffects = this.signalClickEffects.filter(effect => {
+            effect.life -= dt * 1.8;
+            effect.y += effect.vy;
+            if (effect.life <= 0) return false;
+            ctx.save();
+            ctx.globalAlpha = effect.life;
+            ctx.fillStyle = effect.color;
+            ctx.font = "bold 11px 'Share Tech Mono', monospace";
+            ctx.textAlign = 'center';
+            ctx.shadowColor = effect.color;
+            ctx.shadowBlur = 10;
+            ctx.fillText(effect.text, effect.x, effect.y);
+            ctx.restore();
+            return true;
+        });
+    }
+
+    handleSignalInterceptCanvasClick(event) {
+        if (!this.signalWaveRunning || this.gameScreen?.isPaused || this.isComplete || !this.signalCanvas) return;
+
+        const rect = this.signalCanvas.getBoundingClientRect();
+        const mx = event.clientX - rect.left;
+        const my = event.clientY - rect.top;
+        const packet = this.signalPackets.find(item =>
+            item.alive && !item.clicked && Math.hypot(mx - item.x, my - item.y) < item.size * 2.5
+        );
+        if (!packet) return;
+
+        packet.clicked = true;
+        packet.alive = false;
+        if (packet.type.malicious) {
+            this.signalBlocked++;
+            this.signalCombo++;
+            if (this.signalCombo > this.signalMaxCombo) this.signalMaxCombo = this.signalCombo;
+            const bonus = this.signalCombo >= 5 ? Number(packet.type.points || 0) * 2 : Number(packet.type.points || 0);
+            this.adjustSignalInterceptScore(bonus, 'blocked');
+            this.pushSignalClickEffect(packet.x, packet.y, '#00e676', `+${bonus}${this.signalCombo >= 5 ? ' COMBO' : ''}`);
+            if (this.signalCombo >= 5) this.showSignalCombo(`${this.signalCombo}x COMBO!`, '#00e676');
+            else if (this.signalCombo === 3) this.showSignalCombo('3x STREAK!', '#ffd600');
+            this.appendSignalPacketLog('BLOCKED', `${packet.type.label} intercepted.`, 'blocked');
+            this.showSignalToast(`Intercepted ${packet.type.label} (+${bonus})`, 'good');
+            this.audio.playButtonClick();
+        } else {
+            this.signalCombo = 0;
+            this.signalFalsePositives++;
+            this.signalIntegrity = Math.max(0, this.signalIntegrity - Number(packet.type.damage || 0));
+            this.pushSignalClickEffect(packet.x, packet.y, '#c060ff', `FALSE + (-${packet.type.damage})`);
+            this.appendSignalPacketLog('FALSE +', `${packet.type.label} was legitimate traffic.`, 'false');
+            this.showSignalToast(`False positive on ${packet.type.label}. Integrity -${packet.type.damage}%`, 'bad');
+            this.audio.playFailure();
+            if (this.signalIntegrity <= 0) {
+                this.updateSignalInterceptUI();
+                this.finishSignalIntercept(false);
+                return;
+            }
+        }
+
+        this.updateSignalInterceptUI();
+    }
+
+    pushSignalClickEffect(x, y, color, text) {
+        this.signalClickEffects.push({ x, y, color, text, life: 1, vy: -1.5 });
+    }
+
+    showSignalCombo(text, color) {
+        const el = document.getElementById('signal-combo-flash');
+        if (!el) return;
+        el.textContent = text;
+        el.style.color = color;
+        el.style.textShadow = `0 0 20px ${color}`;
+        el.style.opacity = '1';
+        el.style.transition = 'opacity .1s';
+        setTimeout(() => {
+            el.style.transition = 'opacity .8s';
+            el.style.opacity = '0';
+        }, 600);
+    }
+
+    flashSignalServer(ok) {
+        const box = document.getElementById('signal-server-box');
+        if (!box) return;
+        box.className = `sig-server-box ${ok ? 'ok' : 'hit'}`;
+        if (this.signalServerFlashTimerId) clearTimeout(this.signalServerFlashTimerId);
+        this.signalServerFlashTimerId = setTimeout(() => {
+            this.signalServerFlashTimerId = null;
+            box.className = 'sig-server-box';
+        }, 320);
+    }
+
+    updateSignalInterceptUI() {
+        const config = this.getSignalInterceptConfig();
+        const waves = config.waves;
+        const currentWave = this.getSignalCurrentWave();
+        const total = this.signalBlocked + this.signalMissed;
+        const accuracy = total > 0 ? Math.round((this.signalBlocked / total) * 100) : 100;
+        const totalWaves = Math.max(1, waves.length);
+        const visibleWave = this.signalGameOver ? totalWaves : Math.min(totalWaves, this.signalCurrentWaveIndex + 1);
+        const statusText = this.signalGameOver
+            ? (this.signalIntegrity > 0 ? 'NETWORK SECURED' : 'SERVER BREACHED')
+            : this.signalWaveRunning
+                ? 'INTRUSION ACTIVE'
+                : 'WAVE BRIEFING';
+        const timerText = this.signalWaveRunning
+            ? `${String(Math.max(0, this.signalWaveSeconds)).padStart(2, '0')}S`
+            : this.signalGameOver
+                ? '00S'
+                : `${String(Math.max(0, Number(currentWave?.duration || this.signalWaveSeconds || 0))).padStart(2, '0')}S`;
+        const waveTimerPercent = currentWave && Number(currentWave.duration || 0) > 0
+            ? Math.max(0, Math.min(100, ((this.signalWaveRunning ? this.signalWaveSeconds : Number(currentWave.duration || 0)) / Number(currentWave.duration || 1)) * 100))
+            : 0;
+        const threatBars = [
+            { label: 'Blocked', value: Math.min(100, this.signalBlocked * 10), tone: 'safe' },
+            { label: 'Missed', value: Math.min(100, this.signalMissed * 14), tone: 'danger' },
+            { label: 'False +', value: Math.min(100, this.signalFalsePositives * 14), tone: 'warn' },
+            { label: 'Accuracy', value: accuracy, tone: accuracy >= 80 ? 'safe' : accuracy >= 60 ? 'warn' : 'danger' }
+        ];
+        const threatMarkup = threatBars.map(bar => `
+            <div class="l1-threat-row">
+                <div class="l1-threat-top">
+                    <span>${bar.label}</span>
+                    <span class="tone-${bar.tone}">${bar.value}%</span>
+                </div>
+                <div class="l1-threat-track">
+                    <div class="l1-threat-fill tone-${bar.tone}" style="width:${bar.value}%"></div>
+                </div>
+            </div>`).join('');
+        const timerEl = document.getElementById('l1-timer');
+        const waveHud = document.getElementById('l1-combo');
+        const integrityFill = document.getElementById('l1-xp-fill');
+        const dialNum = document.getElementById('l1-dial-num');
+        const dialRing = document.getElementById('l1-dial-ring');
+        const threatPanel = document.getElementById('signal-threat-bars');
+        const ptsPreview = document.getElementById('ptsPreview');
+        const serverHp = document.getElementById('signal-server-hp');
+        const waveTimerEl = document.getElementById('signal-wave-timer');
+        const timerFill = document.getElementById('signal-timer-fill');
+        const intelTitle = document.getElementById('signal-intel-title');
+        const intelCopy = document.getElementById('signal-intel-copy');
+        const waveInfo = document.getElementById('signal-wave-info');
+        const headerHint = document.getElementById('signal-header-hint');
+        const briefCopy = document.getElementById('signal-brief-copy');
+        const dockStatus = document.getElementById('signal-dock-status');
+        const threatSummary = document.getElementById('signal-threat-summary');
+        const friendlySummary = document.getElementById('signal-friendly-summary');
+        const announce = document.getElementById('signal-wave-announce');
+        const waveTitle = document.getElementById('signal-wave-title');
+        const waveSubtitle = document.getElementById('signal-wave-subtitle');
+        const waveDesc = document.getElementById('signal-wave-desc');
+        const waveThreats = document.getElementById('signal-wave-threats');
+        const overlayNote = document.getElementById('signal-overlay-note');
+        const startButton = document.getElementById('signal-start-wave');
+        const overlayStartButton = document.getElementById('signal-overlay-start-wave');
+        const startLabel = this.signalWaveRunning ? '[ INTERCEPT LIVE ]' : '[ ARM INTERCEPT ]';
+
+        if (timerEl) {
+            timerEl.textContent = timerText;
+            timerEl.classList.toggle('danger', this.signalWaveRunning && this.signalWaveSeconds <= 8);
+        }
+        if (waveHud) waveHud.textContent = `${visibleWave}/${totalWaves}`;
+        if (integrityFill) integrityFill.style.width = `${this.signalIntegrity}%`;
+        if (dialNum) {
+            dialNum.textContent = `${this.signalIntegrity}`;
+            dialNum.style.color = this.signalIntegrity > 60 ? '#00ff88' : this.signalIntegrity > 30 ? '#ffcc00' : '#ff3f78';
+        }
+        if (dialRing) {
+            const circumference = 408;
+            dialRing.style.strokeDashoffset = circumference - (circumference * Math.max(0, Math.min(100, this.signalIntegrity))) / 100;
+        }
+        if (threatPanel) threatPanel.innerHTML = threatMarkup;
+        if (ptsPreview) ptsPreview.textContent = `${accuracy}%`;
+        if (serverHp) {
+            serverHp.textContent = `HP: ${this.signalIntegrity}%`;
+            serverHp.style.color = this.signalIntegrity > 60 ? '#00e676' : this.signalIntegrity > 30 ? '#ff9100' : '#ff1744';
+        }
+        if (waveTimerEl) {
+            waveTimerEl.textContent = timerText;
+            waveTimerEl.style.color = this.signalWaveRunning && this.signalWaveSeconds <= 8 ? '#ff3f78' : '';
+        }
+        if (timerFill) timerFill.style.width = `${waveTimerPercent}%`;
+        if (intelTitle) intelTitle.textContent = currentWave?.subtitle || 'SIGNAL INTERCEPT';
+        if (intelCopy) intelCopy.textContent = currentWave?.desc || (this.mission.userTask || '');
+        if (waveInfo) {
+            waveInfo.textContent = this.signalGameOver
+                ? `${totalWaves} / ${totalWaves} - ${this.signalIntegrity > 0 ? 'Operation Complete' : 'Operation Failed'}`
+                : currentWave
+                    ? `${visibleWave} / ${totalWaves} - ${currentWave.name}`
+                    : `${visibleWave} / ${totalWaves} - Briefing`;
+        }
+        if (headerHint) {
+            headerHint.innerHTML = `<b>Status:</b> ${statusText}<br>${currentWave?.subtitle || 'Prepare to intercept the incoming traffic wave.'}`;
+        }
+        if (briefCopy) {
+            briefCopy.textContent = currentWave?.desc || this.mission.userTask || 'Intercept hostile packets and protect the server.';
+        }
+        if (dockStatus) dockStatus.textContent = statusText;
+        if (threatSummary) threatSummary.textContent = `Threats: ${currentWave?.threats || 'Unknown'}`;
+        if (friendlySummary) friendlySummary.textContent = `Friendly: ${currentWave?.friendly || 'Unknown'}`;
+        if (announce) announce.classList.toggle('show', this.signalAnnouncementVisible && !this.signalWaveRunning && !this.signalGameOver);
+        if (waveTitle) waveTitle.textContent = currentWave?.name || `WAVE ${this.signalCurrentWaveIndex + 1}`;
+        if (waveSubtitle) waveSubtitle.textContent = currentWave?.subtitle || 'SIGNAL INTERCEPT';
+        if (waveDesc) waveDesc.textContent = currentWave?.desc || (this.mission.userTask || '');
+        if (waveThreats) {
+            waveThreats.innerHTML = `Threats: <span>${currentWave?.threats || 'Unknown'}</span> | Friendly: <strong>${currentWave?.friendly || 'Unknown'}</strong>`;
+        }
+        if (overlayNote) {
+            overlayNote.textContent = this.signalGameOver
+                ? 'MISSION RESOLVED'
+                : this.signalWaveRunning
+                    ? 'INTERCEPT IN PROGRESS'
+                    : 'AUTO DEPLOY IN 2.4S';
+        }
+        if (startButton) {
+            startButton.disabled = this.signalGameOver || this.signalWaveRunning;
+            startButton.textContent = startLabel;
+        }
+        if (overlayStartButton) {
+            overlayStartButton.disabled = this.signalGameOver || this.signalWaveRunning;
+            overlayStartButton.textContent = this.signalWaveRunning ? 'INTERCEPT LIVE' : '▶ INTERCEPT';
+        }
+
+        const waveDots = document.getElementById('signal-wave-dots');
+        if (waveDots) {
+            waveDots.innerHTML = waves.map((_, index) => {
+                const active = !this.signalGameOver && index === this.signalCurrentWaveIndex;
+                const done = this.signalGameOver ? this.signalIntegrity > 0 || index < this.signalCurrentWaveIndex : index < this.signalCurrentWaveIndex;
+                return `<div class="l1-flag-slot ${done ? 'done' : active ? 'current active' : ''}">${index + 1}</div>`;
+            }).join('');
+        }
+
+        document.querySelectorAll('.l1-phase').forEach((node, index) => {
+            const active = !this.signalGameOver && index === this.signalCurrentWaveIndex;
+            const done = this.signalGameOver ? this.signalIntegrity > 0 || index < this.signalCurrentWaveIndex : index < this.signalCurrentWaveIndex;
+            node.classList.toggle('active', active);
+            node.classList.toggle('done', done);
+        });
+
+        const statusNode = document.getElementById('signal-mission-status');
+        if (statusNode) {
+            statusNode.innerHTML = `<span class="l1-mission-status__dot"></span>${statusText}`;
+        }
+
+        this.renderSignalThreatIntel();
+        this.gameScreen.syncEmbeddedMissionHUD();
+    }
+
+    scheduleSignalWaveAutoStart(delayMs = 2400) {
+        if (this.signalAutoStartTimerId) {
+            clearTimeout(this.signalAutoStartTimerId);
+            this.signalAutoStartTimerId = null;
+        }
+        if (this.signalGameOver || this.signalWaveRunning || !this.signalAnnouncementVisible) return;
+
+        this.signalAutoStartTimerId = setTimeout(() => {
+            this.signalAutoStartTimerId = null;
+            if (this.gameScreen?.isPaused) {
+                this.scheduleSignalWaveAutoStart(1000);
+                return;
+            }
+            if (!this.signalGameOver && !this.signalWaveRunning && this.signalAnnouncementVisible) {
+                this.startSignalWave();
+            }
+        }, delayMs);
+    }
+
+    startSignalWave() {
+        if (this.signalGameOver || this.signalWaveRunning) return;
+        const config = this.getSignalInterceptConfig();
+        const wave = this.getSignalCurrentWave();
+        if (!wave) {
+            this.finishSignalIntercept(true);
+            return;
+        }
+
+        if (this.signalAutoStartTimerId) {
+            clearTimeout(this.signalAutoStartTimerId);
+            this.signalAutoStartTimerId = null;
+        }
+        if (this.signalWaveTimerId) clearInterval(this.signalWaveTimerId);
+        if (this.signalTransitionTimeoutId) {
+            clearTimeout(this.signalTransitionTimeoutId);
+            this.signalTransitionTimeoutId = null;
+        }
+
+        this.signalAnnouncementVisible = false;
+        this.signalWaveRunning = true;
+        this.signalPackets = [];
+        this.signalClickEffects = [];
+        this.signalSpawnAccumulatorMs = 0;
+        this.signalWaveSeconds = Number(wave.duration || 30);
+        this.signalLastFrameTime = 0;
+        this.updateSignalInterceptUI();
+        this.showSignalToast(`${wave.name} engaged. Block hostile traffic and allow the rest.`, 'info');
+        this.audio.playButtonClick();
+
+        this.signalWaveTimerId = setInterval(() => {
+            if (this.isComplete || this.signalGameOver) return;
+            if (this.gameScreen?.isPaused) return;
+
+            this.signalWaveSeconds = Math.max(0, this.signalWaveSeconds - 1);
+            this.updateSignalInterceptUI();
+            if (this.signalWaveSeconds > 0) return;
+
+            clearInterval(this.signalWaveTimerId);
+            this.signalWaveTimerId = null;
+            this.signalWaveRunning = false;
+            this.signalPackets = [];
+            const waveBonus = this.signalIntegrity >= 80
+                ? config.scoring.waveEndHigh
+                : this.signalIntegrity >= 50
+                    ? config.scoring.waveEndMid
+                    : config.scoring.waveEndLow;
+            this.adjustSignalInterceptScore(waveBonus, 'wave');
+            this.appendSignalPacketLog('WAVE CLEAR', `${wave.name} stabilized. +${waveBonus} pts.`, 'blocked');
+
+            this.signalTransitionTimeoutId = setTimeout(() => {
+                this.signalTransitionTimeoutId = null;
+                if (this.isComplete) return;
+                this.signalCurrentWaveIndex++;
+                if (this.signalCurrentWaveIndex >= config.waves.length) {
+                    this.finishSignalIntercept(true);
+                    return;
+                }
+                this.signalAnnouncementVisible = true;
+                this.signalWaveSeconds = Number(config.waves[this.signalCurrentWaveIndex]?.duration || 0);
+                this.updateSignalInterceptUI();
+                this.scheduleSignalWaveAutoStart();
+            }, config.waveTransitionDelayMs);
+        }, 1000);
+    }
+
+    appendSignalPacketLog(action, message, tone = 'blocked') {
+        const feed = document.getElementById('signal-packet-feed');
+        if (!feed) return;
+        const now = new Date();
+        const timestamp = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        const row = document.createElement('div');
+        row.className = `sig-feed-item ${tone}`;
+        row.innerHTML = `<div class="sig-feed-time">${timestamp}</div><div><span class="sig-feed-type">[${action}]</span> ${message}</div>`;
+        feed.prepend(row);
+        while (feed.children.length > 24) {
+            feed.removeChild(feed.lastChild);
+        }
+    }
+
+    showSignalToast(message, tone = 'info') {
+        const toast = document.getElementById('signal-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.className = `sig-toast show ${tone}`;
+        if (this.signalToastTimerId) clearTimeout(this.signalToastTimerId);
+        this.signalToastTimerId = setTimeout(() => {
+            this.signalToastTimerId = null;
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    adjustSignalInterceptScore(points, bucket = null) {
+        const value = Number(points || 0);
+        if (!value) return;
+        if (bucket && Object.prototype.hasOwnProperty.call(this.signalScoreBreakdown, bucket)) {
+            this.signalScoreBreakdown[bucket] += value;
+        }
+        if (value > 0) this.gameScreen.game.score.addPoints(value);
+        else this.gameScreen.game.score.subtractPoints(Math.abs(value));
+        this.gameScreen.updateScore();
+    }
+
+    finishSignalIntercept(success) {
+        if (this.isComplete) return;
+        this.isComplete = true;
+        this.signalGameOver = true;
+        this.signalWaveRunning = false;
+        this.signalAnnouncementVisible = false;
+        this.stopSignalInterceptSimulation();
+
+        const config = this.getSignalInterceptConfig();
+        const totalThreats = this.signalBlocked + this.signalMissed;
+        const accuracy = totalThreats > 0 ? Math.round((this.signalBlocked / totalThreats) * 100) : 100;
+        const integrityBonus = success ? this.signalIntegrity * config.scoring.integrityMultiplier : 0;
+        const accuracyBonus = success
+            ? (accuracy >= 90 ? config.scoring.accuracy90 : accuracy >= 75 ? config.scoring.accuracy75 : config.scoring.accuracyFallback)
+            : 0;
+        const comboBonus = success ? this.signalMaxCombo * config.scoring.comboMultiplier : 0;
+        const missedPenalty = this.signalMissed * config.scoring.missedPenalty;
+        const falsePenalty = this.signalFalsePositives * config.scoring.falsePositivePenalty;
+
+        if (success) {
+            this.adjustSignalInterceptScore(integrityBonus, 'integrity');
+            this.adjustSignalInterceptScore(accuracyBonus, 'accuracy');
+            this.adjustSignalInterceptScore(comboBonus, 'combo');
+        }
+
+        const missionTotal = Object.values(this.signalScoreBreakdown).reduce((sum, value) => sum + Number(value || 0), 0);
+        const overlay = document.getElementById('signal-outcome-overlay');
+        const card = document.getElementById('signal-outcome-card');
+        const title = document.getElementById('signal-outcome-title');
+        const score = document.getElementById('signal-outcome-score');
+        const body = document.getElementById('signal-outcome-body');
+        const rows = document.getElementById('signal-outcome-rows');
+
+        if (overlay && card && title && score && body && rows) {
+            card.classList.toggle('fail', !success);
+            title.textContent = success ? 'NETWORK SECURED' : 'SERVER BREACHED';
+            score.textContent = `${missionTotal.toLocaleString()} PTS`;
+            body.innerHTML = success
+                ? `Signal intercept complete. Integrity held at <span style="color:#00e676;">${this.signalIntegrity}%</span> with <span style="color:#00ffe7;">${accuracy}%</span> interception accuracy.`
+                : `Server integrity collapsed under sustained attack pressure. Blocked: ${this.signalBlocked} · Missed: ${this.signalMissed} · False positives: ${this.signalFalsePositives}.`;
+            rows.innerHTML = success
+                ? `
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Packets Blocked</span><span class="sig-outcome-value">+${this.signalScoreBreakdown.blocked}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Wave Control Bonus</span><span class="sig-outcome-value">+${this.signalScoreBreakdown.wave}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Integrity Bonus</span><span class="sig-outcome-value">+${integrityBonus}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Accuracy Bonus</span><span class="sig-outcome-value">+${accuracyBonus}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Max Combo</span><span class="sig-outcome-value">+${comboBonus}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Missed Packets</span><span class="sig-outcome-value neg">-${missedPenalty}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">False Positives</span><span class="sig-outcome-value neg">-${falsePenalty}</span></div>`
+                : `
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Packets Blocked</span><span class="sig-outcome-value">+${this.signalScoreBreakdown.blocked}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">Missed Packets</span><span class="sig-outcome-value neg">-${missedPenalty}</span></div>
+                    <div class="sig-outcome-row"><span class="sig-outcome-key">False Positives</span><span class="sig-outcome-value neg">-${falsePenalty}</span></div>`;
+            overlay.classList.add('show');
+        }
+
+        this.appendSignalPacketLog(success ? 'SECURED' : 'BREACHED', success ? 'All five waves were contained.' : 'Hostile traffic reached the core server.', success ? 'blocked' : 'missed');
+        this.audio[success ? 'playSuccess' : 'playFailure']();
+        this.gameScreen.ui.flashScreen(success ? 'rgba(0,255,65,0.18)' : 'rgba(255,0,110,0.18)', 300);
+        this.gameScreen.ui.showNotification(success ? (this.mission.successFeedback || 'Signal intercept complete.') : (this.mission.failureFeedback || 'Server breached.'), success ? 'success' : 'error');
+        this.signalCompletionTimerId = setTimeout(() => {
+            this.signalCompletionTimerId = null;
+            this.gameScreen.completePuzzle(success);
+        }, config.completionDelayMs);
+    }
+
+    stopSignalInterceptSimulation() {
+        if (this.signalAutoStartTimerId) {
+            clearTimeout(this.signalAutoStartTimerId);
+            this.signalAutoStartTimerId = null;
+        }
+        if (this.signalWaveTimerId) {
+            clearInterval(this.signalWaveTimerId);
+            this.signalWaveTimerId = null;
+        }
+        if (this.signalTransitionTimeoutId) {
+            clearTimeout(this.signalTransitionTimeoutId);
+            this.signalTransitionTimeoutId = null;
+        }
+        if (this.signalCompletionTimerId) {
+            clearTimeout(this.signalCompletionTimerId);
+            this.signalCompletionTimerId = null;
+        }
+        if (this.signalAnimationFrameId) {
+            cancelAnimationFrame(this.signalAnimationFrameId);
+            this.signalAnimationFrameId = null;
+        }
+        if (this.signalToastTimerId) {
+            clearTimeout(this.signalToastTimerId);
+            this.signalToastTimerId = null;
+        }
+        if (this.signalServerFlashTimerId) {
+            clearTimeout(this.signalServerFlashTimerId);
+            this.signalServerFlashTimerId = null;
+        }
+        if (this.signalResizeHandler) {
+            window.removeEventListener('resize', this.signalResizeHandler);
+            this.signalResizeHandler = null;
+        }
+    }
+
+    syncEmbeddedMissionHUD() {
+        if (this.interactionMode === 'liveDefenseSimulation') {
+            const waves = this.getLiveDefenseWaves();
+            const totalWaves = Math.max(1, waves.length);
+            const visibleWave = Math.min(totalWaves, Math.max(1, this.liveWaveIndex + 1));
+            const timerEl = document.getElementById('l1-timer');
+            const timerLabel = document.getElementById('lab-shared-time-label');
+            const auxLabel = document.getElementById('lab-shared-aux-label');
+            const auxValue = document.getElementById('l1-ai-progress');
+
+            if (timerLabel) timerLabel.textContent = 'Timer';
+            if (timerEl) {
+                timerEl.textContent = `${Math.max(0, Math.floor(this.liveRemainingTime))}S`;
+                timerEl.classList.toggle('danger', this.liveRemainingTime <= 10);
+            }
+            if (auxLabel) auxLabel.textContent = 'Wave';
+            if (auxValue) {
+                auxValue.textContent = `${visibleWave}/${totalWaves}`;
+                auxValue.className = 'lab-shared-value lab-shared-value--safe';
+                auxValue.style.color = '';
+            }
+            return true;
+        }
+
+        if (this.interactionMode === 'threatHuntSimulation') {
+            const totalTime = Math.max(1, Number(this.puzzleData?.timeLimit || this.mission?.puzzle?.timeLimit || 180));
+            const rawRemaining = this.gameScreen?.timer?.getRemaining?.();
+            const remaining = Number.isFinite(rawRemaining) ? Math.max(0, Math.floor(rawRemaining)) : totalTime;
+            const elapsedPercent = Math.min(100, Math.max(0, Math.round(((totalTime - remaining) / totalTime) * 100)));
+            const timerEl = document.getElementById('l1-timer');
+            const timerLabel = document.getElementById('lab-shared-time-label');
+            const auxLabel = document.getElementById('lab-shared-aux-label');
+            const auxValue = document.getElementById('l1-ai-progress');
+
+            if (timerLabel) timerLabel.textContent = 'Time';
+            if (timerEl) {
+                const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+                const seconds = String(remaining % 60).padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+                timerEl.classList.toggle('danger', remaining <= 30);
+            }
+            if (auxLabel) auxLabel.textContent = 'AI';
+            if (auxValue) {
+                auxValue.textContent = `${elapsedPercent}%`;
+                auxValue.className = 'lab-shared-value lab-shared-value--safe';
+                auxValue.style.color = '#ff4f8b';
+            }
+            return true;
+        }
+
+        if (this.interactionMode === 'signalInterceptSimulation') {
+            const totalWaves = Math.max(1, this.getSignalInterceptConfig().waves.length);
+            const visibleWave = this.signalGameOver ? totalWaves : Math.min(totalWaves, this.signalCurrentWaveIndex + 1);
+            const currentWave = this.getSignalCurrentWave();
+            const timerValue = this.signalWaveRunning
+                ? `${String(Math.max(0, this.signalWaveSeconds)).padStart(2, '0')}S`
+                : this.signalGameOver
+                    ? '00S'
+                    : `${String(Math.max(0, Number(currentWave?.duration || this.signalWaveSeconds || 0))).padStart(2, '0')}S`;
+            const timerEl = document.getElementById('l1-timer');
+            const waveHud = document.getElementById('l1-combo');
+            const integrityFill = document.getElementById('l1-xp-fill');
+            if (timerEl) {
+                timerEl.textContent = timerValue;
+                timerEl.classList.toggle('danger', this.signalWaveRunning && this.signalWaveSeconds <= 8);
+            }
+            if (waveHud) waveHud.textContent = `${visibleWave}/${totalWaves}`;
+            if (integrityFill) integrityFill.style.width = `${this.signalIntegrity}%`;
+            return true;
+        }
+
+        return false;
+    }
+
     // ─── typing puzzle helpers ────────────────────────────────────────────────
 
     createInputs() {
@@ -7348,7 +9541,10 @@ export class PasswordCrack {
         if (!hintText) { this.gameScreen.ui.showNotification('No more hints available!', 'warning'); return; }
         this.hintsShown++;
 
-        if (['singleChoice','predictionChoice','investigation','inspection','liveDefenseSimulation','threatHuntSimulation','livePatchSimulation','enterpriseArchitectureSimulation'].includes(this.interactionMode)) {
+        if (this.interactionMode === 'threatHuntSimulation') {
+            this.appendThreatLog(`Hint deployed: ${hintText}`, 'warn');
+            this.gameScreen.ui.showNotification(hintText, 'info');
+        } else if (['singleChoice','predictionChoice','investigation','inspection','liveDefenseSimulation','signalInterceptSimulation','livePatchSimulation','enterpriseArchitectureSimulation'].includes(this.interactionMode)) {
             this.gameScreen.ui.showNotification(hintText, 'info');
         } else {
             const hintsContainer = document.getElementById('password-hints');
@@ -7367,6 +9563,9 @@ export class PasswordCrack {
         this.gameScreen.ui.showNotification('Hint revealed!', 'info');
         this.gameScreen.game.score.recordHint();
         this.gameScreen.updateHintsDisplay();
+        if (this.interactionMode === 'threatHuntSimulation') {
+            this.rerenderThreatHuntSimulation({ primarySelector: '__root__' });
+        }
     }
 
     // ─── utility ──────────────────────────────────────────────────────────────
@@ -7376,9 +9575,9 @@ export class PasswordCrack {
     updateAttemptCounter() {
         const counter = document.getElementById('attempt-counter');
         if (!counter) return;
-        const modeLabels = { multiSelect:'Submissions', humanPsychologyLab:'Submissions', breachTriageLab:'Reset waves', singleChoice:'Decisions', predictionChoice:'Decisions', investigation:'Decisions', inspection:'Decisions', liveDefenseSimulation:'Live defense active', threatHuntSimulation:'Investigation actions', livePatchSimulation:'Patch operations', enterpriseArchitectureSimulation:'Certification evaluations' };
+        const modeLabels = { multiSelect:'Submissions', humanPsychologyLab:'Submissions', breachTriageLab:'Reset waves', singleChoice:'Decisions', predictionChoice:'Decisions', investigation:'Decisions', inspection:'Decisions', liveDefenseSimulation:'Live defense active', signalInterceptSimulation:'Signal intercept live', threatHuntSimulation:'Case submissions', livePatchSimulation:'Patch operations', enterpriseArchitectureSimulation:'Certification evaluations' };
         const label = modeLabels[this.interactionMode] || 'Attempts';
-        if (label === 'Live defense active') { counter.innerHTML = 'Live defense active'; return; }
+        if (label === 'Live defense active' || label === 'Signal intercept live') { counter.innerHTML = label; return; }
         if (this.isHumanLabShellMode()) {
             counter.innerHTML = `${label}: <span class="${this.attempts >= this.maxAttempts - 1 ? 'is-hot' : ''}">${this.attempts}</span> / ${this.maxAttempts}`;
             return;
@@ -7390,9 +9589,11 @@ export class PasswordCrack {
 
     destroy() {
         this.clearSaltReuseCompletionTimer();
+        this.clearThreatCompletionTimer();
         this.stopSingleChoiceTimers();
         this.stopPredictionTimer();
         this.stopLiveDefenseSimulation();
+        this.stopSignalInterceptSimulation();
         this.stopHumanLabMatrixAnimation();
         this.inputs.forEach(i => { i.removeEventListener('input', null); i.removeEventListener('keydown', null); i.removeEventListener('keypress', null); i.removeEventListener('paste', null); });
     }
@@ -7435,3 +9636,4 @@ export class PasswordCrack {
         return selected;
     }
 }
+

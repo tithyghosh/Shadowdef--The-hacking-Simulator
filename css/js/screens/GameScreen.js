@@ -98,7 +98,7 @@ export class GameScreen {
 
         const embeddedTimer = document.getElementById('l1-timer');
         if (embeddedTimer) {
-            embeddedTimer.textContent = label;
+            embeddedTimer.textContent = label;  
             embeddedTimer.classList.toggle('danger', isWarning && !isFreeMode);
         }
     }
