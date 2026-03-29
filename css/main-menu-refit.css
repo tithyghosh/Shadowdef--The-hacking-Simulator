@@ -652,8 +652,8 @@
 #main-menu .joy {
     position: relative;
     z-index: 10;
-    width: clamp(34px, 9.5vw, 44px);
-    height: clamp(34px, 9.5vw, 44px);
+    width: clamp(24px, 7.6vw, 31px);
+    height: clamp(24px, 7.6vw, 31px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -697,10 +697,17 @@
 #main-menu .jicon {
     position: relative;
     z-index: 2;
-    font-size: clamp(17px, 5.5vw, 24px);
+    font-size: clamp(20px, 6.2vw, 28px);
     color: var(--cyan);
     filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.7)) drop-shadow(0 0 12px rgba(0, 229, 255, 0.4));
     transition: transform 0.15s;
+}
+
+#main-menu .jicon svg {
+    width: 30px;
+    height: 30px;
+    transform: translateX(-4px) rotate(-90deg);
+    transform-origin: center;
 }
 
 #main-menu .joy:active .jicon {
@@ -900,13 +907,13 @@
     }
 
     #main-menu .joy {
-        width: clamp(28px, 9vw, 38px);
-        height: clamp(28px, 9vw, 38px);
+        width: clamp(20px, 7.4vw, 26px);
+        height: clamp(20px, 7.4vw, 26px);
         margin: 0 4px;
     }
 
     #main-menu .jicon {
-        font-size: clamp(14px, 5vw, 20px);
+        font-size: clamp(17px, 5.6vw, 22px);
     }
 
     #main-menu .htag {
