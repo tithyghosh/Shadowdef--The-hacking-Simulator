@@ -11667,6 +11667,1168 @@
     }
 }
 
+.mission-briefing-modal .modal-close,
+.mission-briefing-modal .modal-title,
+.mission-briefing-modal .modal-buttons {
+    display: none;
+}
+
+.mission-briefing-modal .modal-content.mission-briefing-modal__content {
+    width: min(980px, 94vw);
+    max-width: min(980px, 94vw) !important;
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.mission-briefing-modal .modal-body {
+    margin: 0;
+    overflow: hidden;
+}
+
+.mission-briefing-shell {
+    --brief-bg: #080c10;
+    --brief-cyan: #00b4ff;
+    --brief-green: #00ff88;
+    --brief-amber: #ffaa00;
+    --brief-red: #ff4455;
+    width: 100%;
+    max-height: calc(100vh - 32px);
+    background: var(--brief-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    position: relative;
+    overflow: auto;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.mission-briefing-shell *,
+.mission-briefing-shell *::before,
+.mission-briefing-shell *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.mission-briefing-shell .bg-lines,
+.mission-briefing-shell .bg-diag,
+.mission-briefing-shell .orb,
+.mission-briefing-shell .scan {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mission-briefing-shell .bg-lines {
+    background-image:
+        linear-gradient(rgba(0, 180, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 180, 255, 0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+}
+
+.mission-briefing-shell .bg-diag {
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 60px,
+        rgba(0, 180, 255, 0.015) 60px,
+        rgba(0, 180, 255, 0.015) 61px
+    );
+}
+
+.mission-briefing-shell .orb {
+    border-radius: 50%;
+    filter: blur(90px);
+}
+
+.mission-briefing-shell .orb1 {
+    width: 400px;
+    height: 400px;
+    background: #00b4ff08;
+    top: -100px;
+    right: -100px;
+    left: auto;
+    bottom: auto;
+}
+
+.mission-briefing-shell .orb2 {
+    width: 300px;
+    height: 300px;
+    background: #ff440008;
+    bottom: -80px;
+    left: -60px;
+    top: auto;
+    right: auto;
+}
+
+.mission-briefing-shell .scan {
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 180, 255, 0.1);
+    animation: missionBriefingScan 6s linear infinite;
+    z-index: 0;
+}
+
+@keyframes missionBriefingScan {
+    0% { top: 0; }
+    100% { top: 100%; }
+}
+
+.mission-briefing-shell .shell {
+    position: relative;
+    width: 100%;
+    max-width: 860px;
+    display: grid;
+    grid-template-columns: 3px 1fr;
+    z-index: 1;
+    animation: missionBriefingRise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes missionBriefingRise {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mission-briefing-shell .left-rail {
+    display: flex;
+    flex-direction: column;
+}
+
+.mission-briefing-shell .rail-seg {
+    flex: 1;
+    min-height: 30px;
+}
+
+.mission-briefing-shell .rail-seg.on {
+    background: var(--brief-cyan);
+}
+
+.mission-briefing-shell .rail-seg.dim {
+    background: #00b4ff33;
+}
+
+.mission-briefing-shell .rail-seg.off {
+    background: #00b4ff0a;
+}
+
+.mission-briefing-shell .card {
+    background: #0c1520;
+    border: 1px solid #00b4ff18;
+    border-left: none;
+    overflow: hidden;
+}
+
+.mission-briefing-shell .card-header {
+    background: #0a1018;
+    border-bottom: 1px solid #00b4ff15;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mission-briefing-shell .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-briefing-shell .h-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.mission-briefing-shell .h-dot.green {
+    background: var(--brief-green);
+    animation: missionBriefingBlink 1.4s step-start infinite;
+}
+
+.mission-briefing-shell .h-dot.amber {
+    background: var(--brief-amber);
+    animation: missionBriefingBlink 1.4s step-start infinite 0.5s;
+}
+
+.mission-briefing-shell .h-dot.red {
+    background: var(--brief-red);
+}
+
+@keyframes missionBriefingBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+.mission-briefing-shell .h-title {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: #2a4a5a;
+    text-transform: uppercase;
+    margin-left: 6px;
+}
+
+.mission-briefing-shell .h-right {
+    display: flex;
+    gap: 20px;
+}
+
+.mission-briefing-shell .h-tag {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: #1a3040;
+    text-transform: uppercase;
+}
+
+.mission-briefing-shell .h-tag span {
+    color: #00b4ff55;
+}
+
+.mission-briefing-shell .close-btn {
+    background: none;
+    border: none;
+    color: #1a3040;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.mission-briefing-shell .close-btn:hover {
+    color: var(--brief-red);
+}
+
+.mission-briefing-shell .body {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+}
+
+.mission-briefing-shell .main-col {
+    padding: 2rem 2rem 1.5rem 2rem;
+    border-right: 1px solid #00b4ff0d;
+}
+
+.mission-briefing-shell .lvl-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    color: #00b4ff55;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-briefing-shell .eyebrow-line {
+    flex: 1;
+    height: 1px;
+    background: #00b4ff15;
+}
+
+.mission-briefing-shell .mission-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 700;
+    color: #e8f4ff;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.3rem;
+}
+
+.mission-briefing-shell .mission-name em {
+    font-style: normal;
+    color: var(--brief-cyan);
+}
+
+.mission-briefing-shell .mission-sub {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: #1e4060;
+    text-transform: uppercase;
+    margin-bottom: 1.6rem;
+}
+
+.mission-briefing-shell .briefing {
+    font-size: 13px;
+    color: #4a7090;
+    line-height: 1.8;
+    margin-bottom: 1.8rem;
+    border-left: 2px solid #00b4ff22;
+    padding-left: 14px;
+}
+
+.mission-briefing-shell .obj-header {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: #00b4ff66;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+.mission-briefing-shell .obj-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 2rem;
+}
+
+.mission-briefing-shell .obj-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #0a1520;
+    border: 1px solid #00b4ff0d;
+    border-left: 2px solid #00b4ff33;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: default;
+}
+
+.mission-briefing-shell .obj-row:hover {
+    background: #0f1e2e;
+    border-left-color: var(--brief-cyan);
+}
+
+.mission-briefing-shell .obj-num {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #00b4ff33;
+    min-width: 28px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.mission-briefing-shell .obj-row:hover .obj-num {
+    color: var(--brief-cyan);
+}
+
+.mission-briefing-shell .obj-txt {
+    font-size: 12px;
+    color: #4a7090;
+    line-height: 1.6;
+    padding-top: 1px;
+    transition: color 0.2s;
+}
+
+.mission-briefing-shell .obj-row:hover .obj-txt {
+    color: #8ab8d0;
+}
+
+.mission-briefing-shell .obj-txt b {
+    color: #00b4ffaa;
+    font-weight: 400;
+}
+
+.mission-briefing-shell .side-col {
+    padding: 1.8rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.mission-briefing-shell .side-block {
+    background: #080e18;
+    border: 1px solid #00b4ff0d;
+    padding: 14px;
+}
+
+.mission-briefing-shell .side-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: #1a3040;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.mission-briefing-shell .side-value {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #e8f4ff;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.mission-briefing-shell .side-value span {
+    font-size: 13px;
+    color: #1e4060;
+}
+
+.mission-briefing-shell .side-sub {
+    font-size: 10px;
+    color: #1e4060;
+    letter-spacing: 0.1em;
+}
+
+.mission-briefing-shell .difficulty-bar {
+    margin-top: 8px;
+    height: 3px;
+    background: #0a1520;
+}
+
+.mission-briefing-shell .difficulty-fill {
+    height: 100%;
+    width: 28%;
+    background: var(--brief-green);
+}
+
+.mission-briefing-shell .tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mission-briefing-shell .tag {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid;
+}
+
+.mission-briefing-shell .tag.blue {
+    color: var(--brief-cyan);
+    border-color: #00b4ff33;
+    background: #00b4ff08;
+}
+
+.mission-briefing-shell .tag.green {
+    color: var(--brief-green);
+    border-color: #00ff8833;
+    background: #00ff8808;
+}
+
+.mission-briefing-shell .tag.orange {
+    color: var(--brief-amber);
+    border-color: #ffaa0033;
+    background: #ffaa0008;
+}
+
+.mission-briefing-shell .threat-meter {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mission-briefing-shell .threat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-briefing-shell .threat-name {
+    font-size: 10px;
+    color: #1e4060;
+    width: 60px;
+}
+
+.mission-briefing-shell .threat-track {
+    flex: 1;
+    height: 3px;
+    background: #0a1520;
+}
+
+.mission-briefing-shell .threat-fill {
+    height: 100%;
+}
+
+.mission-briefing-shell .threat-fill.low {
+    width: 20%;
+    background: var(--brief-green);
+}
+
+.mission-briefing-shell .threat-fill.mid {
+    width: 55%;
+    background: var(--brief-amber);
+}
+
+.mission-briefing-shell .threat-fill.high {
+    width: 80%;
+    background: var(--brief-red);
+}
+
+.mission-briefing-shell .card-footer {
+    border-top: 1px solid #00b4ff0d;
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #080e18;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.mission-briefing-shell .footer-sys {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #1a3040;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-briefing-shell .sys-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--brief-green);
+    animation: missionBriefingBlink 1.4s step-start infinite;
+}
+
+.mission-briefing-shell .btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.mission-briefing-shell .mbtn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    padding: 11px 32px;
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+}
+
+.mission-briefing-shell .mbtn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    transform: translateX(-100%);
+    transition: transform 0s;
+}
+
+.mission-briefing-shell .mbtn:hover::after {
+    animation: missionBriefingShine 0.45s ease forwards;
+}
+
+@keyframes missionBriefingShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.mission-briefing-shell .mbtn.primary {
+    background: var(--brief-cyan);
+    color: #040c14;
+}
+
+.mission-briefing-shell .mbtn.primary:hover {
+    background: #33c8ff;
+    transform: translateY(-1px);
+}
+
+.mission-briefing-shell .mbtn.primary:active {
+    transform: scale(0.97);
+}
+
+.mission-briefing-shell .mbtn.ghost {
+    background: transparent;
+    color: #2a5070;
+    border: 1px solid #00b4ff18;
+}
+
+.mission-briefing-shell .mbtn.ghost:hover {
+    border-color: #00b4ff44;
+    color: #4a90b0;
+}
+
+@media (max-width: 640px) {
+    .mission-briefing-modal .modal-content.mission-briefing-modal__content {
+        max-height: calc(100vh - 20px);
+    }
+
+    .mission-briefing-shell {
+        padding: 0.75rem;
+    }
+
+    .mission-briefing-shell .body {
+        grid-template-columns: 1fr;
+    }
+
+    .mission-briefing-shell .side-col {
+        border-top: 1px solid #00b4ff0d;
+        padding: 1.5rem;
+    }
+
+    .mission-briefing-shell .main-col {
+        padding: 1.5rem;
+    }
+
+    .mission-briefing-shell .h-right {
+        display: none;
+    }
+
+    .mission-briefing-shell .card-footer {
+        align-items: stretch;
+    }
+
+    .mission-briefing-shell .btn-row {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .mission-briefing-shell .mbtn {
+        width: 100%;
+    }
+}
+
+.mission-complete-modal .modal-close,
+.mission-complete-modal .modal-title,
+.mission-complete-modal .modal-buttons {
+    display: none;
+}
+
+.mission-complete-modal .modal-content.mission-complete-modal__content {
+    width: min(720px, 96vw);
+    max-width: min(720px, 96vw) !important;
+    max-height: calc(100vh - 24px);
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.mission-complete-modal .modal-body {
+    margin: 0;
+    overflow: hidden;
+}
+
+.mission-complete-shell {
+    --bg: #03050f;
+    --surface: #070d1e;
+    --panel: #0b1428;
+    --neon-green: #00ff88;
+    --neon-cyan: #00e5ff;
+    --neon-pink: #ff2d6b;
+    --neon-yellow: #ffe600;
+    --text-dim: #2a4a6a;
+    --text-mid: #5a8aaa;
+    --text-bright: #c8e8f8;
+    --glow-green: 0 0 8px #00ff88, 0 0 24px #00ff8855, 0 0 48px #00ff8818;
+    --glow-cyan: 0 0 8px #00e5ff, 0 0 24px #00e5ff55, 0 0 48px #00e5ff18;
+    --glow-pink: 0 0 8px #ff2d6b, 0 0 24px #ff2d6b55, 0 0 48px #ff2d6b18;
+    background: var(--bg);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: min(760px, calc(100vh - 24px));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    padding: 20px;
+}
+
+.mission-complete-shell *,
+.mission-complete-shell *::before,
+.mission-complete-shell *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.mission-complete-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 229, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    animation: missionCompleteGridDrift 24s linear infinite;
+    z-index: 0;
+}
+
+.mission-complete-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.07) 2px,
+        rgba(0, 0, 0, 0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+}
+
+@keyframes missionCompleteGridDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 44px 44px; }
+}
+
+.mission-complete-shell .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mission-complete-shell .blob-green {
+    width: 400px;
+    height: 400px;
+    background: rgba(0, 255, 136, 0.06);
+    top: -100px;
+    left: -100px;
+    animation: missionCompleteBlobPulse 6s ease-in-out infinite;
+}
+
+.mission-complete-shell .blob-cyan {
+    width: 300px;
+    height: 300px;
+    background: rgba(0, 229, 255, 0.05);
+    bottom: -60px;
+    right: -60px;
+    animation: missionCompleteBlobPulse 8s ease-in-out infinite reverse;
+}
+
+.mission-complete-shell .blob-pink {
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 45, 107, 0.04);
+    top: 50%;
+    right: 20%;
+    animation: missionCompleteBlobPulse 10s ease-in-out infinite;
+}
+
+@keyframes missionCompleteBlobPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0.6;
+    }
+}
+
+.mission-complete-shell .corner {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.mission-complete-shell .corner::before,
+.mission-complete-shell .corner::after {
+    content: '';
+    position: absolute;
+    background: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.mission-complete-shell .corner::before {
+    width: 100%;
+    height: 1.5px;
+}
+
+.mission-complete-shell .corner::after {
+    width: 1.5px;
+    height: 100%;
+}
+
+.mission-complete-shell .corner.tl {
+    top: 14px;
+    left: 14px;
+}
+
+.mission-complete-shell .corner.tr {
+    top: 14px;
+    right: 14px;
+    transform: scaleX(-1);
+}
+
+.mission-complete-shell .corner.bl {
+    bottom: 14px;
+    left: 14px;
+    transform: scaleY(-1);
+}
+
+.mission-complete-shell .corner.br {
+    bottom: 14px;
+    right: 14px;
+    transform: scale(-1);
+}
+
+.mission-complete-shell .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.mission-complete-shell .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    animation: missionCompleteParticleFloat linear infinite;
+    opacity: 0;
+}
+
+@keyframes missionCompleteParticleFloat {
+    0% {
+        transform: translateY(100vh);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    90% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-5vh) translateX(var(--drift));
+        opacity: 0;
+    }
+}
+
+.mission-complete-shell .card {
+    position: relative;
+    z-index: 10;
+    width: min(520px, 92vw);
+    background: linear-gradient(160deg, rgba(11, 20, 40, 0.95), rgba(7, 13, 30, 0.98));
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    border-radius: 6px;
+    padding: 44px 40px 36px;
+    overflow: hidden;
+    animation: missionCompleteCardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes missionCompleteCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.mission-complete-shell .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-green) 40%, var(--neon-cyan) 60%, transparent);
+    box-shadow: 0 0 20px var(--neon-green);
+}
+
+.mission-complete-shell .card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--neon-green), var(--neon-cyan) 50%, transparent);
+    box-shadow: var(--glow-green);
+}
+
+.mission-complete-shell .header {
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: missionCompleteFadeUp 0.5s 0.2s ease forwards;
+}
+
+.mission-complete-shell .mission-tag {
+    font-family: 'Exo 2', 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-complete-shell .mission-tag::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.mission-complete-shell .title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(26px, 6vw, 42px);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: var(--neon-green);
+    text-shadow: var(--glow-green);
+    position: relative;
+}
+
+.mission-complete-shell .title::before,
+.mission-complete-shell .title::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    opacity: 0;
+}
+
+.mission-complete-shell .title::before {
+    color: var(--neon-pink);
+    clip-path: polygon(0 0, 100% 0, 100% 40%, 0 40%);
+    animation: missionCompleteGlitch1 7s infinite;
+}
+
+.mission-complete-shell .title::after {
+    color: var(--neon-cyan);
+    clip-path: polygon(0 60%, 100% 60%, 100% 100%, 0 100%);
+    animation: missionCompleteGlitch2 7s infinite;
+}
+
+@keyframes missionCompleteGlitch1 {
+    0%, 93%, 96%, 100% {
+        opacity: 0;
+        transform: translate(0);
+    }
+    94% {
+        opacity: 0.7;
+        transform: translate(-3px, 1px);
+    }
+}
+
+@keyframes missionCompleteGlitch2 {
+    0%, 93%, 96%, 100% {
+        opacity: 0;
+        transform: translate(0);
+    }
+    94% {
+        opacity: 0.7;
+        transform: translate(3px, -1px);
+    }
+}
+
+@keyframes missionCompleteFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mission-complete-shell .stats {
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.mission-complete-shell .stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.07);
+    opacity: 0;
+    animation: missionCompleteFadeUp 0.4s ease forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.mission-complete-shell .stat-row:last-child {
+    border-bottom: none;
+}
+
+.mission-complete-shell .stat-row:nth-child(1) {
+    animation-delay: 0.35s;
+}
+
+.mission-complete-shell .stat-row:nth-child(2) {
+    animation-delay: 0.48s;
+}
+
+.mission-complete-shell .stat-row:nth-child(3) {
+    animation-delay: 0.61s;
+}
+
+.mission-complete-shell .stat-row::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.04), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+.mission-complete-shell .stat-row:hover::after {
+    transform: translateX(100%);
+}
+
+.mission-complete-shell .stat-label {
+    font-size: 13px;
+    color: var(--text-mid);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mission-complete-shell .stat-icon {
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--neon-cyan);
+    flex-shrink: 0;
+}
+
+.mission-complete-shell .stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.mission-complete-shell .val-green {
+    color: var(--neon-green);
+    text-shadow: var(--glow-green);
+}
+
+.mission-complete-shell .val-cyan {
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+}
+
+.mission-complete-shell .val-yellow {
+    color: var(--neon-yellow);
+    text-shadow: 0 0 8px #ffe60088;
+}
+
+.mission-complete-shell .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.15), transparent);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: missionCompleteFadeUp 0.4s 0.78s ease forwards;
+}
+
+.mission-complete-shell .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    opacity: 0;
+    animation: missionCompleteFadeUp 0.4s 0.88s ease forwards;
+}
+
+.mission-complete-shell .btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 20px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.22s ease;
+    overflow: hidden;
+}
+
+.mission-complete-shell .btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+    transition: left 0.45s ease;
+}
+
+.mission-complete-shell .btn:hover::after {
+    left: 150%;
+}
+
+.mission-complete-shell .btn:hover {
+    transform: translateY(-2px);
+}
+
+.mission-complete-shell .btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.mission-complete-shell .btn-back {
+    background: rgba(255, 45, 107, 0.06);
+    border: 1px solid rgba(255, 45, 107, 0.35);
+    color: var(--neon-pink);
+}
+
+.mission-complete-shell .btn-back:hover {
+    background: rgba(255, 45, 107, 0.1);
+    border-color: var(--neon-pink);
+    box-shadow: var(--glow-pink);
+}
+
+.mission-complete-shell .btn-continue {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 229, 255, 0.08));
+    border: 1px solid var(--neon-green);
+    color: var(--neon-green);
+    box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.05);
+}
+
+.mission-complete-shell .btn-continue:hover {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.18), rgba(0, 229, 255, 0.12));
+    border-color: var(--neon-green);
+    box-shadow: var(--glow-green), inset 0 0 20px rgba(0, 255, 136, 0.08);
+}
+
+.mission-complete-shell .btn-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
 
 
 

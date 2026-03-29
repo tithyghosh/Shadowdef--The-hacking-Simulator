@@ -8,7 +8,7 @@
     <title  >SHADOWDEF - Hack the Invisible</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:wght@400;700&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Teko:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:wght@400;700&family=Exo+2:wght@300;400;600&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Teko:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <!-- Firebase SDK -->                           
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -39,24 +39,59 @@
     <div id="game-container" class="game-container">
         <!-- Loading Screen -->
         <div id="loading-screen" class="screen active">
-            <div class="loading-container">
-                <div class="logo-container">
-                    <div class="logo-text">SHADOWDEF</div>
-                    <div class="logo-subtitle">Hack the Invisible</div>
+            <div class="scanlines"></div>
+            <div class="vignette"></div>
+
+            <div class="hud-line hud-h hud-top"></div>
+            <div class="hud-line hud-h hud-bot"></div>
+            <div class="hud-line hud-v hud-left"></div>
+            <div class="hud-line hud-v hud-right"></div>
+
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+
+            <div class="status-tl">SYS.BOOT // v4.2.1</div>
+            <div class="status-tr">NODE_ID :: 0xA3F7</div>
+            <div class="status-bl">ENC // AES-256-GCM</div>
+            <div class="status-br">UPLINK ACTIVE</div>
+
+            <div class="center">
+                <div class="logo-wrap">
+                    <div class="logo">SHADOWDEF</div>
                 </div>
-                
-                <div class="loading-progress">
-                    <div class="progress-label">Loading Game Assets...</div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="loading-progress-fill"></div>
+                <div class="logo-line"></div>
+                <div class="tagline">HACK &nbsp; THE &nbsp; INVISIBLE</div>
+
+                <div class="loading-block">
+                    <div class="loading-label">
+                        <div class="loading-text">
+                            <span id="load-msg">INITIALIZING SYSTEMS</span>
+                        </div>
+                        <div class="loading-pct" id="pct">0%</div>
                     </div>
-                    <div class="progress-percentage" id="loading-percentage">0%</div>
-                </div>
-                
-                <div class="loading-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+
+                    <div class="progress-track">
+                        <div class="progress-fill" id="bar"></div>
+                    </div>
+
+                    <div class="progress-segments">
+                        <div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                        <div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                        <div class="seg"></div><div class="seg"></div><div class="seg"></div>
+                        <div class="seg"></div><div class="seg"></div>
+                    </div>
+
+                    <div class="dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+
+                    <div class="sys-log">
+                        <div class="log-line" id="log-line">[ BOOT ] Loading kernel modules...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -464,121 +499,156 @@
     <script type="module">
         import { Background } from './css/js/ui/Background.js';
 
-        // Loading system variables
         let loadingStarted = false;
+        let loadingComplete = false;
         let appBackground = null;
-        
-        function startSimpleLoading() {
-            if (loadingStarted) return;
-            loadingStarted = true;
-            
-            console.log('???? Starting loading with network background...');
-            
-            const progressFill = document.getElementById('loading-progress-fill');
-            const progressPercentage = document.getElementById('loading-percentage');
-            const progressLabel = document.querySelector('.progress-label');
-            const loadingScreen = document.getElementById('loading-screen');
-            const mainMenu = document.getElementById('main-menu');
-            
-            if (!progressFill || !progressPercentage || !progressLabel) {
-                console.error('??? Loading elements not found');
-                return;
-            }
-            
-            const steps = [
-                { text: 'Initializing Core Systems...', progress: 15, duration: 800 },
-                { text: 'Loading Game Assets...', progress: 35, duration: 1000 },
-                { text: 'Preparing Audio Systems...', progress: 50, duration: 600 },
-                { text: 'Loading Mission Data...', progress: 70, duration: 800 },
-                { text: 'Initializing Security Protocols...', progress: 85, duration: 600 },
-                { text: 'Finalizing Setup...', progress: 100, duration: 500 }
-            ];
-            
-            let currentStep = 0;
-            let currentProgress = 0;
-            
-            function animateToProgress(targetProgress, duration, callback) {
-                const startProgress = currentProgress;
-                const progressDiff = targetProgress - startProgress;
-                const startTime = Date.now();
-                
-                function updateFrame() {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    
-                    currentProgress = startProgress + (progressDiff * progress);
-                    
-                    progressFill.style.width = currentProgress + '%';
-                    progressPercentage.textContent = Math.floor(currentProgress) + '%';
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(updateFrame);
-                    } else {
-                        currentProgress = targetProgress;
-                        if (callback) callback();
-                    }
-                }
-                
-                requestAnimationFrame(updateFrame);
-            }
-            
-            function executeStep() {
-                if (currentStep >= steps.length) {
-                    // Loading complete
-                    progressLabel.textContent = 'Loading Complete!';
-                    console.log('??? Loading completed successfully!');
-                    
-                    setTimeout(() => {
-                        // Fade out loading screen
-                        loadingScreen.style.opacity = '0';
-                        loadingScreen.style.transition = 'opacity 1s ease';
-                        
-                        setTimeout(() => {
-                            loadingScreen.style.display = 'none';
-                            loadingScreen.classList.remove('active');
-                            
-                            // Show main menu
-                            mainMenu.style.display = 'flex';
-                            mainMenu.classList.add('active');
-                            mainMenu.style.opacity = '0';
-                            mainMenu.style.transition = 'opacity 1s ease';
-                            
-                            setTimeout(() => {
-                                mainMenu.style.opacity = '1';
-                            }, 50);
+        let loadingFrameId = null;
+        let loadingCanvas = null;
+        let loadingCtx = null;
+        let loadingWidth = 0;
+        let loadingHeight = 0;
+        let loadingVisualActive = false;
+        let loadingNodes = [];
+        let loadingBits = [];
+        const loadingMouse = { x: -9999, y: -9999 };
 
-                            if (window.game?.screens) {
-                                window.game.screens.onScreenShow('main-menu');
-                            } else if (window.AudioManager?.getInstance) {
-                                window.AudioManager.getInstance().playMusic('menu');
-                            }
-                            
-                            console.log('???? Main menu displayed');
-                        }, 1000);
-                    }, 1000);
-                    return;
-                }
-                
-                const step = steps[currentStep];
-                progressLabel.textContent = step.text;
-                
-                console.log(`???? Step ${currentStep + 1}/${steps.length}: ${step.text} -> ${step.progress}%`);
-                
-                animateToProgress(step.progress, step.duration, () => {
-                    currentStep++;
-                    setTimeout(executeStep, 200);
+        function trackLoadingMouse(event) {
+            loadingMouse.x = event.clientX;
+            loadingMouse.y = event.clientY;
+        }
+
+        function resizeLoadingCanvas() {
+            if (!loadingCanvas) return;
+            loadingWidth = loadingCanvas.width = window.innerWidth;
+            loadingHeight = loadingCanvas.height = window.innerHeight;
+        }
+
+        function initLoadingCanvas() {
+            loadingCanvas = document.getElementById('bg-canvas');
+            if (!loadingCanvas) return;
+
+            loadingCtx = loadingCanvas.getContext('2d');
+            resizeLoadingCanvas();
+            loadingNodes = [];
+            loadingBits = [];
+
+            for (let i = 0; i < 60; i += 1) {
+                loadingBits.push({
+                    x: Math.random() * loadingWidth,
+                    y: Math.random() * loadingHeight,
+                    v: 0.12 + Math.random() * 0.22,
+                    text: Math.random() > 0.5 ? '1' : '0',
+                    size: 9 + Math.random() * 7,
+                    alpha: 0.04 + Math.random() * 0.1,
+                    drift: (Math.random() - 0.5) * 0.3
                 });
             }
-            
-            // Start the loading process
-            executeStep();
+
+            for (let i = 0; i < 55; i += 1) {
+                loadingNodes.push({
+                    x: Math.random() * loadingWidth,
+                    y: Math.random() * loadingHeight,
+                    vx: (Math.random() - 0.5) * 0.25,
+                    vy: (Math.random() - 0.5) * 0.25,
+                    r: 1.5 + Math.random() * 2
+                });
+            }
+
+            loadingVisualActive = true;
+            drawLoadingFrame();
         }
-        
-        // Start loading when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('???? DOM loaded, initializing background...');
-            
-            // Initialize shared background immediately so density matches main screens
+
+        function drawLoadingFrame() {
+            if (!loadingVisualActive || !loadingCtx) return;
+
+            loadingCtx.clearRect(0, 0, loadingWidth, loadingHeight);
+
+            loadingBits.forEach((bit) => {
+                bit.y -= bit.v;
+                bit.x += bit.drift;
+
+                if (bit.y < -20) {
+                    bit.y = loadingHeight + 20;
+                    bit.x = Math.random() * loadingWidth;
+                }
+
+                if (bit.x < -20) bit.x = loadingWidth + 20;
+                if (bit.x > loadingWidth + 20) bit.x = -20;
+
+                loadingCtx.save();
+                loadingCtx.globalAlpha = bit.alpha;
+                loadingCtx.fillStyle = '#00e5ff';
+                loadingCtx.font = `${bit.size}px 'Share Tech Mono', monospace`;
+                loadingCtx.fillText(bit.text, bit.x, bit.y);
+                loadingCtx.restore();
+            });
+
+            loadingNodes.forEach((node) => {
+                node.x += node.vx;
+                node.y += node.vy;
+
+                if (node.x < 0 || node.x > loadingWidth) node.vx *= -1;
+                if (node.y < 0 || node.y > loadingHeight) node.vy *= -1;
+            });
+
+            for (let i = 0; i < loadingNodes.length; i += 1) {
+                for (let j = i + 1; j < loadingNodes.length; j += 1) {
+                    const dx = loadingNodes[i].x - loadingNodes[j].x;
+                    const dy = loadingNodes[i].y - loadingNodes[j].y;
+                    const distance = Math.sqrt((dx * dx) + (dy * dy));
+
+                    if (distance < 160) {
+                        const alpha = (1 - (distance / 160)) * 0.12;
+                        loadingCtx.save();
+                        loadingCtx.globalAlpha = alpha;
+                        loadingCtx.strokeStyle = '#00e5ff';
+                        loadingCtx.lineWidth = 0.5;
+                        loadingCtx.beginPath();
+                        loadingCtx.moveTo(loadingNodes[i].x, loadingNodes[i].y);
+                        loadingCtx.lineTo(loadingNodes[j].x, loadingNodes[j].y);
+                        loadingCtx.stroke();
+                        loadingCtx.restore();
+                    }
+                }
+            }
+
+            loadingNodes.forEach((node) => {
+                const dx = node.x - loadingMouse.x;
+                const dy = node.y - loadingMouse.y;
+                const distance = Math.sqrt((dx * dx) + (dy * dy));
+                const highlight = distance < 120;
+
+                loadingCtx.save();
+                loadingCtx.globalAlpha = highlight ? 0.8 : 0.25;
+                loadingCtx.fillStyle = highlight ? '#ffffff' : '#00e5ff';
+                loadingCtx.shadowColor = '#00e5ff';
+                loadingCtx.shadowBlur = highlight ? 12 : 4;
+                loadingCtx.beginPath();
+                loadingCtx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+                loadingCtx.fill();
+                loadingCtx.restore();
+            });
+
+            loadingFrameId = requestAnimationFrame(drawLoadingFrame);
+        }
+
+        function stopLoadingCanvas() {
+            loadingVisualActive = false;
+            window.removeEventListener('resize', resizeLoadingCanvas);
+            window.removeEventListener('mousemove', trackLoadingMouse);
+            if (loadingFrameId) {
+                cancelAnimationFrame(loadingFrameId);
+                loadingFrameId = null;
+            }
+
+            if (loadingCtx && loadingCanvas) {
+                loadingCtx.clearRect(0, 0, loadingCanvas.width, loadingCanvas.height);
+            }
+        }
+
+        function startAppBackground() {
+            if (appBackground) return;
+
             try {
                 appBackground = new Background('bg-canvas');
                 appBackground.start();
@@ -587,35 +657,166 @@
             } catch (error) {
                 console.error('Error creating background:', error);
             }
-            
-            console.log('???? Starting loading in 1 second...');
+        }
+
+        function revealMainMenu() {
+            const loadingScreen = document.getElementById('loading-screen');
+            const mainMenu = document.getElementById('main-menu');
+            if (!loadingScreen) return;
+
+            stopLoadingCanvas();
+            startAppBackground();
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.8s ease';
+
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                loadingScreen.classList.remove('active');
+
+                if (mainMenu) {
+                    mainMenu.style.display = 'flex';
+                    mainMenu.classList.add('active');
+                    mainMenu.style.opacity = '0';
+                    mainMenu.style.transition = 'opacity 1s ease';
+
+                    setTimeout(() => {
+                        mainMenu.style.opacity = '1';
+                    }, 50);
+                }
+
+                if (window.game?.screens) {
+                    window.game.screens.onScreenShow('main-menu');
+                } else if (window.AudioManager?.getInstance) {
+                    window.AudioManager.getInstance().playMusic('menu');
+                }
+            }, 800);
+        }
+
+        function finishLoading() {
+            if (loadingComplete) return;
+            loadingComplete = true;
+
+            const center = document.querySelector('#loading-screen .center');
+            const bar = document.getElementById('bar');
+            const pct = document.getElementById('pct');
+            const loadMsg = document.getElementById('load-msg');
+            const logLine = document.getElementById('log-line');
+
+            if (bar) bar.style.width = '100%';
+            if (pct) pct.textContent = '100%';
+            if (loadMsg) loadMsg.textContent = 'SYSTEM READY';
+            if (logLine) logLine.textContent = '[ OK   ] Boot sequence complete';
+
+            setTimeout(() => {
+                if (center) {
+                    center.style.transition = 'opacity 0.8s ease';
+                    center.style.opacity = '0';
+                }
+
+                setTimeout(() => {
+                    revealMainMenu();
+                }, 800);
+            }, 800);
+        }
+
+        function startSimpleLoading() {
+            if (loadingStarted || loadingComplete) return;
+            loadingStarted = true;
+
+            const bar = document.getElementById('bar');
+            const pct = document.getElementById('pct');
+            const loadMsg = document.getElementById('load-msg');
+            const logLine = document.getElementById('log-line');
+
+            if (!bar || !pct || !loadMsg || !logLine) {
+                console.error('Loading elements not found');
+                return;
+            }
+
+            const messages = [
+                'INITIALIZING SYSTEMS',
+                'LOADING ENCRYPTION MODULES',
+                'MAPPING NETWORK TOPOLOGY',
+                'INJECTING KERNEL HOOKS',
+                'CALIBRATING SENSORS',
+                'COMPILING MISSION DATA',
+                'ESTABLISHING SECURE TUNNEL',
+                'BYPASSING FIREWALL LAYERS',
+                'SYNCHRONIZING NODES',
+                'SYSTEM READY'
+            ];
+
+            const logs = [
+                '[ BOOT ] Loading kernel modules...',
+                '[ ENC  ] AES-256 cipher initialized',
+                '[ NET  ] Scanning 192.168.0.0/24',
+                '[ HOOK ] Injecting ptrace handlers',
+                '[ SYS  ] Sensor array calibrated',
+                '[ DATA ] Mission packages verified',
+                '[ TUN  ] SSH tunnel established',
+                '[ FW   ] Ruleset bypassed - depth 4',
+                '[ SYNC ] All nodes responding',
+                '[ OK   ] Boot sequence complete'
+            ];
+
+            let progress = 0;
+            let messageIndex = 0;
+
+            function tick() {
+                if (loadingComplete) return;
+
+                const step = 0.4 + (Math.random() * 1.2);
+                progress = Math.min(100, progress + step);
+
+                bar.style.width = `${progress}%`;
+                pct.textContent = `${Math.floor(progress)}%`;
+
+                const nextMessageIndex = Math.min(messages.length - 1, Math.floor((progress / 100) * messages.length));
+                if (nextMessageIndex !== messageIndex) {
+                    messageIndex = nextMessageIndex;
+                    loadMsg.textContent = messages[messageIndex];
+                    logLine.textContent = logs[messageIndex];
+                    logLine.style.animation = 'none';
+                    void logLine.offsetWidth;
+                    logLine.style.animation = 'sdLoadingLogScroll 0.4s ease';
+                }
+
+                if (progress < 100) {
+                    setTimeout(tick, 60 + (Math.random() * 80));
+                } else {
+                    finishLoading();
+                }
+            }
+
+            setTimeout(tick, 1300);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Loading screen booting...');
+            initLoadingCanvas();
+            window.addEventListener('resize', resizeLoadingCanvas);
+            window.addEventListener('mousemove', trackLoadingMouse);
+
             setTimeout(() => {
                 startSimpleLoading();
             }, 1000);
         });
-        
-        // Manual controls
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 const loadingScreen = document.getElementById('loading-screen');
                 if (loadingScreen && loadingScreen.classList.contains('active')) {
                     if (!loadingStarted) {
-                        console.log('???? Manual loading start triggered');
                         startSimpleLoading();
+                    } else if (!loadingComplete) {
+                        finishLoading();
                     } else {
-                        console.log('?????? Skipping to main menu...');
-                        loadingScreen.style.display = 'none';
-                        const mainMenu = document.getElementById('main-menu');
-                        if (mainMenu) {
-                            mainMenu.style.display = 'flex';
-                            mainMenu.classList.add('active');
-                        }
+                        revealMainMenu();
                     }
                 }
             }
         });
-        
-        // Make functions and objects globally available for debugging
+
         window.startSimpleLoading = startSimpleLoading;
         window.appBackground = appBackground;
     </script>

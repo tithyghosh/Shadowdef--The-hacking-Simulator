@@ -313,21 +313,10 @@ export class GameScreen {
         this.game.completeMission(success, { ...stats, finalScore });
     }
 
-    // ─── results display with knowledge summary overlay ───────────────────────
-
     showResults(success, stats, finalScore) {
-        // FIX: show knowledge summary overlay BEFORE the results modal if it exists
-        const knowledgeSummary = this.currentMission?.knowledgeSummary;
-        if (knowledgeSummary && success) {
-            this.showKnowledgeSummary(knowledgeSummary, () => {
-                this.showResultsModal(success, stats, finalScore);
-            });
-        } else {
-            this.showResultsModal(success, stats, finalScore);
-        }
+        this.showResultsModal(success, stats, finalScore);
     }
 
-    // NEW: knowledge summary overlay
     showKnowledgeSummary(summary, onContinue) {
         const bulletsHtml = (summary.bullets || []).map(b => `
             <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
@@ -365,10 +354,12 @@ export class GameScreen {
     }
 
     showResultsModal(success, stats, finalScore) {
-        const rank = this.game.score.getScoreRank(finalScore);
-        const xp = this.game.score.calculateXP(finalScore, this.currentMission);
-        const credits = this.game.score.calculateCredits(finalScore, this.currentMission);
+        if (success) {
+            this.showMissionCompleteModal(stats);
+            return;
+        }
 
+        const rank = this.game.score.getScoreRank(finalScore);
         const failedPasswordReveal = !success &&
             this.currentMission?.type === 'password' &&
             this.currentMission?.puzzle?.revealAnswerOnFail !== false &&
@@ -424,6 +415,123 @@ export class GameScreen {
         if (modal) {
             const modalContent = modal.querySelector('.modal-content');
             if (modalContent) modalContent.style.borderColor = success ? 'var(--cyber-green)' : 'var(--cyber-pink)';
+        }
+    }
+
+    showMissionCompleteModal(stats) {
+        const modal = this.ui.showModal(
+            'MISSION COMPLETE',
+            `
+            <div class="mission-complete-shell">
+                <div class="blob blob-green"></div>
+                <div class="blob blob-cyan"></div>
+                <div class="blob blob-pink"></div>
+
+                <div class="particles" data-complete-particles></div>
+
+                <div class="corner tl"></div>
+                <div class="corner tr"></div>
+                <div class="corner bl"></div>
+                <div class="corner br"></div>
+
+                <div class="card">
+                    <div class="header">
+                        <div class="mission-tag">STATUS REPORT</div>
+                        <div class="title" data-text="MISSION COMPLETE">MISSION COMPLETE</div>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat-row">
+                            <div class="stat-label">
+                                <div class="stat-icon">&#9201;</div>
+                                Time
+                            </div>
+                            <div class="stat-value val-cyan">${this.formatTime(stats.time)}</div>
+                        </div>
+                        <div class="stat-row">
+                            <div class="stat-label">
+                                <div class="stat-icon">&#10227;</div>
+                                Attempts
+                            </div>
+                            <div class="stat-value val-green">${stats.attempts}</div>
+                        </div>
+                        <div class="stat-row">
+                            <div class="stat-label">
+                                <div class="stat-icon">?</div>
+                                Hints Used
+                            </div>
+                            <div class="stat-value val-yellow">${stats.hintsUsed}</div>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="buttons">
+                        <button class="btn btn-back" type="button" data-complete-action="back">
+                            <span class="btn-icon">&#9664;</span>
+                            BACK TO LEVELS
+                        </button>
+                        <button class="btn btn-continue" type="button" data-complete-action="continue">
+                            CONTINUE
+                            <span class="btn-icon">&#9654;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>`,
+            {
+                closable: false,
+                width: 'min(720px, 96vw)',
+                modalClass: 'mission-complete-modal',
+                contentClass: 'mission-complete-modal__content'
+            }
+        );
+
+        this.populateMissionCompleteParticles(modal?.querySelector('[data-complete-particles]'));
+
+        modal?.querySelector('[data-complete-action="back"]')?.addEventListener('click', (event) => {
+            this.handleMissionCompleteAction(event.currentTarget, () => this.game.backToCurrentCategoryLevels());
+        });
+
+        modal?.querySelector('[data-complete-action="continue"]')?.addEventListener('click', (event) => {
+            this.handleMissionCompleteAction(event.currentTarget, () => {
+                if (this.game.hasNextLevelInCurrentSection()) this.game.goToNextLevel();
+                else this.game.backToCurrentCategoryLevels();
+            });
+        });
+    }
+
+    handleMissionCompleteAction(button, callback) {
+        if (!(button instanceof HTMLElement)) {
+            callback();
+            return;
+        }
+
+        button.style.transform = 'scale(0.96)';
+        window.setTimeout(() => {
+            button.style.transform = '';
+            callback();
+        }, 150);
+    }
+
+    populateMissionCompleteParticles(container) {
+        if (!container) return;
+
+        const colors = ['#00ff88', '#00e5ff', '#ff2d6b', '#ffe600'];
+        container.innerHTML = '';
+
+        for (let i = 0; i < 28; i += 1) {
+            const particle = document.createElement('div');
+            const color = colors[i % colors.length];
+            particle.className = 'particle';
+            particle.style.cssText = `
+                left:${Math.random() * 100}%;
+                background:${color};
+                box-shadow:0 0 6px ${color};
+                --drift:${(Math.random() - 0.5) * 80}px;
+                animation-duration:${9 + (Math.random() * 14)}s;
+                animation-delay:${Math.random() * 12}s;
+            `;
+            container.appendChild(particle);
         }
     }
 

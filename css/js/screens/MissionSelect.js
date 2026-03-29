@@ -946,47 +946,251 @@ export class MissionSelect {
     }
 
     showBriefing(mission) {
-        const difficulty = String(mission.difficulty || '').toLowerCase();
-        const objectives = (mission.objectives || []).map((obj) => `<li style="margin-bottom: 8px;">-> ${obj}</li>`).join('');
-        this.ui.showModal(mission.title, `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 20px;">
-                    <p style="color: var(--text-secondary); margin-bottom: 10px;">${mission.desc}</p>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <span class="badge badge-${difficulty === 'easy' ? 'success' : difficulty === 'medium' ? 'warning' : 'danger'}">${String(mission.difficulty || '').toUpperCase()}</span>
-                        <span class="badge badge-info">TIME ${mission.estimatedTime}</span>
-                        <span class="badge badge-info">${this.getPuzzleTypeLabel(mission.type)}</span>
+        const levelLabel = String(mission.level || 0).padStart(2, '0');
+        const difficultyMeta = this.getBriefingDifficultyMeta(mission.difficulty);
+        const objectives = (mission.objectives || []).map((obj, index) => `
+            <div class="obj-row">
+                <span class="obj-num">${String(index + 1).padStart(2, '0')}</span>
+                <span class="obj-txt">${obj}</span>
+            </div>
+        `).join('');
+        const categoryTags = this.getBriefingCategoryTags(mission).map((tag, index) => `
+            <span class="tag ${['blue', 'green', 'orange'][index] || 'blue'}">${tag}</span>
+        `).join('');
+        const threatRows = this.getBriefingThreatVectors(mission).map((item) => `
+            <div class="threat-row">
+                <span class="threat-name">${item.name}</span>
+                <div class="threat-track"><div class="threat-fill ${item.level}"></div></div>
+            </div>
+        `).join('');
+        const modal = this.ui.showModal(mission.title, `
+            <div class="mission-briefing-shell">
+                <div class="bg-lines"></div>
+                <div class="bg-diag"></div>
+                <div class="orb orb1"></div>
+                <div class="orb orb2"></div>
+                <div class="scan"></div>
+
+                <div class="shell">
+                    <div class="left-rail">
+                        <div class="rail-seg on"></div>
+                        <div class="rail-seg dim"></div>
+                        <div class="rail-seg off"></div>
+                        <div class="rail-seg dim"></div>
+                        <div class="rail-seg on" style="min-height:6px;flex:0;"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="header-left">
+                                <div class="h-dot green"></div>
+                                <div class="h-dot amber"></div>
+                                <div class="h-dot red"></div>
+                                <span class="h-title">shadowdef :: mission terminal</span>
+                            </div>
+                            <div class="h-right">
+                                <span class="h-tag">NODE <span>0x4F</span></span>
+                                <span class="h-tag">PING <span>12ms</span></span>
+                                <span class="h-tag">ENC <span>AES-256</span></span>
+                            </div>
+                            <button class="close-btn" data-briefing-action="close">[ ESC ]</button>
+                        </div>
+
+                        <div class="body">
+                            <div class="main-col">
+                                <div class="lvl-eyebrow">
+                                    Level ${levelLabel} <div class="eyebrow-line"></div>
+                                </div>
+                                <h1 class="mission-name">${this.getBriefingMissionNameMarkup(this.cleanMissionTitle(mission.title, mission.level), mission.type)}</h1>
+                                <div class="mission-sub">// Operative Briefing - Clearance ${difficultyMeta.clearance}</div>
+
+                                <p class="briefing">
+                                    ${mission.desc}
+                                </p>
+
+                                <div class="obj-header">// Mission Objectives</div>
+                                <div class="obj-list">
+                                    ${objectives}
+                                </div>
+                            </div>
+
+                            <div class="side-col">
+                                <div class="side-block">
+                                    <div class="side-label">Difficulty</div>
+                                    <div class="side-value">${mission.difficulty || 'Unknown'}</div>
+                                    <div class="side-sub">${difficultyMeta.subtitle}</div>
+                                    <div class="difficulty-bar"><div class="difficulty-fill" style="width:${difficultyMeta.width};background:${difficultyMeta.color};"></div></div>
+                                </div>
+
+                                <div class="side-block">
+                                    <div class="side-label">Est. Duration</div>
+                                    <div class="side-value">${this.getBriefingDurationMarkup(mission.estimatedTime)}</div>
+                                    <div class="side-sub">Avg. completion: ${this.getBriefingAverageTime(mission.estimatedTime)}</div>
+                                </div>
+
+                                <div class="side-block">
+                                    <div class="side-label">Category</div>
+                                    <div class="tag-grid">
+                                        ${categoryTags}
+                                    </div>
+                                </div>
+
+                                <div class="side-block">
+                                    <div class="side-label">Threat Vectors</div>
+                                    <div class="threat-meter">
+                                        ${threatRows}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <div class="footer-sys">
+                                <span class="sys-dot"></span>
+                                sys::online - auth granted - ready
+                            </div>
+                            <div class="btn-row">
+                                <button class="mbtn ghost" data-briefing-action="back">Back</button>
+                                <button class="mbtn primary" data-briefing-action="start">Start Mission</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="divider"></div>
-                <div style="margin: 20px 0;">
-                    <h3 style="color: var(--cyber-blue); margin-bottom: 10px;">OBJECTIVES:</h3>
-                    <ul style="list-style: none; padding-left: 0; color: var(--text-secondary);">${objectives}</ul>
-                </div>
-                <div class="divider"></div>
-                <div style="margin-top: 20px;">
-                    <h3 style="color: var(--cyber-blue); margin-bottom: 10px;">REWARDS:</h3>
-                    <div style="display: flex; gap: 20px; color: var(--text-secondary);">
-                        <span><strong style="color: var(--cyber-green);">+${mission.rewards?.xp || 0}</strong> XP</span>
-                        <span><strong style="color: var(--cyber-green);">+${mission.rewards?.credits || 0}</strong> Credits</span>
-                    </div>
-                </div>
-                ${mission.bestScore > 0 ? `<div class="divider"></div><div style="margin-top: 20px; text-align: center;"><p style="color: var(--text-secondary);">Your Best: <strong style="color: var(--cyber-green);">${mission.bestScore}</strong></p></div>` : ''}
             </div>`, {
             closable: true,
-            buttons: [
-                {
-                    text: 'START MISSION',
-                    class: 'btn-primary',
-                    onClick: () => {
-                        this.ui.closeModal();
-                        setTimeout(() => this.game.startMission(mission), 20);
-                    },
-                    closeOnClick: false
-                },
-                { text: 'BACK', class: 'btn', onClick: () => this.ui.closeModal() }
-            ]
+            width: 'min(980px, 94vw)',
+            modalClass: 'mission-briefing-modal',
+            contentClass: 'mission-briefing-modal__content'
         });
+
+        modal.querySelector('[data-briefing-action="close"]')?.addEventListener('click', () => this.ui.closeModal());
+        modal.querySelector('[data-briefing-action="back"]')?.addEventListener('click', () => this.ui.closeModal());
+        modal.querySelector('[data-briefing-action="start"]')?.addEventListener('click', () => {
+            this.ui.closeModal();
+            setTimeout(() => this.game.startMission(mission), 20);
+        });
+    }
+
+    getBriefingMissionNameMarkup(title, type) {
+        const emphasisMap = {
+            password: 'Password',
+            firewall: 'Firewall',
+            network: 'Network',
+            malware: 'Threat',
+            zeroday: 'Zero-Day',
+            phishing: 'Phishing',
+            mixed: 'Mission'
+        };
+
+        let display = String(title || '');
+        const emphasis = emphasisMap[type];
+        if (emphasis && display.includes(emphasis)) {
+            display = display.replace(emphasis, `<em>${emphasis}</em>`);
+        }
+
+        const words = display.split(' ').filter(Boolean);
+        if (words.length > 2) {
+            const breakIndex = Math.ceil(words.length / 2);
+            return `${words.slice(0, breakIndex).join(' ')}<br>${words.slice(breakIndex).join(' ')}`;
+        }
+
+        return display;
+    }
+
+    getBriefingDifficultyMeta(difficulty) {
+        const map = {
+            easy: { width: '28%', color: '#00ff88', subtitle: 'Entry Level', clearance: 'Alpha' },
+            medium: { width: '56%', color: '#ffaa00', subtitle: 'Field Ready', clearance: 'Beta' },
+            hard: { width: '78%', color: '#ff4455', subtitle: 'Advanced Tier', clearance: 'Gamma' },
+            pro: { width: '92%', color: '#ff4455', subtitle: 'Elite Operations', clearance: 'Omega' }
+        };
+
+        return map[String(difficulty || '').toLowerCase()] || {
+            width: '50%',
+            color: '#00b4ff',
+            subtitle: 'Operational',
+            clearance: 'Alpha'
+        };
+    }
+
+    getBriefingAverageTime(estimatedTime) {
+        const match = String(estimatedTime || '').match(/(\d+)\s*-\s*(\d+)/);
+        if (!match) {
+            return estimatedTime || 'Unknown';
+        }
+
+        const average = (Number(match[1]) + Number(match[2])) / 2;
+        return `${average.toFixed(1)} min`;
+    }
+
+    getBriefingDurationMarkup(estimatedTime) {
+        const text = String(estimatedTime || 'N/A').trim();
+        const match = text.match(/^(.+?)\s*(min|s)$/i);
+        if (!match) {
+            return text;
+        }
+
+        return `${match[1]}<span> ${match[2].toLowerCase()}</span>`;
+    }
+
+    getBriefingCategoryTags(mission) {
+        const map = {
+            password: ['Password', 'Cracking', 'OSINT'],
+            firewall: ['Firewall', 'Bypass', 'Routing'],
+            network: ['Network', 'Traversal', 'Signals'],
+            malware: ['Threat', 'Analysis', 'Response'],
+            zeroday: ['Zero-Day', 'Countdown', 'Containment'],
+            phishing: ['Phishing', 'Email', 'OSINT'],
+            mixed: ['Multi-Stage', 'Adaptive', 'SOC']
+        };
+
+        return map[mission.type] || ['Mission', 'Briefing', 'Ops'];
+    }
+
+    getBriefingThreatVectors(mission) {
+        const map = {
+            password: [
+                { name: 'Brute', level: 'low' },
+                { name: 'Social', level: 'mid' },
+                { name: 'Dict.', level: 'high' }
+            ],
+            firewall: [
+                { name: 'Ports', level: 'mid' },
+                { name: 'Scan', level: 'high' },
+                { name: 'Timing', level: 'low' }
+            ],
+            network: [
+                { name: 'Trace', level: 'low' },
+                { name: 'Proxy', level: 'mid' },
+                { name: 'Route', level: 'high' }
+            ],
+            malware: [
+                { name: 'Behavior', level: 'mid' },
+                { name: 'Payload', level: 'high' },
+                { name: 'Stealth', level: 'mid' }
+            ],
+            zeroday: [
+                { name: 'Exploit', level: 'high' },
+                { name: 'Patch', level: 'mid' },
+                { name: 'Race', level: 'high' }
+            ],
+            phishing: [
+                { name: 'Lure', level: 'mid' },
+                { name: 'Identity', level: 'high' },
+                { name: 'Relay', level: 'mid' }
+            ],
+            mixed: [
+                { name: 'Recon', level: 'mid' },
+                { name: 'Pivot', level: 'high' },
+                { name: 'Noise', level: 'mid' }
+            ]
+        };
+
+        return map[mission.type] || [
+            { name: 'Recon', level: 'low' },
+            { name: 'Threat', level: 'mid' },
+            { name: 'Risk', level: 'high' }
+        ];
     }
 
     getPuzzleTypeLabel(type) {
