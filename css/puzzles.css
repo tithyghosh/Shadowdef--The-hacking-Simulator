@@ -934,18 +934,21 @@
 }
 
 .investigation-choice-card__marker {
-    width: 34px;
-    height: 34px;
+    min-width: 74px;
+    height: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 6px 10px;
     border-radius: 999px;
     border: 1px solid rgba(0, 243, 255, 0.18);
     background: rgba(0, 243, 255, 0.05);
     color: #9adfff;
     font-family: var(--font-mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    white-space: nowrap;
     flex-shrink: 0;
 }
 
@@ -961,11 +964,13 @@
     justify-content: space-between;
     gap: 14px;
     align-items: flex-start;
+    flex-wrap: wrap;
 }
 
 .investigation-choice-card__heading {
     display: grid;
     gap: 6px;
+    min-width: 0;
 }
 
 .investigation-choice-card__label {
@@ -977,13 +982,13 @@
 }
 
 .investigation-choice-card__tag {
-    padding: 6px 10px;
+    padding: 5px 9px;
     border: 1px solid rgba(255, 176, 0, 0.24);
     border-radius: 999px;
     background: rgba(255, 176, 0, 0.08);
     color: #ffcb6b;
     font-family: var(--font-mono);
-    font-size: 0.64rem;
+    font-size: 0.58rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -994,6 +999,7 @@
     font-size: 1.06rem;
     font-weight: 700;
     line-height: 1.35;
+    word-break: break-word;
 }
 
 .investigation-choice-card__desc {

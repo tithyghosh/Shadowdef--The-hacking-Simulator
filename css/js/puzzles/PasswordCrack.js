@@ -2321,7 +2321,7 @@ export class PasswordCrack {
 
     renderSharedPasswordLabThemeStyles() {
         return `<style>
-            .lab-shared-shell,.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell,.password-puzzle.investigation-shell,.password-puzzle.inspection-shell{--lab-cyan:#17d8ff;--lab-red:#ff3f78;--lab-green:#00ff88;--lab-gold:#ffcc00;--lab-white:#edf7ff;--lab-text:rgba(232,244,255,.86);--lab-text-mid:rgba(168,216,232,.58);--lab-text-low:rgba(168,216,232,.3);--lab-border:rgba(23,216,255,.16);display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:radial-gradient(circle at top left,rgba(23,216,255,.12),transparent 24%),radial-gradient(circle at bottom right,rgba(255,63,120,.08),transparent 28%),linear-gradient(180deg,#030914 0%,#020610 100%) !important;color:var(--lab-text)!important;border:1px solid var(--lab-border)!important;box-shadow:0 24px 72px rgba(0,0,0,.34)!important;font-family:'Courier Prime','Share Tech Mono',monospace;overflow:auto}
+            .lab-shared-shell,.l2-shell,.l3-shell,.srl-shell,.ld-shell,.th-shell,.patch-shell,.ea-shell,.password-puzzle.investigation-shell,.password-puzzle.inspection-shell{--lab-cyan:#00e5ff;--lab-red:#ff355e;--lab-green:#00ff88;--lab-gold:#ffd700;--lab-white:#f3fbff;--lab-text:#c8e8f0;--lab-text-mid:rgba(200,232,240,.62);--lab-text-low:rgba(200,232,240,.34);--lab-border:rgba(0,229,255,.13);display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:radial-gradient(circle at top left,rgba(0,229,255,.08),transparent 24%),radial-gradient(circle at bottom right,rgba(255,53,94,.08),transparent 28%),linear-gradient(180deg,#030a14 0%,#020814 100%) !important;color:var(--lab-text)!important;border:1px solid var(--lab-border)!important;box-shadow:0 24px 72px rgba(0,0,0,.34)!important;font-family:'Rajdhani',sans-serif;overflow:auto}
             .password-puzzle.investigation-shell,.password-puzzle.inspection-shell{overflow:auto}
             .lab-shared-shell,.lab-shared-shell *,.lab-shared-shell *::before,.lab-shared-shell *::after,.l2-shell *,.l3-shell *,.srl-shell *,.ld-shell *,.th-shell *,.patch-shell *,.ea-shell *,.password-puzzle.investigation-shell *,.password-puzzle.inspection-shell *,.l2-shell *::before,.l3-shell *::before,.srl-shell *::before,.ld-shell *::before,.th-shell *::before,.patch-shell *::before,.ea-shell *::before,.password-puzzle.investigation-shell *::before,.password-puzzle.inspection-shell *::before,.l2-shell *::after,.l3-shell *::after,.srl-shell *::after,.ld-shell *::after,.th-shell *::after,.patch-shell *::after,.ea-shell *::after,.password-puzzle.investigation-shell *::after,.password-puzzle.inspection-shell *::after{box-sizing:border-box}
             @keyframes labSharedScan{0%{top:-4px}100%{top:100%}}
@@ -2335,52 +2335,52 @@ export class PasswordCrack {
             .lab-shared-hud,.lab-shared-strip,.lab-shared-body{position:relative;z-index:3}
             .lab-shared-hud{display:flex;align-items:stretch;flex-wrap:wrap;min-height:60px;border-bottom:1px solid var(--lab-border);background:rgba(0,8,20,.95);flex-shrink:0}
             .lab-shared-logo{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:1px solid var(--lab-border);flex-shrink:0}
-            .lab-shared-logo-badge{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid var(--lab-cyan);color:var(--lab-cyan);font-size:14px;background:rgba(23,216,255,.08);box-shadow:0 0 18px rgba(23,216,255,.2);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:labSharedPulse 2s infinite}
-            .lab-shared-logo-text{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--lab-cyan);text-shadow:0 0 16px rgba(23,216,255,.24)}
-            .lab-shared-kicker,.lab-shared-label,.lab-shared-btn,.lab-shared-phase,.lab-shared-status{font-family:'Courier Prime','Share Tech Mono',monospace;text-transform:uppercase}
+            .lab-shared-logo-badge{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,.32);color:var(--lab-cyan);font-size:13px;background:rgba(0,229,255,.08);box-shadow:0 0 18px rgba(0,229,255,.18);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:labSharedPulse 2s infinite}
+            .lab-shared-logo-text{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:800;letter-spacing:6px;color:var(--lab-cyan);text-shadow:0 0 16px rgba(0,229,255,.2)}
+            .lab-shared-kicker,.lab-shared-label,.lab-shared-btn,.lab-shared-phase,.lab-shared-status{font-family:'Share Tech Mono',monospace;text-transform:uppercase}
             .lab-shared-mission{display:flex;flex:1 1 240px;flex-direction:column;justify-content:center;padding:0 24px;border-right:1px solid var(--lab-border);min-width:220px}
-            .lab-shared-kicker{font-size:9px;letter-spacing:3px;color:var(--lab-text-mid);margin-bottom:3px}
-            .lab-shared-title{font-family:'Teko',sans-serif;font-size:18px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--lab-white);text-transform:uppercase}
+            .lab-shared-kicker{font-size:8px;letter-spacing:.26em;color:var(--lab-text-mid);margin-bottom:4px}
+            .lab-shared-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;letter-spacing:.18em;line-height:1.25;color:var(--lab-white);text-transform:uppercase}
             .lab-shared-stats{display:flex;align-items:stretch;flex-wrap:wrap;min-width:0;margin-left:auto}
             .lab-shared-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 18px;border-left:1px solid var(--lab-border);min-width:80px}
-            .lab-shared-label{font-size:8px;letter-spacing:3px;color:var(--lab-text-low);margin-bottom:2px}
-            .lab-shared-value{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1;color:var(--lab-cyan)}
+            .lab-shared-label{font-size:8px;letter-spacing:.24em;color:var(--lab-text-low);margin-bottom:2px}
+            .lab-shared-value{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;letter-spacing:.08em;line-height:1;color:var(--lab-cyan)}
             .lab-shared-value--score{color:var(--lab-gold)}
             .lab-shared-value--alert{color:var(--lab-red)}
             .lab-shared-value--safe{color:var(--lab-green)}
-            #l1-timer.danger{color:var(--lab-red)!important;text-shadow:0 0 16px rgba(255,63,120,.3)}
+            #l1-timer.danger{color:var(--lab-red)!important;text-shadow:0 0 16px rgba(255,53,94,.3)}
             .lab-shared-actions{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--lab-border);flex-wrap:wrap}
-            .lab-shared-btn{padding:6px 14px;border:1px solid rgba(23,216,255,.26);background:transparent;color:var(--lab-text-mid);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s ease}
-            .lab-shared-btn:hover{border-color:var(--lab-cyan);color:var(--lab-cyan);box-shadow:0 0 18px rgba(23,216,255,.16)}
-            .lab-shared-strip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:40px;padding:0 24px;border-bottom:1px solid var(--lab-border);background:rgba(23,216,255,.04);flex-shrink:0}
-            .lab-shared-phase{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:2px;color:var(--lab-text-low)}
-            .lab-shared-phase strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;font-weight:400}
+            .lab-shared-btn{padding:8px 12px;border:1px solid rgba(0,229,255,.24);background:rgba(4,16,36,.6);color:var(--lab-text-mid);font-size:9px;letter-spacing:.18em;cursor:pointer;transition:all .2s ease}
+            .lab-shared-btn:hover{border-color:var(--lab-cyan);color:var(--lab-cyan);box-shadow:0 0 18px rgba(0,229,255,.14)}
+            .lab-shared-strip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:38px;padding:0 24px;border-bottom:1px solid rgba(0,229,255,.08);background:rgba(3,10,20,.92);flex-shrink:0}
+            .lab-shared-phase{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.18em;color:var(--lab-text-low)}
+            .lab-shared-phase strong{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.08em;font-weight:700}
             .lab-shared-phase__dot{width:8px;height:8px;border-radius:50%;background:rgba(23,216,255,.14);flex-shrink:0}
             .lab-shared-phase.active{color:var(--lab-cyan)}
             .lab-shared-phase.done{color:var(--lab-green)}
-            .lab-shared-phase.active .lab-shared-phase__dot{background:var(--lab-cyan);box-shadow:0 0 14px rgba(23,216,255,.42)}
+            .lab-shared-phase.active .lab-shared-phase__dot{background:var(--lab-cyan);box-shadow:0 0 14px rgba(0,229,255,.42)}
             .lab-shared-phase.done .lab-shared-phase__dot{background:var(--lab-green);box-shadow:0 0 14px rgba(0,255,136,.3)}
-            .lab-shared-phase-sep{color:rgba(23,216,255,.3);font-size:16px}
-            .lab-shared-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:3px;color:var(--lab-cyan);text-shadow:0 0 12px rgba(23,216,255,.28)}
+            .lab-shared-phase-sep{color:rgba(0,229,255,.24);font-size:14px}
+            .lab-shared-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.18em;color:var(--lab-green);text-shadow:0 0 12px rgba(0,255,136,.24)}
             .lab-shared-status__dot{width:8px;height:8px;background:var(--lab-green);box-shadow:0 0 12px rgba(0,255,136,.75);animation:labSharedBlink 1s step-end infinite}
             .lab-shared-body{display:flex;flex:1;min-height:0;overflow:hidden}
-            .lab-shared-content{display:flex;flex:1;min-height:0;overflow:hidden}
+            .lab-shared-content{display:flex;flex:1;min-height:0;overflow:hidden;background:linear-gradient(180deg,rgba(2,9,18,.88),rgba(1,6,14,.98))}
             .lab-shared-content > *{flex:1;min-height:0}
             .lab-shared-content .l2-shell,.lab-shared-content .l3-shell,.lab-shared-content .srl-shell,.lab-shared-content .ld-shell,.lab-shared-content .th-shell,.lab-shared-content .patch-shell,.lab-shared-content .ea-shell,.lab-shared-content .password-puzzle.investigation-shell,.lab-shared-content .password-puzzle.inspection-shell{background:transparent !important;border:0 !important;box-shadow:none !important}
             .lab-shared-content .srl-shell{overflow:visible !important}
             .lab-shared-content .l2-header,.lab-shared-content .l2-phases,.lab-shared-content .l2-hint-strip,.lab-shared-content .l3-header,.lab-shared-content .l3-phases,.lab-shared-content .l3-hint-strip,.lab-shared-content .srl-header,.lab-shared-content .srl-phases,.lab-shared-content .ld-header,.lab-shared-content .ld-phases,.lab-shared-content .ld-hint-strip,.lab-shared-content .th-header,.lab-shared-content .th-hint-strip,.lab-shared-content .patch-header,.lab-shared-content .patch-phases,.lab-shared-content .patch-hint-strip,.lab-shared-content .ea-header,.lab-shared-content .ea-phases,.lab-shared-content .ea-hint-strip,.lab-shared-content .investigation-masthead,.lab-shared-content .investigation-progress-rail,.lab-shared-content .investigation-hint-strip,.lab-shared-content .inspection-masthead,.lab-shared-content .inspection-progress-rail,.lab-shared-content .inspection-hint-strip{display:none !important}
-            .l2-header,.l3-header,.srl-header,.ld-header,.th-header,.patch-header,.ea-header,.investigation-masthead,.inspection-masthead{background:rgba(1,8,24,.94)!important;border-bottom:1px solid var(--lab-border)!important}
+            .l2-header,.l3-header,.srl-header,.ld-header,.th-header,.patch-header,.ea-header,.investigation-masthead,.inspection-masthead{background:rgba(3,10,20,.96)!important;border-bottom:1px solid rgba(0,229,255,.08)!important}
             .l2-brand,.l3-brand,.srl-brand,.ld-brand,.th-brand,.patch-brand,.ea-brand,.investigation-masthead__brand,.inspection-masthead__brand{color:var(--lab-cyan)!important;font-family:'Orbitron',sans-serif!important;font-weight:800!important;letter-spacing:4px!important}
             .l2-level,.l3-level,.srl-level,.ld-level,.th-level,.patch-level,.ea-level,.investigation-masthead__case,.inspection-masthead__case{color:rgba(23,216,255,.66)!important;font-family:'Share Tech Mono',monospace!important;letter-spacing:.18em!important;text-transform:uppercase}
             .l2-status,.l3-status,.srl-status,.ld-status,.th-status,.patch-status,.ea-status,.investigation-masthead__status,.inspection-masthead__status{color:var(--lab-green)!important;font-family:'Share Tech Mono',monospace!important;letter-spacing:.16em!important;text-transform:uppercase}
-            .l2-phases,.l3-phases,.srl-phases,.ld-phases,.ea-phases,.investigation-progress-rail,.inspection-progress-rail{background:rgba(1,8,24,.86)!important;border-bottom:1px solid rgba(23,216,255,.08)!important}
+            .l2-phases,.l3-phases,.srl-phases,.ld-phases,.ea-phases,.investigation-progress-rail,.inspection-progress-rail{background:rgba(3,10,20,.92)!important;border-bottom:1px solid rgba(0,229,255,.08)!important}
             .l2-phase,.l3-phase,.srl-phase,.ld-phase,.ea-phase,.investigation-progress-step,.inspection-progress-step{color:var(--lab-text-low)!important;font-family:'Share Tech Mono',monospace!important}
             .l2-phase.active,.l3-phase.active,.srl-phase.active,.ld-phase.active,.ea-phase.active,.investigation-progress-step.is-active,.inspection-progress-step.is-active{color:var(--lab-cyan)!important;background:rgba(23,216,255,.06)!important;border-bottom-color:var(--lab-cyan)!important}
             .srl-phase.done{color:var(--lab-green)!important;border-bottom-color:rgba(0,255,136,.35)!important}
-            .l2-hint-strip,.l3-hint-strip,.srl-hint-strip,.ld-hint-strip,.th-hint-strip,.patch-hint-strip,.ea-hint-strip,.investigation-hint-strip,.inspection-hint-strip{background:rgba(23,216,255,.04)!important;border-bottom:1px solid rgba(23,216,255,.12)!important;color:rgba(23,216,255,.78)!important;font-family:'Share Tech Mono',monospace!important}
+            .l2-hint-strip,.l3-hint-strip,.srl-hint-strip,.ld-hint-strip,.th-hint-strip,.patch-hint-strip,.ea-hint-strip,.investigation-hint-strip,.inspection-hint-strip{background:rgba(0,229,255,.05)!important;border-bottom:1px solid rgba(0,229,255,.12)!important;color:rgba(0,229,255,.76)!important;font-family:'Share Tech Mono',monospace!important}
             .l2-frame,.l3-frame,.ld-grid,.th-grid,.patch-grid,.ea-grid,.investigation-grid,.inspection-grid{flex:1;min-height:0!important;height:100%}
-            .l2-panel,.l3-panel,.ld-panel,.th-main,.th-side,.patch-main,.patch-side,.ea-main,.ea-side,.investigation-panel,.investigation-question-panel,.investigation-selected-entry,.inspection-card,.inspection-side-panel,.inspection-question-panel,.inspection-scorecard{background:rgba(2,10,24,.6)!important;border-color:rgba(23,216,255,.12)!important;box-shadow:0 18px 40px rgba(0,0,0,.22)!important;backdrop-filter:blur(12px)}
-            .l2-brief-box,.l2-metric-box,.l2-guide,.l2-log-panel,.l2-feedback,.l2-choice-card,.l2-evidence-card,.l3-brief-box,.l3-metric-box,.l3-guide,.l3-card,.l3-feedback,.l3-race-board,.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-divergence,.srl-result,.srl-feedback,.srl-completion-card,.th-overview,.th-sidebox,.th-panel,.th-selected,.th-log,.patch-overview,.patch-sidebox,.patch-action-board,.patch-log,.patch-module,.patch-vuln{background:rgba(2,10,24,.6)!important;border-color:rgba(23,216,255,.12)!important}
+            .l2-panel,.l3-panel,.ld-panel,.th-main,.th-side,.patch-main,.patch-side,.ea-main,.ea-side,.investigation-panel,.investigation-question-panel,.investigation-selected-entry,.inspection-card,.inspection-side-panel,.inspection-question-panel,.inspection-scorecard{background:rgba(3,14,32,.88)!important;border-color:rgba(0,229,255,.1)!important;box-shadow:0 18px 40px rgba(0,0,0,.22)!important;backdrop-filter:blur(12px)}
+            .l2-brief-box,.l2-metric-box,.l2-guide,.l2-log-panel,.l2-feedback,.l2-choice-card,.l2-evidence-card,.l3-brief-box,.l3-metric-box,.l3-guide,.l3-card,.l3-feedback,.l3-race-board,.srl-brief-box,.srl-mission-box,.srl-risk-box,.srl-divergence,.srl-result,.srl-feedback,.srl-completion-card,.th-overview,.th-sidebox,.th-panel,.th-selected,.th-log,.patch-overview,.patch-sidebox,.patch-action-board,.patch-log,.patch-module,.patch-vuln{background:rgba(3,14,32,.88)!important;border-color:rgba(0,229,255,.1)!important}
             .l2-section-kicker,.l3-section-kicker,.srl-section-kicker,.ld-kicker,.th-kicker,.patch-kicker,.ea-kicker,.investigation-panel__header strong,.inspection-side-panel__label{color:rgba(23,216,255,.72)!important;font-family:'Share Tech Mono',monospace!important}
             .l2-main-title,.l3-main-title,.ld-title,.th-title,.patch-title,.ea-title,.investigation-title,.inspection-title{color:var(--lab-white)!important;font-family:'Orbitron',sans-serif!important}
             .l2-choice-card__title,.l3-rate-label,.l3-card__label,.srl-label,.ld-card__status,.ld-card__cost,.th-panel__head span,.patch-action-card__meta,.ea-config-card__title,.investigation-case-meta,.inspection-hero__meta{color:rgba(23,216,255,.68)!important;font-family:'Share Tech Mono',monospace!important}
@@ -2396,7 +2396,7 @@ export class PasswordCrack {
 
     renderHumanPsychologyLabStyles() {
         return `<style>
-            .l1-shell{--l1-black:#01060f;--l1-deep:#020910;--l1-panel:rgba(6,18,34,.92);--l1-panel-2:rgba(4,12,26,.96);--l1-rim:rgba(23,216,255,.16);--l1-rim2:rgba(23,216,255,.28);--l1-cyan:#17d8ff;--l1-red:#ff3f78;--l1-green:#00ff88;--l1-gold:#ffcc00;--l1-white:rgba(255,255,255,.92);--l1-text:rgba(232,244,255,.86);--l1-text-mid:rgba(168,216,232,.48);--l1-text-low:rgba(168,216,232,.24);position:relative;display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:100%;max-height:100%;min-width:0;min-height:0;overflow:hidden;background:var(--l1-black);color:var(--l1-text);font-family:'Courier Prime','Share Tech Mono',monospace;cursor:crosshair}
+            .l1-shell{--l1-black:#030a14;--l1-deep:#020814;--l1-panel:rgba(3,14,32,.92);--l1-panel-2:rgba(3,10,24,.96);--l1-rim:rgba(0,229,255,.13);--l1-rim2:rgba(0,229,255,.24);--l1-cyan:#00e5ff;--l1-red:#ff355e;--l1-green:#00ff88;--l1-gold:#ffd700;--l1-white:#f3fbff;--l1-text:#c8e8f0;--l1-text-mid:rgba(200,232,240,.56);--l1-text-low:rgba(200,232,240,.3);position:relative;display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:100%;max-height:100%;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(180deg,#030a14 0%,#020814 100%);color:var(--l1-text);font-family:'Rajdhani',sans-serif;cursor:crosshair}
             .l1-shell,.l1-shell *,.l1-shell *::before,.l1-shell *::after{box-sizing:border-box}
             @keyframes l1ScanDown{0%{top:-4px}100%{top:100%}}
             @keyframes l1Blink{0%,100%{opacity:1}50%{opacity:0}}
@@ -2409,45 +2409,45 @@ export class PasswordCrack {
             .l1-top-hud,.l1-mission-strip,.l1-body{position:relative;z-index:5}
             .l1-top-hud{display:flex;align-items:stretch;min-height:60px;border-bottom:1px solid var(--l1-rim);background:rgba(0,8,20,.95);flex-shrink:0}
             .l1-hud-logo{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:1px solid var(--l1-rim);flex-shrink:0}
-            .l1-logo-badge{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-cyan);color:var(--l1-cyan);font-size:14px;background:rgba(23,216,255,.08);box-shadow:0 0 18px rgba(23,216,255,.2);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:l1Pulse 2s infinite}
-            .l1-logo-text{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--l1-cyan);text-shadow:0 0 16px rgba(23,216,255,.24)}
-            .l1-hud-kicker,.l1-hud-label,.l1-card__id,.l1-card__state,.l1-tag,.l1-hud-btn,.l1-attempts,.l1-submit-label,.l1-submit-points-label,.l1-console-title,.l1-console-chip,.l1-risk-row,.l1-phase,.l1-mission-status{font-family:'Courier Prime','Share Tech Mono',monospace;text-transform:uppercase}
+            .l1-logo-badge{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,.32);color:var(--l1-cyan);font-size:13px;background:rgba(0,229,255,.08);box-shadow:0 0 18px rgba(0,229,255,.18);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0 75%,0 25%);animation:l1Pulse 2s infinite}
+            .l1-logo-text{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:800;letter-spacing:6px;color:var(--l1-cyan);text-shadow:0 0 16px rgba(0,229,255,.2)}
+            .l1-hud-kicker,.l1-hud-label,.l1-card__id,.l1-card__state,.l1-tag,.l1-hud-btn,.l1-attempts,.l1-submit-label,.l1-submit-points-label,.l1-console-title,.l1-console-chip,.l1-risk-row,.l1-phase,.l1-mission-status{font-family:'Share Tech Mono',monospace;text-transform:uppercase}
             .l1-hud-mission{display:flex;flex-direction:column;justify-content:center;padding:0 24px;border-right:1px solid var(--l1-rim);min-width:220px}
-            .l1-hud-kicker{font-size:9px;letter-spacing:3px;color:var(--l1-text-mid);margin-bottom:3px}
-            .l1-hud-title{font-family:'Teko',sans-serif;font-size:18px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--l1-white);text-transform:uppercase}
+            .l1-hud-kicker{font-size:8px;letter-spacing:.26em;color:var(--l1-text-mid);margin-bottom:4px}
+            .l1-hud-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;letter-spacing:.18em;line-height:1.25;color:var(--l1-white);text-transform:uppercase}
             .l1-hud-stats{display:flex;align-items:stretch;margin-left:auto;min-width:0}
             .l1-hud-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;border-left:1px solid var(--l1-rim);min-width:84px}
             .l1-hud-meter{display:flex;align-items:center;gap:12px;padding:0 24px;border-left:1px solid var(--l1-rim);min-width:164px}
-            .l1-hud-label{font-size:8px;letter-spacing:3px;color:var(--l1-text-low);margin-bottom:2px}
-            .l1-hud-value{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1;color:var(--l1-cyan)}
+            .l1-hud-label{font-size:8px;letter-spacing:.24em;color:var(--l1-text-low);margin-bottom:2px}
+            .l1-hud-value{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;letter-spacing:.08em;line-height:1;color:var(--l1-cyan)}
             .l1-hud-value--cyan{color:var(--l1-gold)}
             .l1-hud-value--red{color:var(--l1-red)}
-            #l1-timer.danger{color:var(--l1-red);text-shadow:0 0 16px rgba(255,63,120,.32)}
-            .l1-hud-track{flex:1;height:6px;background:rgba(23,216,255,.14);border-radius:999px;overflow:hidden}
-            .l1-hud-fill{height:100%;background:linear-gradient(90deg,var(--l1-cyan),rgba(135,241,255,.92));box-shadow:0 0 12px rgba(23,216,255,.26);transition:width .35s ease}
+            #l1-timer.danger{color:var(--l1-red);text-shadow:0 0 16px rgba(255,53,94,.32)}
+            .l1-hud-track{flex:1;height:6px;background:rgba(0,229,255,.12);border-radius:999px;overflow:hidden}
+            .l1-hud-fill{height:100%;background:linear-gradient(90deg,var(--l1-green),var(--l1-cyan));box-shadow:0 0 12px rgba(0,229,255,.24);transition:width .35s ease}
             .l1-hud-actions{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--l1-rim)}
-            .l1-hud-btn{padding:6px 14px;border:1px solid var(--l1-rim2);background:transparent;color:var(--l1-text-mid);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s ease}
-            .l1-hud-btn:hover{border-color:var(--l1-cyan);color:var(--l1-cyan);box-shadow:0 0 18px rgba(23,216,255,.16)}
-            .l1-mission-strip{display:flex;align-items:center;gap:14px;height:40px;padding:0 24px;border-bottom:1px solid var(--l1-rim);background:rgba(23,216,255,.04);flex-shrink:0}
-            .l1-phase{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:2px;color:var(--l1-text-low)}
-            .l1-phase strong{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;font-weight:400}
+            .l1-hud-btn{padding:8px 12px;border:1px solid rgba(0,229,255,.24);background:rgba(4,16,36,.6);color:var(--l1-text-mid);font-size:9px;letter-spacing:.18em;cursor:pointer;transition:all .2s ease}
+            .l1-hud-btn:hover{border-color:var(--l1-cyan);color:var(--l1-cyan);box-shadow:0 0 18px rgba(0,229,255,.14)}
+            .l1-mission-strip{display:flex;align-items:center;gap:14px;height:38px;padding:0 24px;border-bottom:1px solid rgba(0,229,255,.08);background:rgba(3,10,20,.92);flex-shrink:0}
+            .l1-phase{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.18em;color:var(--l1-text-low)}
+            .l1-phase strong{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.08em;font-weight:700}
             .l1-phase__dot{width:8px;height:8px;border-radius:50%;background:rgba(23,216,255,.14);flex-shrink:0}
             .l1-phase.active{color:var(--l1-cyan)}
-            .l1-phase.active .l1-phase__dot{background:var(--l1-cyan);box-shadow:0 0 14px rgba(23,216,255,.42)}
-            .l1-phase-sep{color:rgba(23,216,255,.3);font-size:16px}
-            .l1-mission-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:3px;color:var(--l1-cyan);text-shadow:0 0 12px rgba(23,216,255,.28)}
+            .l1-phase.active .l1-phase__dot{background:var(--l1-cyan);box-shadow:0 0 14px rgba(0,229,255,.42)}
+            .l1-phase-sep{color:rgba(0,229,255,.24);font-size:14px}
+            .l1-mission-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.18em;color:var(--l1-green);text-shadow:0 0 12px rgba(0,255,136,.24)}
             .l1-mission-status__dot{width:8px;height:8px;background:var(--l1-green);box-shadow:0 0 12px rgba(0,255,136,.75);animation:l1Blink 1s step-end infinite}
             .l1-body{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;overflow:hidden}
             .l1-arena{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--l1-rim)}
-            .l1-arena-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:16px 24px 12px;border-bottom:1px solid var(--l1-rim);background:rgba(0,4,14,.58);flex-shrink:0}
-            .l1-arena-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,4.4vw,72px);letter-spacing:3px;line-height:.88;color:var(--l1-white);text-transform:uppercase}
-            .l1-arena-title span{color:var(--l1-red);text-shadow:0 0 18px rgba(255,63,120,.28)}
-            .l1-arena-sub{margin-top:4px;font-size:10px;letter-spacing:1px;color:var(--l1-text-mid)}
-            .l1-arena-hint{max-width:280px;text-align:right;font-size:10px;letter-spacing:1px;line-height:1.5;color:var(--l1-text-mid)}
+            .l1-arena-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:18px 24px 14px;border-bottom:1px solid rgba(0,229,255,.08);background:rgba(3,10,20,.72);flex-shrink:0}
+            .l1-arena-title{font-family:'Orbitron',sans-serif;font-size:clamp(34px,3.5vw,52px);font-weight:800;letter-spacing:.14em;line-height:1.08;color:var(--l1-white);text-transform:uppercase}
+            .l1-arena-title span{color:var(--l1-red);text-shadow:0 0 18px rgba(255,53,94,.24)}
+            .l1-arena-sub{margin-top:6px;font-size:10px;letter-spacing:.12em;color:var(--l1-text-mid);font-family:'Share Tech Mono',monospace;text-transform:uppercase}
+            .l1-arena-hint{max-width:280px;text-align:right;font-size:10px;letter-spacing:.08em;line-height:1.6;color:var(--l1-text-mid);font-family:'Share Tech Mono',monospace}
             .l1-arena-hint b{color:var(--l1-cyan);font-weight:700}
             .l1-arena-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 24px;scrollbar-width:thin;scrollbar-color:rgba(23,216,255,.28) transparent}
-            .l1-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-            .l1-card{position:relative;overflow:hidden;padding:0;border:1px solid var(--l1-rim);background:rgba(2,15,34,.9);color:var(--l1-text);text-align:left;cursor:pointer;transition:border-color .2s ease,transform .2s ease,box-shadow .2s ease}
+            .l1-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+            .l1-card{position:relative;overflow:hidden;padding:0;border:1px solid rgba(0,229,255,.1);background:rgba(3,14,32,.9);color:var(--l1-text);text-align:left;cursor:pointer;transition:border-color .2s ease,transform .2s ease,box-shadow .2s ease}
             .l1-card:hover{border-color:var(--l1-cyan);transform:translateX(4px);box-shadow:-4px 0 0 rgba(23,216,255,.48),0 0 28px rgba(23,216,255,.12)}
             .l1-card.selected.flagged{border-color:var(--l1-red);background:rgba(22,4,14,.96);box-shadow:0 0 0 1px rgba(255,63,120,.22) inset,0 0 28px rgba(255,63,120,.14)}
             .l1-card.selected.clear{border-color:var(--l1-green);background:rgba(0,12,11,.96);box-shadow:0 0 0 1px rgba(0,255,136,.18) inset,0 0 28px rgba(0,255,136,.12)}
@@ -2461,7 +2461,7 @@ export class PasswordCrack {
             .l1-card__state{font-size:9px;letter-spacing:2px;font-weight:700;opacity:0;transition:opacity .25s ease}
             .l1-card.selected.flagged .l1-card__state{opacity:1;color:var(--l1-red)}
             .l1-card.selected.clear .l1-card__state{opacity:1;color:var(--l1-green)}
-            .l1-card__value{font-family:'Teko',sans-serif;font-size:32px;font-weight:600;letter-spacing:2px;line-height:1.05;color:var(--l1-cyan);margin-bottom:10px;word-break:break-all;text-shadow:0 0 10px rgba(23,216,255,.18)}
+            .l1-card__value{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;letter-spacing:.08em;line-height:1.2;color:var(--l1-cyan);margin-bottom:10px;word-break:break-all;text-shadow:0 0 10px rgba(0,229,255,.18)}
             .l1-card.selected.flagged .l1-card__value{color:var(--l1-red);text-shadow:0 0 14px rgba(255,63,120,.24)}
             .l1-card.selected.clear .l1-card__value{color:var(--l1-green);text-shadow:0 0 14px rgba(0,255,136,.22)}
             .l1-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
@@ -2477,40 +2477,40 @@ export class PasswordCrack {
             .l1-card__entropy-fill.mid{background:var(--l1-gold)}
             .l1-card__entropy-fill.high{background:var(--l1-green);box-shadow:0 0 6px rgba(0,255,136,.34)}
             .l1-card__entropy-value{min-width:28px;text-align:right;font-size:9px;color:var(--l1-text-low)}
-            .l1-feedback{margin-bottom:12px;padding:12px 14px;border:1px solid rgba(23,216,255,.1);background:rgba(2,10,24,.82);color:var(--l1-text-mid);line-height:1.65;font-size:11px}
-            .l1-submit-dock{display:flex;align-items:center;gap:20px;padding:16px 24px;border-top:1px solid var(--l1-rim);background:rgba(0,4,14,.84);flex-shrink:0;min-width:0}
+            .l1-feedback{margin-bottom:12px;padding:12px 14px;border:1px solid rgba(0,229,255,.1);background:rgba(3,14,32,.84);color:var(--l1-text-mid);line-height:1.65;font-size:11px}
+            .l1-submit-dock{display:flex;align-items:center;gap:20px;padding:16px 24px;border-top:1px solid rgba(0,229,255,.08);background:rgba(3,10,20,.88);flex-shrink:0;min-width:0}
             .l1-submit-cluster{display:flex;align-items:center;gap:8px;min-width:0}
             .l1-submit-cluster--summary{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:0}
             .l1-submit-label{margin-right:4px;font-size:9px;letter-spacing:2px;color:var(--l1-text-low)}
             .l1-flag-slots{display:flex;align-items:center;gap:8px}
-            .l1-flag-slot{width:44px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-rim2);background:rgba(23,216,255,.03);color:var(--l1-text-low);font-family:'Teko',sans-serif;font-size:13px;letter-spacing:1px;transition:all .3s ease}
+            .l1-flag-slot{width:44px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-rim2);background:rgba(0,229,255,.03);color:var(--l1-text-low);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.06em;transition:all .3s ease}
             .l1-flag-slot.active{border-color:var(--l1-red);background:rgba(255,63,120,.08);color:var(--l1-red);box-shadow:0 0 10px rgba(255,63,120,.16)}
-            .l1-submit-value{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--l1-cyan);line-height:1}
+            .l1-submit-value{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;letter-spacing:.08em;color:var(--l1-cyan);line-height:1}
             .l1-submit-value.neg{color:var(--l1-red)}
             .l1-submit-points-label{font-size:8px;letter-spacing:2px;color:var(--l1-text-low)}
             .l1-submit-meta{min-width:112px;text-align:right}
             .l1-attempts{color:var(--l1-text-low);font-size:8px;letter-spacing:2px}
             .l1-attempts span.is-hot{color:var(--l1-red)}
-            .l1-fire-btn{margin-left:4px;border:none;background:var(--l1-red);color:#03070d;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:12px 36px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:all .2s ease}
-            .l1-fire-btn:hover{background:#ff5a8f;transform:scaleX(1.05);box-shadow:0 10px 32px rgba(255,63,120,.26)}
+            .l1-fire-btn{margin-left:4px;border:1px solid rgba(0,229,255,.24);background:rgba(0,229,255,.08);color:var(--l1-cyan);font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.2em;padding:12px 28px;cursor:pointer;transition:all .2s ease}
+            .l1-fire-btn:hover{background:rgba(0,229,255,.18);transform:translateY(-1px);box-shadow:0 10px 32px rgba(0,229,255,.2)}
             .l1-fire-btn:disabled,.l1-fire-btn:disabled:hover{background:rgba(168,216,232,.18);color:rgba(3,7,13,.48);cursor:not-allowed;transform:none;box-shadow:none}
-            .l1-console{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;overflow:hidden;background:rgba(0,3,12,.97)}
-            .l1-console-panel{position:relative;padding:18px 20px;background:rgba(0,3,12,.94);border-bottom:1px solid var(--l1-rim);flex-shrink:0}
+            .l1-console{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;overflow:hidden;background:rgba(3,10,24,.98)}
+            .l1-console-panel{position:relative;padding:18px 20px;background:rgba(3,10,24,.94);border-bottom:1px solid rgba(0,229,255,.08);flex-shrink:0}
             .l1-console-panel--fill{display:flex;flex-direction:column;flex:1;min-height:0}
-            .l1-console-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:9px;letter-spacing:3px;color:var(--l1-text-low)}
+            .l1-console-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:9px;letter-spacing:.24em;color:var(--l1-text-low)}
             .l1-console-title::before{content:'//';color:var(--l1-cyan);font-size:11px}
             .l1-dial-wrap{position:relative;width:160px;height:160px;margin:0 auto 16px}
-            .l1-dial-wrap::after{content:'';position:absolute;inset:-10px;border:1px solid rgba(23,216,255,.08);border-radius:50%;animation:l1Spin 20s linear infinite}
+            .l1-dial-wrap::after{content:'';position:absolute;inset:-10px;border:1px solid rgba(0,229,255,.08);border-radius:50%;animation:l1Spin 20s linear infinite}
             .l1-dial-svg{width:100%;height:100%;transform:rotate(-90deg)}
-            .l1-dial-bg{fill:none;stroke:rgba(23,216,255,.12);stroke-width:8}
-            .l1-dial-ring{fill:none;stroke:var(--l1-red);stroke-width:8;stroke-linecap:round;stroke-dasharray:408;stroke-dashoffset:408;filter:drop-shadow(0 0 6px rgba(255,63,120,.34));transition:stroke-dashoffset .5s ease}
+            .l1-dial-bg{fill:none;stroke:rgba(0,229,255,.12);stroke-width:8}
+            .l1-dial-ring{fill:none;stroke:var(--l1-red);stroke-width:8;stroke-linecap:round;stroke-dasharray:408;stroke-dashoffset:408;filter:drop-shadow(0 0 6px rgba(255,53,94,.34));transition:stroke-dashoffset .5s ease}
             .l1-dial-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-            .l1-dial-num{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:2px;line-height:1;color:var(--l1-red);text-shadow:0 0 16px rgba(255,63,120,.32)}
-            .l1-dial-sub{margin-top:2px;font-size:9px;letter-spacing:3px;color:var(--l1-text-low)}
+            .l1-dial-num{font-family:'Orbitron',sans-serif;font-size:38px;font-weight:700;letter-spacing:.08em;line-height:1;color:var(--l1-red);text-shadow:0 0 16px rgba(255,53,94,.32)}
+            .l1-dial-sub{margin-top:2px;font-size:9px;letter-spacing:.24em;color:var(--l1-text-low)}
             .l1-threat-bars{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:16px}
             .l1-threat-row{display:flex;flex-direction:column;gap:3px}
-            .l1-threat-top{display:flex;justify-content:space-between;gap:12px;font-size:9px;letter-spacing:1px;color:var(--l1-text-mid)}
-            .l1-threat-track,.l1-risk-track{height:3px;background:rgba(23,216,255,.12)}
+            .l1-threat-top{display:flex;justify-content:space-between;gap:12px;font-size:9px;letter-spacing:.08em;color:var(--l1-text-mid)}
+            .l1-threat-track,.l1-risk-track{height:3px;background:rgba(0,229,255,.12)}
             .l1-threat-fill,.l1-risk-fill{height:100%}
             .tone-danger{color:var(--l1-red)}
             .tone-warn{color:var(--l1-gold)}
@@ -2519,21 +2519,21 @@ export class PasswordCrack {
             .l1-threat-fill.tone-warn{background:var(--l1-gold)}
             .l1-threat-fill.tone-safe,.l1-risk-fill{background:var(--l1-green);box-shadow:0 0 6px rgba(0,255,136,.22)}
             .l1-objective-list{display:flex;flex-direction:column;gap:0}
-            .l1-objective{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(23,216,255,.06)}
+            .l1-objective{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(0,229,255,.06)}
             .l1-objective:last-child{border-bottom:0}
             .l1-objective__icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:1px solid var(--l1-rim2);font-size:9px;color:var(--l1-text-low);flex-shrink:0;margin-top:1px}
             .l1-objective__text{font-size:11px;line-height:1.5;color:var(--l1-text-mid)}
-            .l1-objective.on .l1-objective__icon{border-color:var(--l1-cyan);color:var(--l1-cyan);background:rgba(23,216,255,.08);box-shadow:0 0 8px rgba(23,216,255,.16)}
+            .l1-objective.on .l1-objective__icon{border-color:var(--l1-cyan);color:var(--l1-cyan);background:rgba(0,229,255,.08);box-shadow:0 0 8px rgba(0,229,255,.16)}
             .l1-objective.on .l1-objective__text{color:var(--l1-text)}
             .l1-objective.done .l1-objective__icon{border-color:rgba(0,255,136,.36);color:var(--l1-green);background:rgba(0,255,136,.08)}
             .l1-objective.done .l1-objective__text{color:#baffdf}
             .l1-console-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
-            .l1-console-chip{padding:5px 9px;border:1px solid rgba(255,63,120,.24);background:rgba(255,63,120,.08);color:#ffd9e5;font-size:9px;letter-spacing:2px}
-            .l1-risk-row{display:flex;align-items:center;gap:12px;margin:12px 0 14px;font-size:9px;letter-spacing:2px;color:var(--l1-text-low)}
+            .l1-console-chip{padding:5px 9px;border:1px solid rgba(0,229,255,.24);background:rgba(0,229,255,.08);color:var(--l1-cyan);font-size:9px;letter-spacing:.18em}
+            .l1-risk-row{display:flex;align-items:center;gap:12px;margin:12px 0 14px;font-size:9px;letter-spacing:.18em;color:var(--l1-text-low)}
             .l1-risk-row .l1-risk-track{flex:1}
             .l1-risk-text{min-width:38px;text-align:right;color:var(--l1-red)}
             .l1-hint-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-            .l1-hint{padding:10px 12px;border-left:2px solid var(--l1-cyan);background:rgba(23,216,255,.05);color:var(--l1-text);font-size:11px;line-height:1.6}
+            .l1-hint{padding:10px 12px;border-left:2px solid var(--l1-cyan);background:rgba(0,229,255,.05);color:var(--l1-text);font-size:11px;line-height:1.6}
             .l1-log-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;font-size:11px;line-height:1.8;color:var(--l1-text-mid)}
             .l1-log-line{display:block}
             .l1-log-time{color:var(--l1-text-low);margin-right:8px}
@@ -2543,8 +2543,8 @@ export class PasswordCrack {
             .l1-log-danger{color:var(--l1-red)}
             .l1-log-cursor{display:inline-block;width:8px;height:12px;margin-left:4px;background:var(--l1-cyan);vertical-align:middle;animation:l1Blink 1s step-end infinite}
             .l1-arena-scroll::-webkit-scrollbar,.l1-log-body::-webkit-scrollbar{width:4px}
-            .l1-arena-scroll::-webkit-scrollbar-thumb,.l1-log-body::-webkit-scrollbar-thumb{background:rgba(23,216,255,.28);border-radius:999px}
-            @media (max-width:1280px){.l1-body{grid-template-columns:minmax(0,1fr) 350px}.l1-arena-title{font-size:clamp(46px,4vw,62px)}}
+            .l1-arena-scroll::-webkit-scrollbar-thumb,.l1-log-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,.28);border-radius:999px}
+            @media (max-width:1280px){.l1-body{grid-template-columns:minmax(0,1fr) 350px}.l1-arena-title{font-size:clamp(30px,3vw,44px)}}
             @media (max-width:1080px){.l1-shell{overflow:auto}.l1-top-hud{flex-wrap:wrap}.l1-hud-logo,.l1-hud-mission{border-right:0}.l1-hud-stats{order:3;width:100%;margin-left:0}.l1-hud-actions{margin-left:auto}.l1-body{grid-template-columns:1fr;height:auto;overflow:visible}}
             @media (max-width:760px){.l1-top-hud,.l1-mission-strip,.l1-arena-header,.l1-arena-scroll,.l1-submit-dock,.l1-console-panel{padding-left:16px;padding-right:16px}.l1-mission-strip{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px}.l1-mission-status{width:100%;margin-left:0}.l1-arena-header{flex-direction:column;align-items:flex-start}.l1-arena-hint{text-align:left;max-width:none}.l1-grid{grid-template-columns:1fr}.l1-submit-dock{flex-wrap:wrap}.l1-submit-cluster--summary,.l1-submit-meta{margin-left:0;align-items:flex-start;text-align:left}.l1-fire-btn{width:100%;margin-left:0}.l1-hud-actions,.l1-hud-stats{width:100%;border-left:0}.l1-hud-stats{flex-wrap:wrap}.l1-hud-meter{min-width:0;flex:1 1 180px}}
         </style>`;
@@ -3681,12 +3681,12 @@ export class PasswordCrack {
             .l2-flag-btn.active{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
             .l2-triage-meta{margin:2px 0 18px;color:rgba(180,190,230,.62);font-size:.82rem}
             .l2-choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-            .l2-choice-card{display:block;padding:16px;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;color:#eef2ff}
+            .l2-choice-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:54px 16px 16px;min-height:156px;overflow:hidden;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;color:#eef2ff}
             .l2-choice-card:hover{transform:translateY(-2px);border-color:rgba(245,166,35,.36);box-shadow:0 14px 30px rgba(0,0,0,.18)}
             .l2-choice-card input{display:none}
             .l2-choice-card.selected{border-color:#00d4ff;background:rgba(0,212,255,.06);box-shadow:0 0 0 1px rgba(0,212,255,.18) inset}
-            .l2-choice-card__title{margin-bottom:10px;color:#f5a623;font-size:.84rem}
-            .l2-choice-card__desc{color:rgba(180,190,230,.66);line-height:1.6}
+            .l2-choice-card__title{margin:0;padding-right:88px;color:#f5a623;font-size:.84rem;line-height:1.45;word-break:break-word}
+            .l2-choice-card__desc{color:rgba(180,190,230,.66);line-height:1.6;word-break:break-word}
             .l2-feedback{margin-top:18px;color:rgba(220,228,245,.86);min-height:74px}
             .l2-actions{margin-top:18px;justify-content:flex-end}
             .l2-btn{padding:13px 18px;background:rgba(0,0,0,.38);border:1px solid rgba(245,166,35,.18);color:rgba(245,166,35,.78);cursor:pointer}
@@ -4577,13 +4577,13 @@ export class PasswordCrack {
             .password-puzzle.investigation-shell .investigation-choice-card__accent{height:2px;background:rgba(23,216,255,.22)}
             .password-puzzle.investigation-shell .investigation-choice-card.is-selected .investigation-choice-card__accent{background:#17d8ff;box-shadow:0 0 10px rgba(23,216,255,.32)}
             .password-puzzle.investigation-shell .investigation-choice-card__copy{display:flex;flex-direction:column;gap:0;padding:16px;min-height:100%}
-            .password-puzzle.investigation-shell .investigation-choice-card__marker{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border:1px solid rgba(23,216,255,.18);background:rgba(23,216,255,.06);color:#17d8ff;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
-            .password-puzzle.investigation-shell .investigation-choice-card__top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-            .password-puzzle.investigation-shell .investigation-choice-card__heading{display:flex;flex-direction:column;gap:4px}
+            .password-puzzle.investigation-shell .investigation-choice-card__marker{display:inline-flex;align-items:center;justify-content:center;min-width:74px;padding:6px 10px;border:1px solid rgba(23,216,255,.18);border-radius:999px;background:rgba(23,216,255,.06);color:#17d8ff;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.16em;line-height:1;text-transform:uppercase;white-space:nowrap}
+            .password-puzzle.investigation-shell .investigation-choice-card__top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+            .password-puzzle.investigation-shell .investigation-choice-card__heading{display:flex;flex-direction:column;gap:4px;min-width:0}
             .password-puzzle.investigation-shell .investigation-choice-card__label{color:rgba(168,216,232,.38);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
-            .password-puzzle.investigation-shell .investigation-choice-card__title{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:28px;letter-spacing:1px;line-height:1.05}
-            .password-puzzle.investigation-shell .investigation-choice-card__tag{padding:4px 8px;border:1px solid rgba(23,216,255,.18);background:rgba(23,216,255,.06);color:rgba(232,244,255,.8);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
-            .password-puzzle.investigation-shell .investigation-choice-card__desc{display:block;margin-top:10px;color:rgba(168,216,232,.64);line-height:1.65}
+            .password-puzzle.investigation-shell .investigation-choice-card__title{color:rgba(255,255,255,.94);font-family:'Teko',sans-serif;font-size:28px;letter-spacing:1px;line-height:1.05;word-break:break-word}
+            .password-puzzle.investigation-shell .investigation-choice-card__tag{padding:5px 9px;border:1px solid rgba(23,216,255,.18);border-radius:999px;background:rgba(23,216,255,.06);color:rgba(232,244,255,.8);font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+            .password-puzzle.investigation-shell .investigation-choice-card__desc{display:block;margin-top:10px;color:rgba(168,216,232,.64);line-height:1.65;word-break:break-word}
             .password-puzzle.investigation-shell .investigation-question-panel__footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:2px;border-top:1px solid rgba(23,216,255,.08)}
             .password-puzzle.investigation-shell .investigation-question-panel__hint{color:rgba(168,216,232,.42);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
             .password-puzzle.investigation-shell .investigation-feedback-wrap{display:grid;gap:12px;padding:16px}
@@ -4677,14 +4677,13 @@ export class PasswordCrack {
         const selectedCauseChoice = causeChoices.find(choice => choice.id === this.investigationSelectedCause) || null;
         const confirmedCauseChoice = causeChoices.find(choice => choice.id === this.puzzleData.correctAnswer) || null;
         const selectedDefenseChoice = defenseOptions.find(option => option.id === this.investigationSelectedDefense) || null;
-        const renderInvestigationChoiceCard = (item, idx, groupName, selectedId, fallbackDesc, kindLabel) => `
+        const renderInvestigationChoiceCard = (item, idx, groupName, selectedId, fallbackDesc) => `
             <label class="investigation-choice-card ${selectedId === item.id ? 'is-selected' : ''}">
                 <input type="radio" name="${groupName}" value="${item.id}" ${selectedId === item.id ? 'checked' : ''}/>
                 <div class="investigation-choice-card__accent"></div>
                 <div class="investigation-choice-card__copy">
                     <div class="investigation-choice-card__top">
                         <div class="investigation-choice-card__heading">
-                            <span class="investigation-choice-card__marker">${kindLabel} ${String.fromCharCode(65 + idx)}</span>
                             <span class="investigation-choice-card__title">${item.label}</span>
                         </div>
                         <span class="investigation-choice-card__tag">${groupName === 'investigation-cause' ? 'ATTACK' : 'CONTROL'}</span>
@@ -4698,8 +4697,7 @@ export class PasswordCrack {
                 idx,
                 'investigation-cause',
                 this.investigationSelectedCause,
-                'Review the evidence trail and choose the attack path that best fits the observed sequence.',
-                'OPTION'
+                'Review the evidence trail and choose the attack path that best fits the observed sequence.'
             )
         ).join('');
         const defenseMarkup = followUp ? defenseOptions.map((option, idx) =>
@@ -4708,8 +4706,7 @@ export class PasswordCrack {
                 idx,
                 'investigation-defense',
                 this.investigationSelectedDefense,
-                'Choose the control that most directly disrupts the attack pattern visible in the logs.',
-                'CONTROL'
+                'Choose the control that most directly disrupts the attack pattern visible in the logs.'
             )
         ).join('') : '';
         const profileCards = this.getInvestigationProfileFields(profile).map(field => `

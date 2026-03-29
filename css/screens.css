@@ -11272,7 +11272,10 @@
     --zd-text: #c8e8f0;
     --zd-dim: rgba(200, 232, 240, 0.34);
     position: relative;
+    display: flex;
+    flex-direction: column;
     min-height: 100%;
+    min-width: 0;
     background: var(--zd-bg);
     color: var(--zd-text);
     font-family: 'Rajdhani', sans-serif;
@@ -11373,17 +11376,20 @@
     z-index: 4;
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
-    min-height: calc(100vh - 48px);
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .zero-day-dossier__left {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
     padding: 0 0 12px;
     background: rgba(3, 10, 24, 0.98);
     border-right: 1px solid var(--zd-border);
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .zero-day-dossier__mission {
@@ -11511,12 +11517,34 @@
 
 .zero-day-dossier__right {
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     align-items: stretch;
     justify-content: stretch;
-    min-height: calc(100vh - 48px);
+    min-height: 0;
     background: linear-gradient(180deg, rgba(2, 9, 18, 0.88), rgba(1, 6, 14, 0.98));
+}
+
+.zero-day-dossier__left::-webkit-scrollbar,
+.zero-day-dossier__right::-webkit-scrollbar {
+    width: 6px;
+}
+
+.zero-day-dossier__left::-webkit-scrollbar-track,
+.zero-day-dossier__right::-webkit-scrollbar-track {
+    background: rgba(0, 229, 255, 0.04);
+}
+
+.zero-day-dossier__left::-webkit-scrollbar-thumb,
+.zero-day-dossier__right::-webkit-scrollbar-thumb {
+    background: rgba(0, 229, 255, 0.18);
+    border-radius: 999px;
+}
+
+.zero-day-dossier__left::-webkit-scrollbar-thumb:hover,
+.zero-day-dossier__right::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 229, 255, 0.3);
 }
 
 .zero-day-dossier__right-bg,
@@ -11562,10 +11590,12 @@
     position: relative;
     z-index: 4;
     width: 100%;
+    min-height: 100%;
     padding: 28px 28px 28px 36px;
     display: grid;
     grid-template-rows: auto auto auto;
     gap: 18px;
+    align-content: start;
 }
 
 .zero-day-dossier__hero {
@@ -11623,7 +11653,7 @@
     }
 
     .zero-day-dossier__left {
-        max-height: 50vh;
+        max-height: min(50vh, 420px);
         border-right: 0;
         border-bottom: 1px solid var(--zd-border);
     }
