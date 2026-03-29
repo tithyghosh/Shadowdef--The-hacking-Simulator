@@ -174,32 +174,6 @@ export class ProfileScreen {
                         </div>
                     </div>
 
-                    <div class="ps-panel">
-                        <div class="ps-panel-title">Achievements</div>
-                        <div class="ps-panel-body">
-                            <div class="ps-ach-grid">
-                                ${this.renderCyberAchievements(stats.achievements || [], stats)}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ps-panel">
-                        <div class="ps-panel-title">Gaming Credits</div>
-                        <div class="ps-panel-body">
-                            <div class="ps-credits-row">
-                                <div>
-                                    <div class="ps-credits-coin-row">
-                                        <div class="ps-coin-icon">&#128176;</div>
-                                        <div>
-                                            <div class="ps-credits-num">${credits}</div>
-                                            <div class="ps-credits-sub">CREDITS</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button class="ps-btn-buy" id="earn-credits" type="button">BUY MORE</button>
-                            </div>
-                        </div>
-                    </div>
                 </aside>
 
                 <main class="profile-main">
@@ -309,21 +283,6 @@ export class ProfileScreen {
                         </div>
                     </div>
 
-                    <div class="pm-panel">
-                        <div class="pm-panel-title">Gaming Credits</div>
-                        <div class="pm-panel-body">
-                            <div class="pm-credits-row">
-                                <div class="pm-coin-row">
-                                    <div class="pm-coin">&#128176;</div>
-                                    <div>
-                                        <div class="pm-credits-num">${credits}</div>
-                                        <div class="pm-credits-sub">CREDITS</div>
-                                    </div>
-                                </div>
-                                <button class="pm-btn-buy" id="earn-credits" type="button">BUY MORE</button>
-                            </div>
-                        </div>
-                    </div>
                 </section>
 
                 <section class="pm-tab-page" data-tab-page="badges">
