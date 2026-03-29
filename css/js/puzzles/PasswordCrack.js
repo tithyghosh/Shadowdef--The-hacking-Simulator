@@ -3488,7 +3488,7 @@ export class PasswordCrack {
                 <div class="l2-choice-card__desc">${option.description || option.explanation || 'Choose the best defensive control for the attack you identified.'}</div>
             </label>`).join('');
         const evidenceMarkup = evidenceEntries.map(entry => `
-            <article class="l2-evidence-card ${this.singleChoiceSelectedEntryIds.has(entry.id) ? 'selected' : ''}">
+            <article class="l2-evidence-card ${this.singleChoiceSelectedEntryIds.has(entry.id) ? 'selected' : ''}" data-single-evidence-card="${entry.id}">
                 <div class="l2-evidence-card__meta">
                     <span>${entry.timestamp}</span>
                     <span>${entry.code}</span>
@@ -3560,10 +3560,10 @@ export class PasswordCrack {
                                 <div class="l2-metric-box">
                                     <div class="l2-metric-box__row">
                                         <span>Confidence</span>
-                                        <strong>${confidenceScore}%</strong>
+                                        <strong id="single-choice-confidence-text">${confidenceScore}%</strong>
                                     </div>
-                                    <div class="progress-bar"><div class="progress-fill" style="width:${confidenceScore}%;"></div></div>
-                                    <div class="l2-metric-box__meta">
+                                    <div class="progress-bar"><div class="progress-fill" id="single-choice-confidence-fill" style="width:${confidenceScore}%;"></div></div>
+                                    <div class="l2-metric-box__meta" id="single-choice-confidence-meta">
                                         <span>Read: ${evidenceSummary}</span>
                                     </div>
                                 </div>
@@ -3594,7 +3594,7 @@ export class PasswordCrack {
                                     </div>` : `
                                     <div class="l2-section-kicker">Evidence Triage</div>
                                     <div class="l2-evidence-grid">${evidenceMarkup}</div>
-                                    <div class="l2-triage-meta">${this.singleChoiceSelectedEntryIds.size}/${this.singleChoiceFlagLimit} evidence markers flagged</div>
+                                    <div class="l2-triage-meta" id="single-choice-triage-meta">${this.singleChoiceSelectedEntryIds.size}/${this.singleChoiceFlagLimit} evidence markers flagged</div>
                                     <div class="l2-section-kicker">Attack Classification</div>
                                     <div class="l2-choice-grid" id="single-choice-grid">${choiceMarkup}</div>
                                     <div class="l2-feedback guess-feedback" id="guess-feedback">
@@ -3646,7 +3646,32 @@ export class PasswordCrack {
             return;
         }
         this.audio.playButtonClick();
-        this.renderSingleChoicePuzzle(this.visualizerElement);
+        this.updateSingleChoiceEvidenceUI(entryId);
+    }
+
+    updateSingleChoiceEvidenceUI(entryId) {
+        if (!this.visualizerElement) return;
+        const isSelected = this.singleChoiceSelectedEntryIds.has(entryId);
+        const card = this.visualizerElement.querySelector(`[data-single-evidence-card="${entryId}"]`);
+        const button = this.visualizerElement.querySelector(`[data-single-flag="${entryId}"]`);
+        if (card) card.classList.toggle('selected', isSelected);
+        if (button) {
+            button.classList.toggle('active', isSelected);
+            button.textContent = isSelected ? 'FLAGGED' : 'FLAG AS EVIDENCE';
+        }
+
+        const triageMeta = this.visualizerElement.querySelector('#single-choice-triage-meta');
+        if (triageMeta) {
+            triageMeta.textContent = `${this.singleChoiceSelectedEntryIds.size}/${this.singleChoiceFlagLimit} evidence markers flagged`;
+        }
+
+        const confidenceScore = this.getSingleChoiceConfidenceScore();
+        const confidenceText = this.visualizerElement.querySelector('#single-choice-confidence-text');
+        const confidenceFill = this.visualizerElement.querySelector('#single-choice-confidence-fill');
+        const confidenceMeta = this.visualizerElement.querySelector('#single-choice-confidence-meta');
+        if (confidenceText) confidenceText.textContent = `${confidenceScore}%`;
+        if (confidenceFill) confidenceFill.style.width = `${confidenceScore}%`;
+        if (confidenceMeta) confidenceMeta.innerHTML = `<span>Read: ${this.getSingleChoiceEvidenceSummary()}</span>`;
     }
 
     renderSingleChoiceLabStyles() {
