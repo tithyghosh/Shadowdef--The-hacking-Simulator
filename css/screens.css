@@ -3782,178 +3782,486 @@
     }
 }
 
-/* Category Grid for Mission Categories */
-.category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: var(--spacing-lg);
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--spacing-md);
-}
-
-.category-card {
-    background: var(--panel-bg);
-    border: 2px solid var(--cyber-blue);
-    padding: var(--spacing-lg);
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    position: relative;
+/* Mission category hub */
+#mission-select {
+    position: absolute;
+    inset: 0;
+    padding: 0;
     overflow: hidden;
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    background:
+        radial-gradient(circle at 50% 22%, rgba(0, 216, 255, 0.08), transparent 30%),
+        linear-gradient(180deg, #040913 0%, #030711 100%);
 }
 
-.category-card::before {
+#mission-select > .back-btn {
+    display: none;
+}
+
+#mission-select::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(0, 243, 255, 0.1),
-        transparent
-    );
-    transition: left var(--transition-slow);
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg, transparent, transparent 2px, rgba(0, 0, 0, 0.038) 2px, rgba(0, 0, 0, 0.038) 4px);
+    z-index: 10;
 }
 
-.category-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 40px rgba(0, 243, 255, 0.4);
-    border-color: var(--cyber-pink);
+.mission-select-shell {
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    color: #d4edf6;
 }
 
-.category-card:hover::before {
-    left: 100%;
+.mission-select-gridbg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events: none;
 }
 
-.category-card[data-category="password"] {
-    border-color: var(--cyber-green);
+.mission-select-gridbg::before,
+.mission-select-gridbg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
 }
 
-.category-card[data-category="password"]:hover {
-    border-color: var(--cyber-green);
-    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
+.mission-select-gridbg::before {
+    background:
+        radial-gradient(circle at 8% 30%, rgba(0, 229, 255, 0.18) 0 2px, transparent 3px),
+        radial-gradient(circle at 24% 70%, rgba(0, 229, 255, 0.16) 0 2px, transparent 3px),
+        radial-gradient(circle at 82% 28%, rgba(255, 34, 92, 0.16) 0 2px, transparent 3px),
+        radial-gradient(circle at 88% 78%, rgba(0, 229, 255, 0.14) 0 2px, transparent 3px);
+    opacity: 0.9;
 }
 
-.category-card[data-category="malware"] {
-    border-color: var(--cyber-pink);
+.mission-select-gridbg::after {
+    background:
+        linear-gradient(115deg, transparent 49.5%, rgba(0, 229, 255, 0.08) 50%, transparent 50.5%) 14% 31% / 180px 110px no-repeat,
+        linear-gradient(25deg, transparent 49.5%, rgba(0, 229, 255, 0.07) 50%, transparent 50.5%) 76% 62% / 220px 120px no-repeat,
+        linear-gradient(180deg, rgba(0, 229, 255, 0.03), transparent 35%);
+    opacity: 0.8;
 }
 
-.category-card[data-category="malware"]:hover {
-    border-color: var(--cyber-pink);
-    box-shadow: 0 15px 40px rgba(255, 0, 110, 0.4);
+.mission-select-shell::before {
+    content: '';
+    position: absolute;
+    inset: 52px 0 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 34% 22%, rgba(0, 229, 255, 0.08), transparent 26%),
+        radial-gradient(circle at 72% 70%, rgba(255, 44, 134, 0.06), transparent 24%);
+    z-index: 1;
 }
 
-.category-card[data-category="network"] {
-    border-color: var(--cyber-purple);
+.mission-select-shell::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.08), transparent);
+    animation: missionSelectSweep 7s linear infinite;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.category-card[data-category="network"]:hover {
-    border-color: var(--cyber-purple);
-    box-shadow: 0 15px 40px rgba(138, 43, 226, 0.4);
+.mission-select-nav {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 28px;
+    background: rgba(3, 10, 20, 0.94);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.14);
+    backdrop-filter: blur(14px);
 }
 
-.category-icon {
-    font-size: 4rem;
-    margin-bottom: var(--spacing-md);
-    color: var(--cyber-blue);
+.mission-select-logo,
+.mission-select-hero h2,
+#mission-select .category-title {
+    font-family: 'Orbitron', sans-serif;
 }
 
-.category-card[data-category="password"] .category-icon {
-    color: var(--cyber-green);
+.mission-select-logo {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.34em;
+    color: #00e5ff;
+    text-shadow: 0 0 18px rgba(0, 229, 255, 0.22);
 }
 
-.category-card[data-category="malware"] .category-icon {
-    color: var(--cyber-pink);
+.mission-select-nav-mid,
+.mission-select-back,
+.mission-select-kicker,
+#mission-select .category-kicker,
+#mission-select .category-progress-label,
+#mission-select .category-progress,
+#mission-select .skill-tag,
+#mission-select .category-levels,
+#mission-select .category-state,
+#mission-select .category-enter {
+    font-family: 'Share Tech Mono', monospace;
 }
 
-.category-card[data-category="network"] .category-icon {
-    color: var(--cyber-purple);
+.mission-select-nav-mid {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: rgba(200, 232, 240, 0.42);
+    font-size: 9px;
+    letter-spacing: 0.14em;
 }
 
-.category-content {
-    flex: 1;
+.mission-select-nav-mid span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mission-select-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.mission-select-dot.is-green {
+    background: #00ff88;
+    box-shadow: 0 0 8px #00ff88;
+}
+
+.mission-select-back {
+    border: 0;
+    background: transparent;
+    color: rgba(200, 232, 240, 0.54);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+}
+
+.mission-select-back::before {
+    content: '‹';
+    margin-right: 8px;
+    color: #00e5ff;
+    font-size: 14px;
+}
+
+.mission-select-back:hover {
+    color: #00e5ff;
+}
+
+.mission-select-frame {
+    position: relative;
+    z-index: 2;
+    padding: 14px 42px 22px;
     display: flex;
     flex-direction: column;
+    gap: 12px;
+}
+
+.mission-select-hero {
+    max-width: 690px;
+}
+
+.mission-select-kicker {
+    margin-bottom: 8px;
+    color: rgba(0, 229, 255, 0.54);
+    font-size: 8px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+}
+
+.mission-select-hero h2 {
+    margin: 0;
+    font-size: clamp(27px, 3.8vw, 50px);
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    color: #f4fbff;
+    text-transform: uppercase;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.04);
+}
+
+.mission-select-hero .subtitle {
+    max-width: 580px;
+    margin-top: 6px;
+    color: rgba(200, 232, 240, 0.54);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    letter-spacing: 0.04em;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    min-height: 0;
+    align-items: stretch;
+}
+
+#mission-select .category-card {
+    position: relative;
+    min-height: 360px;
+    padding: 24px 24px 20px;
+    background: rgba(6, 15, 32, 0.86);
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+}
+
+#mission-select .category-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 28%);
+    pointer-events: none;
+}
+
+#mission-select .category-card::after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0.12;
+    pointer-events: none;
+}
+
+#mission-select .category-card[data-category="password"] .category-card-accent::before,
+#mission-select .category-card[data-category="malware"] .category-card-accent::before {
+    content: '';
+    position: absolute;
+    inset: -120px -80px auto auto;
+    width: 260px;
+    height: 180px;
+    background: radial-gradient(circle, currentColor 0%, transparent 70%);
+    opacity: 0.07;
+    filter: blur(36px);
+}
+
+#mission-select .category-card:hover {
+    transform: translateY(-4px);
+}
+
+#mission-select .category-card[data-category="password"] {
+    color: #00ff88;
+    border-color: rgba(0, 255, 136, 0.42);
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.05), 0 24px 60px rgba(0, 0, 0, 0.22);
+}
+
+#mission-select .category-card[data-category="password"] {
+    transform: translateY(-6px);
+}
+
+#mission-select .category-card[data-category="password"]:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.12), 0 28px 70px rgba(0, 255, 136, 0.11);
+}
+
+#mission-select .category-card[data-category="malware"] {
+    color: #ff2c86;
+    border-color: rgba(255, 44, 134, 0.42);
+    box-shadow: 0 0 0 1px rgba(255, 44, 134, 0.05), 0 24px 60px rgba(0, 0, 0, 0.22);
+}
+
+#mission-select .category-card[data-category="malware"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px rgba(255, 44, 134, 0.12), 0 28px 70px rgba(255, 44, 134, 0.11);
+}
+
+#mission-select .category-card-accent {
+    position: absolute;
+    inset: auto -16% 28% -16%;
+    height: 74px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0.05;
+    filter: blur(22px);
+    pointer-events: none;
+}
+
+#mission-select .category-card[data-category="password"] .category-card-accent {
+    inset: auto -18% 34% -12%;
+}
+
+#mission-select .category-card[data-category="malware"] .category-card-accent {
+    inset: auto -12% 22% -18%;
+}
+
+#mission-select .category-card-head {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 16px;
 }
 
-.category-title {
-    font-size: var(--font-size-xl);
-    color: var(--cyber-blue);
-    font-weight: bold;
+#mission-select .category-icon {
+    width: 64px;
+    height: 64px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid currentColor;
+    background: rgba(255, 255, 255, 0.02);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    clip-path: polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%);
+    box-shadow: inset 0 0 26px rgba(255, 255, 255, 0.02);
+}
+
+#mission-select .category-kicker {
+    color: currentColor;
+    opacity: 0.58;
+    font-size: 8px;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: var(--spacing-sm);
+    text-align: right;
 }
 
-.category-card[data-category="password"] .category-title {
-    color: var(--cyber-green);
+#mission-select .category-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
 }
 
-.category-card[data-category="malware"] .category-title {
-    color: var(--cyber-pink);
+#mission-select .category-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
 }
 
-.category-card[data-category="network"] .category-title {
-    color: var(--cyber-purple);
-}
-
-.category-subtitle {
-    color: var(--text-secondary);
-    font-size: var(--font-size-base);
-    margin-bottom: var(--spacing-md);
-    line-height: 1.4;
-}
-
-.category-progress {
-    color: var(--cyber-blue);
-    font-size: var(--font-size-sm);
-    font-weight: bold;
+#mission-select .category-title {
+    margin: 0;
+    color: #f7fcff;
+    font-size: clamp(23px, 1.95vw, 31px);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    line-height: 1.08;
     text-transform: uppercase;
-    margin-bottom: var(--spacing-md);
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.05);
 }
 
-.category-skills {
+#mission-select .category-levels {
+    flex: 0 0 auto;
+    margin-top: 4px;
+    color: currentColor;
+    opacity: 0.72;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+#mission-select .category-subtitle {
+    max-width: 96%;
+    color: rgba(210, 231, 239, 0.6);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+}
+
+#mission-select .category-progress-block {
+    display: grid;
+    gap: 8px;
+}
+
+#mission-select .category-progress-label {
+    color: rgba(200, 232, 240, 0.42);
+    font-size: 8px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+#mission-select .category-progress {
+    color: #00e5ff;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 16px rgba(0, 229, 255, 0.12);
+}
+
+#mission-select .category-skills {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-xs);
-    justify-content: center;
+    gap: 10px;
+    margin-top: auto;
 }
 
-.skill-tag {
-    background: rgba(0, 243, 255, 0.2);
-    color: var(--cyber-blue);
-    border: 1px solid var(--cyber-blue);
-    padding: 4px 8px;
-    font-size: var(--font-size-xs);
+#mission-select .skill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid currentColor;
+    background: rgba(255, 255, 255, 0.03);
+    color: currentColor;
+    font-size: 8px;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    border-radius: 3px;
 }
 
-.category-card[data-category="password"] .skill-tag {
-    background: rgba(0, 255, 65, 0.2);
-    color: var(--cyber-green);
-    border-color: var(--cyber-green);
+#mission-select .category-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: auto;
+    padding-top: 14px;
+    padding-bottom: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.015));
 }
 
-.category-card[data-category="malware"] .skill-tag {
-    background: rgba(255, 0, 110, 0.2);
-    color: var(--cyber-pink);
-    border-color: var(--cyber-pink);
+#mission-select .category-state,
+#mission-select .category-enter {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
 }
 
-.category-card[data-category="network"] .skill-tag {
-    background: rgba(138, 43, 226, 0.2);
-    color: var(--cyber-purple);
-    border-color: var(--cyber-purple);
+#mission-select .category-state {
+    color: rgba(200, 232, 240, 0.44);
+}
+
+#mission-select .category-enter {
+    color: currentColor;
+    padding: 8px 10px;
+    border: 1px solid currentColor;
+    background: rgba(255, 255, 255, 0.03);
+    transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+#mission-select .category-card:hover .category-enter {
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.06);
+}
+
+@keyframes missionSelectSweep {
+    from { transform: translateY(-14px); opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    to { transform: translateY(560px); opacity: 0; }
 }
 
 /* Individual Category Mission Screens */

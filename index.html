@@ -269,35 +269,80 @@
         <!-- Mission Categories Screen -->
         <div id="mission-select" class="screen">
             <button class="back-btn" data-action="back">â† BACK</button>
-            <div class="mission-header">
-                <h2>TRAINING CATEGORIES</h2>
-                <p class="subtitle">Choose your specialization</p>
-            </div>
-            <div class="category-grid">
-                <div class="category-card" data-category="password">
-                    <div class="category-icon">ðŸ”</div>
-                    <div class="category-content">
-                        <div class="category-title">PASSWORD CRACKING</div>
-                        <div class="category-subtitle">Master the art of password analysis and decryption</div>
-                        <div class="category-progress" id="password-progress">0/3 Completed</div>
-                        <div class="category-skills">
-                            <span class="skill-tag">Pattern Recognition</span>
-                            <span class="skill-tag">Cryptanalysis</span>
-                            <span class="skill-tag">Brute Force</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="mission-select-shell">
+                <div class="mission-select-gridbg"></div>
 
-                <div class="category-card" data-category="malware">
-                    <div class="category-icon">0D</div>
-                    <div class="category-content">
-                        <div class="category-title">ZERO-DAY COUNTDOWN</div>
-                        <div class="category-subtitle">Decode hostile transmissions and neutralize a live exploit chain</div>
-                        <div class="category-progress" id="malware-progress">0/10 Completed</div>
-                        <div class="category-skills">
-                            <span class="skill-tag">Binary Decode</span>
-                            <span class="skill-tag">Cipher Analysis</span>
-                            <span class="skill-tag">Incident Response</span>
+                <nav class="mission-select-nav">
+                    <div class="mission-select-logo">SHADOWDEF</div>
+                    <div class="mission-select-nav-mid">
+                        <span><span class="mission-select-dot is-green"></span>TRAINING HUB</span>
+                        <span>2 LIVE SECTORS</span>
+                    </div>
+                    <button class="mission-select-back" data-action="back" type="button">BACK TO MAIN MENU</button>
+                </nav>
+
+                <div class="mission-select-frame">
+                    <header class="mission-select-hero">
+                        <div class="mission-select-kicker">// OPERATOR ROUTING</div>
+                        <h2>TRAINING CATEGORIES</h2>
+                        <p class="subtitle">Select the active training sector that matches your current specialization path.</p>
+                    </header>
+
+                    <div class="category-grid">
+                        <div class="category-card" data-category="password">
+                            <div class="category-card-accent"></div>
+                            <div class="category-card-head">
+                                <div class="category-icon">KEY</div>
+                                <div class="category-kicker">// SECTOR 01 · OFFENSIVE ACCESS</div>
+                            </div>
+                            <div class="category-content">
+                                <div class="category-title-row">
+                                    <div class="category-title">PASSWORD CRACKING</div>
+                                    <div class="category-levels">9 LEVELS</div>
+                                </div>
+                                <div class="category-subtitle">Analyze human behavior, audit vault weaknesses, and break layered authentication systems across the full campaign arc.</div>
+                                <div class="category-progress-block">
+                                    <div class="category-progress-label">MISSION PROGRESS</div>
+                                    <div class="category-progress" id="password-progress">0/9 COMPLETED</div>
+                                </div>
+                                <div class="category-skills">
+                                    <span class="skill-tag">Pattern Recognition</span>
+                                    <span class="skill-tag">Cryptanalysis</span>
+                                    <span class="skill-tag">Vault Audits</span>
+                                </div>
+                            </div>
+                            <div class="category-card-foot">
+                                <span class="category-state">LIVE OPS</span>
+                                <span class="category-enter">OPEN SECTOR</span>
+                            </div>
+                        </div>
+
+                        <div class="category-card" data-category="malware">
+                            <div class="category-card-accent"></div>
+                            <div class="category-card-head">
+                                <div class="category-icon">0D</div>
+                                <div class="category-kicker">// SECTOR 02 · SIGNAL WARFARE</div>
+                            </div>
+                            <div class="category-content">
+                                <div class="category-title-row">
+                                    <div class="category-title">ZERO-DAY COUNTDOWN</div>
+                                    <div class="category-levels">10 LEVELS</div>
+                                </div>
+                                <div class="category-subtitle">Decode hostile ciphers, classify exploit signatures, and neutralize a live zero-day chain before deployment spreads.</div>
+                                <div class="category-progress-block">
+                                    <div class="category-progress-label">MISSION PROGRESS</div>
+                                    <div class="category-progress" id="malware-progress">0/10 COMPLETED</div>
+                                </div>
+                                <div class="category-skills">
+                                    <span class="skill-tag">Binary Decode</span>
+                                    <span class="skill-tag">Cipher Analysis</span>
+                                    <span class="skill-tag">Incident Response</span>
+                                </div>
+                            </div>
+                            <div class="category-card-foot">
+                                <span class="category-state">THREAT LIVE</span>
+                                <span class="category-enter">OPEN SECTOR</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -18,35 +18,31 @@ export class ProfileScreen {
 
     getMissionSections() {
         const sections = [
-            {
+            this.createMissionSection({
                 name: 'Password Cracking',
-                subtitle: 'MISSION 1 - 10 LEVELS',
-                roadmapTitle: 'MISSION 1 - PASSWORD CRACKING',
+                missionNumber: 1,
                 emoji: '&#128273;',
                 colorKey: 'c',
-                lvl5Icon: '&#9889;',
-                lvl10Icon: '&#127942;',
-                lvl5Name: 'CIPHER BREAKER',
-                lvl10Name: 'FIRST BREACH',
-                badges: ['&#128274; CIPHER BREAKER', '&#128274; FIRST BREACH'],
+                badgeMilestones: [
+                    { preferredLevel: 5, icon: '&#9889;', name: 'CIPHER BREAKER' },
+                    { preferredLevel: 'final', icon: '&#127942;', name: 'FIRST BREACH' }
+                ],
                 missions: Array.isArray(this.game?.passwordMissions) ? this.game.passwordMissions : []
-            },
-            {
+            }),
+            this.createMissionSection({
                 name: 'Zero-Day Countdown',
-                subtitle: 'MISSION 2 - 10 LEVELS',
-                roadmapTitle: 'MISSION 2 - ZERO-DAY COUNTDOWN',
+                missionNumber: 2,
                 emoji: '&#9888;',
                 colorKey: 'r',
-                lvl5Icon: '&#128293;',
-                lvl10Icon: '&#9760;',
-                lvl5Name: 'PHANTOM STRIKE',
-                lvl10Name: 'DARK NET LEGEND',
-                badges: ['&#128274; PHANTOM STRIKE', '&#128274; DARK NET LEGEND'],
+                badgeMilestones: [
+                    { preferredLevel: 5, icon: '&#128293;', name: 'PHANTOM STRIKE' },
+                    { preferredLevel: 'final', icon: '&#9760;', name: 'DARK NET LEGEND' }
+                ],
                 missions: Array.isArray(this.game?.malwareMissions) ? this.game.malwareMissions : []
-            }
+            })
         ];
 
-        return sections.filter((section) => section.missions.length > 0);
+        return sections.filter(Boolean);
     }
 
     getCompletedMissionCount() {
@@ -62,6 +58,63 @@ export class ProfileScreen {
 
     getBestScoreForSection(missions) {
         return missions.reduce((best, mission) => Math.max(best, mission.bestScore || 0), 0);
+    }
+
+    createMissionSection({ name, missionNumber, emoji, colorKey, badgeMilestones, missions }) {
+        if (!Array.isArray(missions) || missions.length === 0) return null;
+
+        const levels = missions
+            .map((mission, index) => Number(mission.level) || index + 1)
+            .sort((a, b) => a - b);
+        const finalLevel = levels[levels.length - 1] || missions.length;
+        const resolvedMilestones = (badgeMilestones || [])
+            .map((milestone) => {
+                if (milestone.preferredLevel === 'final') {
+                    return { ...milestone, level: finalLevel };
+                }
+                return levels.includes(milestone.preferredLevel)
+                    ? { ...milestone, level: milestone.preferredLevel }
+                    : null;
+            })
+            .filter(Boolean)
+            .filter((milestone, index, array) => array.findIndex((item) => item.level === milestone.level) === index)
+            .sort((a, b) => a.level - b.level);
+
+        return {
+            name,
+            subtitle: `MISSION ${missionNumber} - ${missions.length} LEVEL${missions.length === 1 ? '' : 'S'}`,
+            roadmapTitle: `MISSION ${missionNumber} - ${name.toUpperCase()}`,
+            emoji,
+            colorKey,
+            missions,
+            levels,
+            totalLevels: missions.length,
+            finalLevel,
+            badgeMilestones: resolvedMilestones,
+            badges: resolvedMilestones.map((milestone) => `&#128274; ${milestone.name}`)
+        };
+    }
+
+    getEarnedBadgeCount(section) {
+        const completed = section.missions.filter((mission) => mission.completed).length;
+        return section.badgeMilestones.filter((milestone) => completed >= milestone.level).length;
+    }
+
+    getProfileAchievementDefinitions(stats, achievements) {
+        const completed = this.getCompletedMissionCount();
+        const earned = new Set(achievements || []);
+        const highScore = stats.highScore || 0;
+        const totalPlayTime = stats.totalPlayTime || 0;
+        const credits = stats.credits || 0;
+
+        return [
+            { id: 'first_mission', icon: '&#9889;', name: 'FIRST<br>STEPS', cls: 'gold', title: 'First Steps Badge', unlocked: earned.has('first_mission') || completed >= 1 },
+            { id: 'speed_demon', icon: '&#9888;', name: 'SPEED<br>DEMON', cls: 'cyan', title: 'Speed Demon Badge', unlocked: earned.has('speed_demon') },
+            { id: 'perfectionist', icon: '&#10022;', name: 'PERFECTION<br>IST', cls: 'green', title: 'Perfectionist Badge', unlocked: earned.has('perfectionist') },
+            { id: 'high_scorer', icon: '&#127942;', name: 'HIGH<br>SCORER', cls: 'purple', title: 'High Scorer Badge', unlocked: earned.has('high_scorer') || highScore >= 10000 },
+            { id: 'dedicated', icon: '&#9201;', name: 'DEDICATED<br>PLAYER', cls: 'red', title: 'Dedicated Player Badge', unlocked: earned.has('dedicated') || totalPlayTime >= 300 },
+            { id: 'collector', icon: '&#128176;', name: 'CREDIT<br>COLLECTOR', cls: 'silver', title: 'Credit Collector Badge', unlocked: earned.has('collector') || credits >= 5000 }
+        ];
     }
 
     /**
@@ -340,17 +393,7 @@ export class ProfileScreen {
     }
 
     renderCyberAchievements(achievements, stats) {
-        const completed = this.getCompletedMissionCount();
-        const level = stats.level || 1;
-        const earned = new Set(achievements || []);
-        const badgeDefs = [
-            { id: 'first_mission', icon: '&#9889;', name: 'FIRST<br>BREACH', cls: 'gold', unlocked: completed > 0 || earned.has('first_mission') },
-            { id: 'cipher_breaker', icon: '&#128275;', name: 'CIPHER<br>BREAKER', cls: 'cyan', unlocked: level >= 5 || earned.has('cipher_breaker') },
-            { id: 'phantom_strike', icon: '&#128293;', name: 'PHANTOM<br>STRIKE', cls: 'red', unlocked: earned.has('phantom_strike') },
-            { id: 'ghost_protocol', icon: '&#128737;', name: 'GHOST<br>PROTOCOL', cls: 'green', unlocked: earned.has('ghost_protocol') },
-            { id: 'dark_net_legend', icon: '&#9760;', name: 'DARK NET<br>LEGEND', cls: 'purple', unlocked: earned.has('dark_net_legend') },
-            { id: 'shadow_master', icon: '&#128081;', name: 'SHADOW<br>MASTER', cls: 'silver', unlocked: earned.has('shadow_master') }
-        ];
+        const badgeDefs = this.getProfileAchievementDefinitions(stats, achievements);
 
         return badgeDefs.map((badge) => `
             <div class="ps-ach-badge ${badge.unlocked ? '' : 'locked'}">
@@ -365,32 +408,14 @@ export class ProfileScreen {
 
     renderMissionRoadmap() {
         const blocks = this.getMissionSections()
-            .map((section) => this.renderMissionRoadmapBlock(
-                section.roadmapTitle,
-                section.emoji,
-                section.colorKey,
-                section.lvl5Icon,
-                section.lvl10Icon,
-                section.lvl5Name,
-                section.lvl10Name
-            ))
+            .map((section) => this.renderMissionRoadmapBlock(section))
             .join('');
 
         return `<div class="ps-mission-roadmap">${blocks}</div>`;
     }
 
     renderAvatarBadge(stats) {
-        const completed = this.getCompletedMissionCount();
-        const level = stats.level || 1;
-        const earned = new Set(stats.achievements || []);
-        const badgePriority = [
-            { id: 'shadow_master', icon: '&#128081;', cls: 'silver', title: 'Shadow Master Badge', unlocked: earned.has('shadow_master') },
-            { id: 'dark_net_legend', icon: '&#9760;', cls: 'purple', title: 'Dark Net Legend Badge', unlocked: earned.has('dark_net_legend') },
-            { id: 'ghost_protocol', icon: '&#128737;', cls: 'green', title: 'Ghost Protocol Badge', unlocked: earned.has('ghost_protocol') },
-            { id: 'phantom_strike', icon: '&#128293;', cls: 'red', title: 'Phantom Strike Badge', unlocked: earned.has('phantom_strike') },
-            { id: 'cipher_breaker', icon: '&#128275;', cls: 'cyan', title: 'Cipher Breaker Badge', unlocked: level >= 5 || earned.has('cipher_breaker') },
-            { id: 'first_mission', icon: '&#9889;', cls: 'gold', title: 'First Breach Badge', unlocked: completed > 0 || earned.has('first_mission') }
-        ];
+        const badgePriority = [...this.getProfileAchievementDefinitions(stats, stats.achievements)].reverse();
 
         const activeBadge = badgePriority.find((badge) => badge.unlocked);
         if (!activeBadge) return '';
@@ -421,27 +446,29 @@ export class ProfileScreen {
         `;
     }
 
-    renderMissionRoadmapBlock(title, icon, colorKey, lvl5Icon, lvl10Icon, lvl5Name, lvl10Name) {
+    renderMissionRoadmapBlock(section) {
+        const {
+            roadmapTitle,
+            emoji,
+            colorKey,
+            levels,
+            badgeMilestones
+        } = section;
         const rewardClass5 = colorKey === 'c' ? 'c-reward' : colorKey === 'r' ? 'r-reward' : 'g-reward';
         const rewardClass10 = colorKey === 'c' ? 'gold-reward' : colorKey === 'r' ? 'purple-reward' : 'silver-reward';
         const hl5 = colorKey;
         const hl10 = colorKey === 'c' ? 'gold' : colorKey === 'r' ? 'purple' : 'silver';
+        const milestones = new Map(badgeMilestones.map((milestone, index) => [milestone.level, { ...milestone, milestoneIndex: index }]));
 
-        const nodes = Array.from({ length: 10 }, (_, i) => {
-            const level = i + 1;
-            if (level === 5) {
+        const nodes = levels.map((level) => {
+            const milestone = milestones.get(level);
+            if (milestone) {
+                const rewardClass = milestone.milestoneIndex === 0 ? rewardClass5 : rewardClass10;
+                const highlightClass = milestone.milestoneIndex === 0 ? hl5 : hl10;
                 return `
                     <div class="ps-level-step">
-                        <div class="ps-level-node reward ${rewardClass5}">${lvl5Icon}</div>
-                        <div class="ps-level-label highlight ${hl5}">LVL 5<br>BADGE</div>
-                    </div>
-                `;
-            }
-            if (level === 10) {
-                return `
-                    <div class="ps-level-step">
-                        <div class="ps-level-node reward ${rewardClass10}">${lvl10Icon}</div>
-                        <div class="ps-level-label highlight ${hl10}">LVL 10<br>MASTER</div>
+                        <div class="ps-level-node reward ${rewardClass}">${milestone.icon}</div>
+                        <div class="ps-level-label highlight ${highlightClass}">LVL ${level}<br>${milestone.milestoneIndex === 0 ? 'BADGE' : 'MASTER'}</div>
                     </div>
                 `;
             }
@@ -453,18 +480,23 @@ export class ProfileScreen {
             `;
         }).join('');
 
+        const rewardStartLevel = badgeMilestones.length > 0 ? Math.max(1, badgeMilestones[0].level - 1) : levels.length;
+        const footnotes = [
+            rewardStartLevel > 0 ? `<div>Levels 1-${rewardStartLevel}: No reward</div>` : ''
+        ].concat(
+            badgeMilestones.map((milestone) => `<div>${milestone.icon} LV${milestone.level} &#8594; <span>${milestone.name}</span> Badge</div>`)
+        ).join('');
+
         return `
             <div class="ps-mission-block">
                 <div class="ps-mission-block-title">
-                    <span class="ps-mission-icon">${icon}</span>
-                    <span class="ps-mission-block-title-text">${title}</span>
+                    <span class="ps-mission-icon">${emoji}</span>
+                    <span class="ps-mission-block-title-text">${roadmapTitle}</span>
                     <div class="ps-mission-block-title-line ${colorKey}"></div>
                 </div>
                 <div class="ps-level-steps">${nodes}</div>
                 <div class="ps-roadmap-footnote ${colorKey}">
-                    <div>Levels 1-4: No reward</div>
-                    <div>${lvl5Icon} LV5 &#8594; <span>${lvl5Name}</span> Badge</div>
-                    <div>${lvl10Icon} LV10 &#8594; <span>${lvl10Name}</span> Badge</div>
+                    ${footnotes}
                 </div>
             </div>
         `;
@@ -475,13 +507,17 @@ export class ProfileScreen {
             const completed = section.missions.filter((mission) => mission.completed).length;
             const bestScore = this.getBestScoreForSection(section.missions);
             const hasUnlockedMission = section.missions.some((mission) => !mission.locked);
+            const badgesEarned = this.getEarnedBadgeCount(section);
             const statusClass = completed >= section.missions.length ? 'done' : hasUnlockedMission ? 'prog' : 'lock';
             const statusText = completed >= section.missions.length ? 'DONE' : hasUnlockedMission ? 'ACTIVE' : 'LOCKED';
 
             return this.renderMissionLogRow(
                 section.name,
+                section.totalLevels,
                 completed,
                 bestScore,
+                badgesEarned,
+                section.badgeMilestones.length,
                 statusClass,
                 statusText
             );
@@ -506,15 +542,15 @@ export class ProfileScreen {
         `;
     }
 
-    renderMissionLogRow(name, completed, bestScore, statusClass, statusText) {
+    renderMissionLogRow(name, totalLevels, completed, bestScore, badgesEarned, totalBadges, statusClass, statusText) {
         const statusPrefix = statusClass === 'lock' ? '&#128274;' : '&#9656;';
         return `
             <tr>
                 <td>${this.escapeHtml(name)}</td>
-                <td>10 Levels</td>
-                <td>${this.renderLevelMini(completed, 10)}</td>
+                <td>${totalLevels} Levels</td>
+                <td>${this.renderLevelMini(completed, totalLevels)}</td>
                 <td>${bestScore > 0 ? this.formatNumber(bestScore) : '&#8212;'}</td>
-                <td style="color: rgba(168,216,232,0.3)">${completed >= 5 ? 1 : 0} / 2</td>
+                <td style="color: rgba(168,216,232,0.3)">${badgesEarned} / ${Math.max(1, totalBadges)}</td>
                 <td><span class="ps-m-status ${statusClass}">${statusPrefix} ${statusText}</span></td>
             </tr>
         `;
@@ -575,6 +611,7 @@ export class ProfileScreen {
         const cards = this.getMissionSections().map((section) => {
             const completed = section.missions.filter((mission) => mission.completed).length;
             const hasUnlockedMission = section.missions.some((mission) => !mission.locked);
+            const badgesEarned = this.getEarnedBadgeCount(section);
             return {
                 name: section.name.toUpperCase(),
                 sub: section.subtitle,
@@ -582,7 +619,10 @@ export class ProfileScreen {
                 statusClass: completed >= section.missions.length ? 'done' : hasUnlockedMission ? 'prog' : 'lock',
                 statusText: completed >= section.missions.length ? 'DONE' : hasUnlockedMission ? 'ACTIVE' : 'LOCKED',
                 done: completed,
+                totalLevels: section.totalLevels,
                 bestScore: this.getBestScoreForSection(section.missions),
+                badgesEarned,
+                totalBadges: section.badgeMilestones.length,
                 badges: section.badges
             };
         });
@@ -599,9 +639,9 @@ export class ProfileScreen {
                 </div>
                 <div class="pm-mc-body">
                     <div class="pm-mc-key">LEVEL PROGRESS</div>
-                    <div class="pm-mc-levels">${this.renderLevelMini(card.done, 10).replace('ps-level-mini', 'pm-level-mini').replace(/ps-lm/g, 'pm-lm')}</div>
+                    <div class="pm-mc-levels">${this.renderLevelMini(card.done, card.totalLevels).replace('ps-level-mini', 'pm-level-mini').replace(/ps-lm/g, 'pm-lm')}</div>
                     <div class="pm-mc-row"><span class="pm-mc-key">BEST SCORE</span><span class="pm-mc-val">${card.bestScore > 0 ? this.formatNumber(card.bestScore) : '&#8212;'}</span></div>
-                    <div class="pm-mc-row"><span class="pm-mc-key">BADGES EARNED</span><span class="pm-mc-val">${card.done >= 5 ? 1 : 0} / 2</span></div>
+                    <div class="pm-mc-row"><span class="pm-mc-key">BADGES EARNED</span><span class="pm-mc-val">${card.badgesEarned} / ${Math.max(1, card.totalBadges)}</span></div>
                     <div class="pm-mc-badges-row">${card.badges.map((badge) => `<div class="pm-mc-badge">${badge}</div>`).join('')}</div>
                 </div>
             </div>
