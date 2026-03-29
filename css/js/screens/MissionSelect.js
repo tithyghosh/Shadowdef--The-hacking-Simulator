@@ -41,7 +41,7 @@ export class MissionSelect {
         if (header) header.style.display = 'none';
         if (backBtn) backBtn.style.display = 'none';
 
-        if (screen?.id === 'password-missions') {
+        if (screen?.id === 'password-missions' || screen?.id === 'malware-missions') {
             this.renderPasswordSector(missions, grid, screen, header, backBtn);
             return;
         }
@@ -130,6 +130,7 @@ export class MissionSelect {
             header?.querySelector('h2')?.textContent?.trim() || 'PASSWORD CRACKING',
             header?.querySelector('.subtitle')?.textContent?.trim() || 'SECTOR 01 · 10 NODES · OPERATION STACK'
         );
+        const sector = this.getMissionSectorPresentation(screen?.id, meta);
 
         const clearedCount = missions.filter((mission) => mission.completed).length;
         const sealedCount = missions.filter((mission) => {
@@ -145,15 +146,15 @@ export class MissionSelect {
         this.openMissionId = null;
 
         const shell = document.createElement('div');
-        shell.className = 'sd-password-sector';
+        shell.className = `sd-password-sector ${sector.shellClass}`.trim();
         shell.innerHTML = `
             <div class="sd-password-sector-bg"></div>
             <nav class="sd-password-sector-nav">
                 <div class="sd-password-sector-logo">S H A D O W D E F</div>
                 <div class="sd-password-sector-mid">
                     <span><span class="sd-password-dot is-green"></span>ONLINE</span>
-                    <span><span class="sd-password-dot is-red"></span>3 THREATS</span>
-                    <span>MISSION 01 · PASSWORD SECTOR</span>
+                    <span><span class="sd-password-dot is-red"></span>${sector.alertText}</span>
+                    <span>${sector.navText}</span>
                 </div>
                 <div class="sd-password-sector-nav-right">
                     <button class="sd-password-sector-back" type="button">BACK TO CATEGORIES</button>
@@ -165,9 +166,9 @@ export class MissionSelect {
                 <section class="sd-password-sector-left">
                     <div class="sd-password-sector-mission">
                         <div class="sd-password-sector-mid-top">
-                            <div class="sd-password-sector-hex" aria-hidden="true">🔑</div>
+                            <div class="sd-password-sector-hex" aria-hidden="true">${sector.hex}</div>
                             <div>
-                                <div class="sd-password-sector-tag">// SECTOR 01 · OPERATION STACK</div>
+                                <div class="sd-password-sector-tag">${sector.tagText}</div>
                                 <div class="sd-password-sector-title">${meta.title}</div>
                             </div>
                         </div>
@@ -207,7 +208,7 @@ export class MissionSelect {
                     <div class="sd-password-sector-right-bg"></div>
                     <div class="sd-password-sector-hexgrid"></div>
                     <div class="sd-password-sector-scanline"></div>
-                    <div class="sd-password-sector-watermark">PASSWORD</div>
+                    <div class="sd-password-sector-watermark">${sector.watermark}</div>
                     <div class="sd-password-sector-timeline-wrap">
                         <svg class="sd-password-sector-timeline" data-timeline xmlns="http://www.w3.org/2000/svg"></svg>
                     </div>
@@ -222,9 +223,9 @@ export class MissionSelect {
             </div>
 
             <div class="sd-password-sector-status">
-                <div class="sd-password-sector-status-item"><span class="is-green">■</span>NETWORK: SECURE</div>
-                <div class="sd-password-sector-status-item"><span class="is-green">■</span>AES-256 ACTIVE</div>
-                <div class="sd-password-sector-status-item"><span class="is-red">■</span>3 THREATS</div>
+                <div class="sd-password-sector-status-item"><span class="is-green">■</span>${sector.statusLeft}</div>
+                <div class="sd-password-sector-status-item"><span class="is-green">■</span>${sector.statusMid}</div>
+                <div class="sd-password-sector-status-item"><span class="is-red">■</span>${sector.statusAlert}</div>
                 <div class="sd-password-sector-status-item">OPERATOR: MAIMUNAH TABASSUM</div>
                 <div class="sd-password-sector-status-utc" data-utc>--:--:-- UTC</div>
             </div>
@@ -877,17 +878,45 @@ export class MissionSelect {
                 subtitle: 'SECTOR 01 · 10 NODES · OPERATION STACK'
             },
             'malware-missions': {
-                title: title || 'MALWARE DETECTION',
-                subtitle: `SECTOR 02 · 10 NODES · OPERATION STACK`
+                title: title || 'ZERO-DAY COUNTDOWN',
+                subtitle: subtitle || 'SECTOR 02 · 10 NODES · OPERATION STACK'
             },
             'network-missions': {
                 title: title || 'NETWORK & PHISHING',
-                subtitle: `SECTOR 03 · 10 NODES · OPERATION STACK`
+                subtitle: subtitle || 'SECTOR 03 · 10 NODES · OPERATION STACK'
             }
         };
         return map[screenId] || {
             title: title || 'MISSION CONTROL',
             subtitle: subtitle || 'SECTOR STACK'
+        };
+    }
+
+    getMissionSectorPresentation(screenId, meta) {
+        if (screenId === 'malware-missions') {
+            return {
+                shellClass: 'is-zero-day',
+                alertText: 'ZERO-DAY LIVE',
+                navText: 'MISSION 02 · ZERO-DAY SECTOR',
+                hex: '0D',
+                tagText: '// SECTOR 02 · CRISIS STACK',
+                watermark: 'ZERO-DAY',
+                statusLeft: 'NETWORK: CONTAINED',
+                statusMid: 'PATCH WINDOW OPEN',
+                statusAlert: 'ZERO-DAY LIVE'
+            };
+        }
+
+        return {
+            shellClass: '',
+            alertText: '3 THREATS',
+            navText: 'MISSION 01 · PASSWORD SECTOR',
+            hex: 'KEY',
+            tagText: '// SECTOR 01 · OPERATION STACK',
+            watermark: (meta?.title || 'PASSWORD').split(' ')[0],
+            statusLeft: 'NETWORK: SECURE',
+            statusMid: 'AES-256 ACTIVE',
+            statusAlert: '3 THREATS'
         };
     }
 

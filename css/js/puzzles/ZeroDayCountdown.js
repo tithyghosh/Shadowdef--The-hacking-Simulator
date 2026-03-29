@@ -87,98 +87,62 @@ export class ZeroDayCountdown {
         }).join('');
 
         return `
-            <div class="zero-day-lab">
+            <div class="zero-day-lab zero-day-dossier">
                 <canvas class="zero-day-lab__matrix" id="zd-matrix" aria-hidden="true"></canvas>
                 <div class="zero-day-lab__scan"></div>
 
-                <header class="zero-day-lab__topbar">
-                    <div class="zero-day-lab__brand">
-                        <div class="zero-day-lab__brand-mark">0D</div>
-                        <div class="zero-day-lab__brand-copy">
-                            <div class="zero-day-lab__brand-name">SHADOWDEF</div>
-                            <div class="zero-day-lab__brand-sub">// ZERO-DAY COUNTDOWN</div>
-                        </div>
+                <nav class="zero-day-dossier__nav">
+                    <div class="zero-day-dossier__logo">S H A D O W D E F</div>
+                    <div class="zero-day-dossier__nav-mid">
+                        <span><span class="zero-day-dossier__dot is-green"></span>ONLINE</span>
+                        <span><span class="zero-day-dossier__dot is-red"></span>ZERO-DAY</span>
+                        <span>LEVEL ${String(level).padStart(2, '0')} · ${this.puzzleData.stepLabel || CAMPAIGN_STEPS[level - 1] || 'MISSION'}</span>
                     </div>
-
-                    <div class="zero-day-lab__mission">
-                        <div class="zero-day-lab__mission-kicker">// LEVEL ${String(level).padStart(2, '0')} - ${this.puzzleData.stepLabel || CAMPAIGN_STEPS[level - 1] || 'MISSION'}</div>
-                        <div class="zero-day-lab__mission-name">${this.puzzleData.storyTitle || this.mission.title || 'THREAT INTERCEPT'}</div>
+                    <div class="zero-day-dossier__nav-actions">
+                        <button class="zero-day-lab__action zero-day-dossier__nav-btn" data-action="back-to-levels" type="button">BACK TO MAP</button>
+                        <button class="zero-day-lab__action zero-day-dossier__nav-btn" data-action="pause" type="button">PAUSE</button>
                     </div>
+                </nav>
 
-                    <div class="zero-day-lab__hud">
-                        <div class="zero-day-lab__hud-block">
-                            <span class="zero-day-lab__hud-label">TIME</span>
-                            <span class="zero-day-lab__hud-value zero-day-lab__hud-value--cyan" id="zd-timer-chip">00:00</span>
-                        </div>
-                        <div class="zero-day-lab__hud-block">
-                            <span class="zero-day-lab__hud-label">SCORE</span>
-                            <span class="zero-day-lab__hud-value zero-day-lab__hud-value--gold" id="zd-score">0000</span>
-                        </div>
-                        <div class="zero-day-lab__hud-block">
-                            <span class="zero-day-lab__hud-label">THREAT</span>
-                            <span class="zero-day-lab__hud-value zero-day-lab__hud-value--pink" id="zd-ai-progress">0%</span>
-                        </div>
-                        <div class="zero-day-lab__hud-block zero-day-lab__hud-block--wide">
-                            <span class="zero-day-lab__hud-label">HINTS</span>
-                            <span class="zero-day-lab__hud-value" id="zd-hints">3/3</span>
-                        </div>
-                    </div>
+                <div class="zero-day-dossier__page">
+                    <aside class="zero-day-dossier__left">
+                        <section class="zero-day-dossier__mission">
+                            <div class="zero-day-dossier__mission-head">
+                                <div class="zero-day-dossier__hex">0D</div>
+                                <div>
+                                    <div class="zero-day-dossier__tag">// LEVEL ${String(level).padStart(2, '0')} · CRISIS PROTOCOL</div>
+                                    <div class="zero-day-dossier__title">ZERO-DAY COUNTDOWN</div>
+                                </div>
+                            </div>
 
-                    <div class="zero-day-lab__actions">
-                        <button class="zero-day-lab__action" data-action="back-to-levels" type="button">[ MAP ]</button>
-                        <button class="zero-day-lab__action" data-action="pause" type="button">[ PAUSE ]</button>
-                    </div>
-                </header>
+                            <div class="zero-day-dossier__stats">
+                                <div class="zero-day-dossier__stat">
+                                    <div class="zero-day-dossier__stat-value is-cyan" id="zd-timer-chip">00:00</div>
+                                    <div class="zero-day-dossier__stat-label">TIME</div>
+                                </div>
+                                <div class="zero-day-dossier__stat">
+                                    <div class="zero-day-dossier__stat-value is-gold" id="zd-score">0000</div>
+                                    <div class="zero-day-dossier__stat-label">SCORE</div>
+                                </div>
+                                <div class="zero-day-dossier__stat">
+                                    <div class="zero-day-dossier__stat-value is-red" id="zd-ai-progress">0%</div>
+                                    <div class="zero-day-dossier__stat-label">THREAT</div>
+                                </div>
+                            </div>
 
-                <div class="zero-day-lab__steps">
-                    ${stepsMarkup}
-                </div>
-
-                <div class="zero-day-lab__body">
-                    <main class="zero-day-lab__main">
-                        <section class="zero-day-lab__hero">
-                            <div class="zero-day-lab__eyebrow">// ${this.puzzleData.typeLabel || 'DECODE'} OPERATION</div>
-                            <h2 class="zero-day-lab__title">
-                                <span>${hero.line1 || 'DECODE'}</span>
-                                <span>${hero.line2 || 'THE'}</span>
-                                <span><em>${hero.line3Accent || 'CIPHER'}</em>${hero.line3Tail || ''}</span>
-                            </h2>
-                            <p class="zero-day-lab__subtitle">
-                                LEVEL ${String(level).padStart(2, '0')} · ${this.puzzleData.typeLabel || 'CIPHER ANALYSIS'} · ${this.puzzleData.storyObjective || this.mission.objective || 'Recover the hostile keyword.'}
-                            </p>
-                            <p class="zero-day-lab__description">${this.puzzleData.description || this.mission.userTask || this.mission.desc || ''}</p>
+                            <div class="zero-day-dossier__meta">
+                                <div class="zero-day-dossier__meta-row">
+                                    <span>AVAILABLE HINTS</span>
+                                    <span id="zd-hints">3/3</span>
+                                </div>
+                                <div class="zero-day-dossier__meta-row">
+                                    <span>ATTEMPTS</span>
+                                    <span id="zd-attempts">0 / ${this.maxAttempts}</span>
+                                </div>
+                            </div>
                         </section>
 
-                        <section class="zero-day-lab__cipher-card">
-                            <div class="zero-day-lab__card-label">INTERCEPTED TRANSMISSION</div>
-                            <div class="zero-day-lab__cipher">${this.puzzleData.cipher || ''}</div>
-                            <div class="zero-day-lab__tags">
-                                <span class="zero-day-lab__tag zero-day-lab__tag--cyan">${(this.puzzleData.typeLabel || 'DECODER').toUpperCase()}</span>
-                                <span class="zero-day-lab__tag">CLASSIFIED</span>
-                                <span class="zero-day-lab__tag zero-day-lab__tag--pink">${(this.puzzleData.stepLabel || 'MISSION').toUpperCase()}</span>
-                            </div>
-                            ${byteMarkup}
-                        </section>
-
-                        <section class="zero-day-lab__terminal">
-                            <div class="zero-day-lab__terminal-head">// DECODE TERMINAL</div>
-                            <div class="zero-day-lab__terminal-row">
-                                <input class="zero-day-lab__input" id="zd-answer" type="text" placeholder="ENTER DECRYPTED KEYWORD" autocomplete="off" spellcheck="false" />
-                                <button class="zero-day-lab__submit" id="zd-submit" type="button">SUBMIT</button>
-                            </div>
-                            <div class="zero-day-lab__terminal-tools">
-                                <button class="zero-day-lab__hint-btn" id="zd-hint-btn" type="button">REQUEST INTEL (-100)</button>
-                                <div class="zero-day-lab__attempts" id="zd-attempts">ATTEMPTS: 0 / ${this.maxAttempts}</div>
-                            </div>
-                            <div class="zero-day-lab__hint-box" id="zd-hint-box"></div>
-                        </section>
-
-                        <div class="zero-day-lab__feedback" id="zd-feedback">// Awaiting analyst input.</div>
-                        <button class="zero-day-lab__proceed" id="zd-proceed" type="button" hidden>[ SEND TO DEBRIEF ]</button>
-                    </main>
-
-                    <aside class="zero-day-lab__sidebar">
-                        <section class="zero-day-lab__panel zero-day-lab__panel--timer">
+                        <section class="zero-day-lab__panel zero-day-dossier__panel zero-day-lab__panel--timer">
                             <div class="zero-day-lab__panel-title">THREAT CLOCK</div>
                             <div class="zero-day-lab__ring-wrap">
                                 <svg class="zero-day-lab__ring" viewBox="0 0 120 120" aria-hidden="true">
@@ -193,7 +157,7 @@ export class ZeroDayCountdown {
                             <div class="zero-day-lab__telemetry" id="zd-telemetry"></div>
                         </section>
 
-                        <section class="zero-day-lab__panel">
+                        <section class="zero-day-lab__panel zero-day-dossier__panel">
                             <div class="zero-day-lab__panel-title">MISSION OBJECTIVES</div>
                             <div class="zero-day-lab__objectives">
                                 <div class="zero-day-lab__objective" data-objective="0">
@@ -211,7 +175,7 @@ export class ZeroDayCountdown {
                             </div>
                         </section>
 
-                        <section class="zero-day-lab__panel">
+                        <section class="zero-day-lab__panel zero-day-dossier__panel">
                             <div class="zero-day-lab__panel-title">ANALYST STATUS</div>
                             <div class="zero-day-lab__integrity-label">INTEGRITY</div>
                             <div class="zero-day-lab__pips" id="zd-pips">
@@ -220,16 +184,67 @@ export class ZeroDayCountdown {
                                 <span class="zero-day-lab__pip"></span>
                             </div>
                             <div class="zero-day-lab__integrity-copy">Each failed decode burns one integrity segment.</div>
-                        </section>
-
-                        <section class="zero-day-lab__panel">
-                            <div class="zero-day-lab__panel-title">CAMPAIGN MAP</div>
-                            <div class="zero-day-lab__dots">
-                                ${this.renderCampaignDots()}
-                            </div>
+                            <div class="zero-day-dossier__steps">${stepsMarkup}</div>
                             <div class="zero-day-lab__counter">LEVEL ${String(level).padStart(2, '0')} / ${CAMPAIGN_STEPS.length}</div>
                         </section>
                     </aside>
+
+                    <main class="zero-day-dossier__right">
+                        <div class="zero-day-dossier__right-bg"></div>
+                        <div class="zero-day-dossier__hexgrid"></div>
+                        <div class="zero-day-dossier__scanline"></div>
+                        <div class="zero-day-dossier__watermark">ZERO-DAY</div>
+
+                        <div class="zero-day-dossier__content">
+                            <section class="zero-day-lab__hero zero-day-dossier__hero">
+                                <div class="zero-day-lab__eyebrow">// ${this.puzzleData.typeLabel || 'DECODE'} OPERATION</div>
+                                <h2 class="zero-day-lab__title">
+                                    <span>${hero.line1 || 'DECODE'}</span>
+                                    <span>${hero.line2 || 'THE'}</span>
+                                    <span><em>${hero.line3Accent || 'CIPHER'}</em>${hero.line3Tail || ''}</span>
+                                </h2>
+                                <p class="zero-day-lab__subtitle">
+                                    LEVEL ${String(level).padStart(2, '0')} · ${this.puzzleData.typeLabel || 'CIPHER ANALYSIS'} · ${this.puzzleData.storyObjective || this.mission.objective || 'Recover the hostile keyword.'}
+                                </p>
+                                <p class="zero-day-lab__description">${this.puzzleData.description || this.mission.userTask || this.mission.desc || ''}</p>
+                            </section>
+
+                            <div class="zero-day-dossier__grid">
+                                <section class="zero-day-lab__cipher-card zero-day-dossier__card">
+                                    <div class="zero-day-lab__card-label">INTERCEPTED TRANSMISSION</div>
+                                    <div class="zero-day-lab__cipher">${this.puzzleData.cipher || ''}</div>
+                                    <div class="zero-day-lab__tags">
+                                        <span class="zero-day-lab__tag zero-day-lab__tag--cyan">${(this.puzzleData.typeLabel || 'DECODER').toUpperCase()}</span>
+                                        <span class="zero-day-lab__tag">CLASSIFIED</span>
+                                        <span class="zero-day-lab__tag zero-day-lab__tag--pink">${(this.puzzleData.stepLabel || 'MISSION').toUpperCase()}</span>
+                                    </div>
+                                    ${byteMarkup}
+                                </section>
+
+                                <section class="zero-day-lab__terminal zero-day-dossier__card">
+                                    <div class="zero-day-lab__terminal-head">// DECODE TERMINAL</div>
+                                    <div class="zero-day-lab__terminal-row">
+                                        <input class="zero-day-lab__input" id="zd-answer" type="text" placeholder="ENTER DECRYPTED KEYWORD" autocomplete="off" spellcheck="false" />
+                                        <button class="zero-day-lab__submit" id="zd-submit" type="button">SUBMIT</button>
+                                    </div>
+                                    <div class="zero-day-lab__terminal-tools">
+                                        <button class="zero-day-lab__hint-btn" id="zd-hint-btn" type="button">REQUEST INTEL (-100)</button>
+                                    </div>
+                                    <div class="zero-day-lab__hint-box" id="zd-hint-box"></div>
+                                    <div class="zero-day-lab__feedback" id="zd-feedback">// Awaiting analyst input.</div>
+                                    <button class="zero-day-lab__proceed" id="zd-proceed" type="button" hidden>[ SEND TO DEBRIEF ]</button>
+                                </section>
+                            </div>
+
+                            <section class="zero-day-lab__panel zero-day-dossier__floating">
+                                <div class="zero-day-lab__panel-title">CAMPAIGN MAP</div>
+                                <div class="zero-day-lab__dots">
+                                    ${this.renderCampaignDots()}
+                                </div>
+                                <div class="zero-day-dossier__floating-copy">${this.puzzleData.storyTitle || this.mission.title || 'THREAT INTERCEPT'}</div>
+                            </section>
+                        </div>
+                    </main>
                 </div>
             </div>
         `;

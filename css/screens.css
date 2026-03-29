@@ -10787,6 +10787,44 @@
     color: var(--cyan);
 }
 
+.sd-password-sector.is-zero-day {
+    --cyan: #00d8ff;
+    --cyan-glow: rgba(0, 216, 255, 0.42);
+    --red: #ff3b64;
+    --gold: #ffd34f;
+    --purple: #ff5ca8;
+    --bg: #040914;
+    --bg2: #071021;
+    --border: rgba(0, 216, 255, 0.15);
+}
+
+.sd-password-sector.is-zero-day .sd-password-sector-right {
+    background:
+        radial-gradient(circle at 50% 38%, rgba(0, 216, 255, 0.11), rgba(0, 216, 255, 0) 36%),
+        linear-gradient(180deg, rgba(3, 8, 18, 0.9), rgba(2, 5, 14, 0.99));
+}
+
+.sd-password-sector.is-zero-day .sd-password-sector-watermark {
+    color: rgba(0, 216, 255, 0.035);
+    letter-spacing: 0.16em;
+}
+
+.sd-password-sector.is-zero-day .sd-password-sector-hex {
+    font-size: 13px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+}
+
+.sd-password-sector.is-zero-day .sd-password-sector-tag,
+.sd-password-sector.is-zero-day .sd-password-sector-card-label {
+    color: rgba(0, 216, 255, 0.54);
+}
+
+.sd-password-sector.is-zero-day .sd-password-sector-card::before {
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+
 @keyframes sdPasswordBlink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
@@ -10910,6 +10948,383 @@
 
     .sd-password-sector-status-utc {
         margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Zero-Day dossier layout */
+.zero-day-dossier {
+    --zd-cyan: #00e5ff;
+    --zd-green: #00ff88;
+    --zd-red: #ff355e;
+    --zd-gold: #ffd700;
+    --zd-bg: #030a14;
+    --zd-border: rgba(0, 229, 255, 0.13);
+    --zd-card: rgba(4, 16, 36, 0.97);
+    --zd-text: #c8e8f0;
+    --zd-dim: rgba(200, 232, 240, 0.34);
+    position: relative;
+    min-height: 100%;
+    background: var(--zd-bg);
+    color: var(--zd-text);
+    font-family: 'Rajdhani', sans-serif;
+}
+
+.zero-day-dossier::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.038) 2px, rgba(0, 0, 0, 0.038) 4px);
+}
+
+.zero-day-dossier__nav {
+    position: relative;
+    z-index: 8;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 24px;
+    background: rgba(3, 10, 20, 0.98);
+    border-bottom: 1px solid var(--zd-border);
+}
+
+.zero-day-dossier__logo,
+.zero-day-dossier__title {
+    font-family: 'Orbitron', sans-serif;
+}
+
+.zero-day-dossier__logo {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.34em;
+    color: var(--zd-cyan);
+}
+
+.zero-day-dossier__nav-mid,
+.zero-day-dossier__nav-actions,
+.zero-day-dossier__meta-row,
+.zero-day-dossier__stat-label,
+.zero-day-dossier__tag,
+.zero-day-dossier__floating-copy,
+.zero-day-dossier__steps .zd-step,
+.zero-day-dossier .zero-day-lab__panel-title {
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.zero-day-dossier__nav-mid {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 9px;
+    color: var(--zd-dim);
+    letter-spacing: 0.12em;
+}
+
+.zero-day-dossier__nav-mid span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zero-day-dossier__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.zero-day-dossier__dot.is-green {
+    background: var(--zd-green);
+    box-shadow: 0 0 6px var(--zd-green);
+}
+
+.zero-day-dossier__dot.is-red {
+    background: var(--zd-red);
+    box-shadow: 0 0 6px var(--zd-red);
+}
+
+.zero-day-dossier__nav-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.zero-day-dossier__nav-btn {
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 229, 255, 0.24);
+    background: rgba(4, 16, 36, 0.6);
+    color: var(--zd-cyan);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+}
+
+.zero-day-dossier__page {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    min-height: calc(100vh - 48px);
+}
+
+.zero-day-dossier__left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 0 12px;
+    background: rgba(3, 10, 24, 0.98);
+    border-right: 1px solid var(--zd-border);
+    overflow-y: auto;
+}
+
+.zero-day-dossier__mission {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.08);
+    background: linear-gradient(180deg, rgba(0, 229, 255, 0.04), transparent);
+}
+
+.zero-day-dossier__mission-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.zero-day-dossier__hex {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: rgba(0, 229, 255, 0.08);
+    color: var(--zd-cyan);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+}
+
+.zero-day-dossier__tag {
+    margin-bottom: 4px;
+    font-size: 7.5px;
+    color: rgba(0, 229, 255, 0.45);
+    letter-spacing: 0.24em;
+}
+
+.zero-day-dossier__title {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    background: linear-gradient(90deg, #fff, var(--zd-cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.zero-day-dossier__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: rgba(0, 229, 255, 0.06);
+}
+
+.zero-day-dossier__stat {
+    padding: 8px 10px;
+    text-align: center;
+    background: rgba(3, 10, 24, 0.98);
+}
+
+.zero-day-dossier__stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.zero-day-dossier__stat-value.is-cyan { color: var(--zd-cyan); }
+.zero-day-dossier__stat-value.is-gold { color: var(--zd-gold); }
+.zero-day-dossier__stat-value.is-red { color: var(--zd-red); }
+
+.zero-day-dossier__stat-label {
+    margin-top: 2px;
+    font-size: 7px;
+    color: var(--zd-dim);
+    letter-spacing: 0.1em;
+}
+
+.zero-day-dossier__meta {
+    margin-top: 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.zero-day-dossier__meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 7.5px;
+    color: var(--zd-dim);
+    letter-spacing: 0.14em;
+}
+
+.zero-day-dossier__meta-row span:last-child {
+    color: var(--zd-cyan);
+}
+
+.zero-day-dossier__panel {
+    margin: 0 22px;
+    padding: 16px;
+    border: 1px solid rgba(0, 229, 255, 0.08);
+    background: rgba(3, 14, 32, 0.92);
+}
+
+.zero-day-dossier__steps {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.zero-day-dossier__steps .zd-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 8px;
+    color: var(--zd-dim);
+    letter-spacing: 0.12em;
+}
+
+.zero-day-dossier__steps .zd-step.active {
+    color: var(--zd-cyan);
+}
+
+.zero-day-dossier__steps .zd-step.done {
+    color: var(--zd-green);
+}
+
+.zero-day-dossier__right {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    min-height: calc(100vh - 48px);
+    background: linear-gradient(180deg, rgba(2, 9, 18, 0.88), rgba(1, 6, 14, 0.98));
+}
+
+.zero-day-dossier__right-bg,
+.zero-day-dossier__hexgrid,
+.zero-day-dossier__scanline,
+.zero-day-dossier__watermark {
+    position: absolute;
+    inset: 0;
+}
+
+.zero-day-dossier__right-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, rgba(0, 229, 255, 0.06) 0%, rgba(3, 10, 20, 0) 65%);
+}
+
+.zero-day-dossier__hexgrid {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='47'%3E%3Cpath d='M27 0 L54 13.5 L54 33.5 L27 47 L0 33.5 L0 13.5Z' fill='none' stroke='rgba(0,229,255,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+    background-size: 54px 47px;
+}
+
+.zero-day-dossier__scanline {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.06), transparent);
+    animation: sdPasswordScanLine 6s linear infinite;
+}
+
+.zero-day-dossier__watermark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(88px, 14vw, 220px);
+    font-weight: 900;
+    color: rgba(0, 229, 255, 0.028);
+    letter-spacing: 0.18em;
+    transform: rotate(-14deg);
+    pointer-events: none;
+}
+
+.zero-day-dossier__content {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    padding: 28px 28px 28px 36px;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 18px;
+}
+
+.zero-day-dossier__hero {
+    max-width: 820px;
+}
+
+.zero-day-dossier__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    gap: 18px;
+    align-items: start;
+}
+
+.zero-day-dossier__card,
+.zero-day-dossier__floating {
+    position: relative;
+    border: 1px solid rgba(0, 229, 255, 0.1);
+    background: rgba(3, 14, 32, 0.9);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.2);
+}
+
+.zero-day-dossier__floating {
+    width: 280px;
+    margin-left: auto;
+    padding: 16px;
+}
+
+.zero-day-dossier__floating-copy {
+    margin-top: 12px;
+    font-size: 9px;
+    color: rgba(200, 232, 240, 0.62);
+    letter-spacing: 0.12em;
+    line-height: 1.6;
+}
+
+.zero-day-dossier .zero-day-lab__topbar,
+.zero-day-dossier .zero-day-lab__steps,
+.zero-day-dossier .zero-day-lab__body,
+.zero-day-dossier .zero-day-lab__sidebar,
+.zero-day-dossier .zero-day-lab__hud,
+.zero-day-dossier .zero-day-lab__actions {
+    display: contents;
+}
+
+.zero-day-dossier .zero-day-lab__hero,
+.zero-day-dossier .zero-day-lab__cipher-card,
+.zero-day-dossier .zero-day-lab__terminal,
+.zero-day-dossier .zero-day-lab__panel {
+    border-radius: 0;
+}
+
+@media (max-width: 1100px) {
+    .zero-day-dossier__page {
+        grid-template-columns: 1fr;
+    }
+
+    .zero-day-dossier__left {
+        max-height: 50vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--zd-border);
+    }
+
+    .zero-day-dossier__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .zero-day-dossier__floating {
         width: 100%;
     }
 }
