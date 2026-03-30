@@ -3435,10 +3435,21 @@
 
 .guidebook-header {
     gap: 20px;
+    padding-top: 44px;
 }
 
 .guidebook-back-btn {
+    position: absolute;
+    top: 18px;
+    left: 18px;
     align-self: flex-start;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-width: 1px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    line-height: 1;
+    z-index: 2;
 }
 
 .guidebook-title-block {
@@ -3526,9 +3537,28 @@
     flex: 1;
 }
 
+.guidebook-route-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.guidebook-route-bar-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.guidebook-route-bar-head .guidebook-panel-copy {
+    max-width: 760px;
+    color: rgba(220, 241, 248, 0.82);
+}
+
 .guidebook-sidebar,
 .guidebook-content {
     min-height: 0;
+    min-width: 0;
 }
 
 .guidebook-sidebar {
@@ -3561,6 +3591,114 @@
     margin: 6px 0 0;
     font-size: 1.24rem;
     color: #f4fbff;
+}
+
+.guidebook-section-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.guidebook-section-menu--top {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin-top: 0;
+    gap: 12px;
+}
+
+.guidebook-section-menu-btn {
+    width: 100%;
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    background: linear-gradient(180deg, rgba(3, 12, 24, 0.9), rgba(4, 10, 20, 0.76));
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    min-height: 110px;
+    padding: 16px 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guidebook-section-menu--top .guidebook-section-menu-btn {
+    min-width: 0;
+}
+
+.guidebook-section-menu-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 229, 255, 0.3);
+    background: rgba(0, 229, 255, 0.08);
+}
+
+.guidebook-section-menu-btn.is-active {
+    border-color: rgba(0, 229, 255, 0.38);
+    background: linear-gradient(180deg, rgba(0, 229, 255, 0.14), rgba(4, 14, 28, 0.88));
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.08), 0 0 22px rgba(0, 229, 255, 0.08);
+}
+
+.guidebook-section-menu-kicker,
+.guidebook-section-menu-btn > span:last-child {
+    font-family: 'Share Tech Mono', monospace;
+    text-transform: uppercase;
+}
+
+.guidebook-section-menu-kicker {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(0, 229, 255, 0.72);
+    line-height: 1.4;
+}
+
+.guidebook-section-menu-btn strong {
+    color: #f4fbff;
+    font-size: 1.14rem;
+    font-weight: 700;
+    line-height: 1.28;
+    text-wrap: balance;
+}
+
+.guidebook-section-menu-btn > span:last-child {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: rgba(214, 239, 246, 0.9);
+    line-height: 1.4;
+}
+
+.guidebook-index-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.guidebook-section-index {
+    margin-top: 14px;
+}
+
+.guidebook-index-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.guidebook-index-group + .guidebook-index-group {
+    padding-top: 14px;
+    border-top: 1px solid rgba(0, 229, 255, 0.12);
+}
+
+.guidebook-index-group-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(0, 229, 255, 0.74);
+}
+
+.guidebook-index-group .guidebook-level-index {
+    padding-left: 12px;
+    border-left: 1px solid rgba(0, 229, 255, 0.12);
 }
 
 .guidebook-overview-list,
@@ -3636,6 +3774,40 @@
     margin-bottom: 14px;
 }
 
+.guidebook-section-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.guidebook-section-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-margin-top: 18px;
+}
+
+.guidebook-section-block.is-focused .guidebook-section-overview {
+    border-color: rgba(0, 229, 255, 0.36);
+    box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.08), 0 0 24px rgba(0, 229, 255, 0.1);
+}
+
+.guidebook-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.guidebook-status--section {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.guidebook-section-summary {
+    margin-top: 14px;
+}
+
 .guidebook-steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3664,6 +3836,7 @@
 
 .guidebook-mission-card {
     padding: 20px;
+    scroll-margin-top: 18px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -3745,6 +3918,14 @@
     .guidebook-steps {
         grid-template-columns: 1fr;
     }
+
+    .guidebook-section-heading {
+        flex-direction: column;
+    }
+
+    .guidebook-status--section {
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 760px) {
@@ -3762,10 +3943,15 @@
     .guidebook-header {
         flex-direction: column;
         align-items: flex-start;
+        padding-top: 40px;
     }
 
     .guidebook-status {
         flex-wrap: wrap;
+    }
+
+    .guidebook-section-menu--top .guidebook-section-menu-btn {
+        min-height: 96px;
     }
 
     .guidebook-sidebar,
@@ -12827,6 +13013,645 @@
 .mission-complete-shell .btn-icon {
     font-size: 13px;
     line-height: 1;
+}
+
+.mission-failed-modal .modal-close,
+.mission-failed-modal .modal-title,
+.mission-failed-modal .modal-buttons {
+    display: none;
+}
+
+.mission-failed-modal .modal-content.mission-failed-modal__content {
+    width: min(720px, 96vw);
+    max-width: min(720px, 96vw) !important;
+    max-height: calc(100vh - 24px);
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.mission-failed-modal .modal-body {
+    margin: 0;
+    overflow: hidden;
+}
+
+.mission-failed-shell {
+    --bg: #03050f;
+    --neon-red: #ff2d2d;
+    --neon-orange: #ff6b00;
+    --neon-cyan: #00e5ff;
+    --neon-pink: #ff2d6b;
+    --neon-green: #00ff88;
+    --purple: #9b5de5;
+    --text-mid: #5a8aaa;
+    --text-bright: #c8e8f8;
+    --glow-red: 0 0 8px #ff2d2d, 0 0 24px rgba(255, 45, 45, 0.5), 0 0 50px rgba(255, 45, 45, 0.2);
+    --glow-cyan: 0 0 8px #00e5ff, 0 0 24px rgba(0, 229, 255, 0.5), 0 0 50px rgba(0, 229, 255, 0.2);
+    --glow-pink: 0 0 8px #ff2d6b, 0 0 24px rgba(255, 45, 107, 0.5);
+    background: var(--bg);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: min(760px, calc(100vh - 24px));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    padding: 20px;
+}
+
+.mission-failed-shell *,
+.mission-failed-shell *::before,
+.mission-failed-shell *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.mission-failed-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 45, 45, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 45, 45, 0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    animation: missionFailedGridDrift 20s linear infinite;
+    z-index: 0;
+}
+
+.mission-failed-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.07) 2px,
+        rgba(0, 0, 0, 0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+}
+
+@keyframes missionFailedGridDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 44px 44px; }
+}
+
+.mission-failed-shell .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    animation: missionFailedBlobPulse 7s ease-in-out infinite;
+}
+
+.mission-failed-shell .blob-red {
+    width: 500px;
+    height: 400px;
+    background: rgba(255, 45, 45, 0.07);
+    top: -80px;
+    left: -80px;
+}
+
+.mission-failed-shell .blob-orange {
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 107, 0, 0.05);
+    bottom: -60px;
+    right: -40px;
+    animation-delay: 3s;
+}
+
+.mission-failed-shell .blob-dark {
+    width: 400px;
+    height: 400px;
+    background: rgba(155, 93, 229, 0.04);
+    top: 40%;
+    left: 50%;
+    animation-delay: 1.5s;
+}
+
+@keyframes missionFailedBlobPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 0.6;
+    }
+}
+
+.mission-failed-shell .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.mission-failed-shell .particle {
+    position: absolute;
+    border-radius: 50%;
+    animation: missionFailedParticleRain linear infinite;
+    opacity: 0;
+}
+
+@keyframes missionFailedParticleRain {
+    0% {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.7;
+    }
+    90% {
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(100vh) translateX(var(--drift));
+        opacity: 0;
+    }
+}
+
+.mission-failed-shell .corner {
+    position: absolute;
+    width: 65px;
+    height: 65px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.mission-failed-shell .corner::before,
+.mission-failed-shell .corner::after {
+    content: '';
+    position: absolute;
+}
+
+.mission-failed-shell .corner::before {
+    width: 100%;
+    height: 1.5px;
+    background: var(--neon-red);
+    box-shadow: var(--glow-red);
+}
+
+.mission-failed-shell .corner::after {
+    width: 1.5px;
+    height: 100%;
+    background: var(--neon-red);
+    box-shadow: var(--glow-red);
+}
+
+.mission-failed-shell .corner.tl {
+    top: 16px;
+    left: 16px;
+}
+
+.mission-failed-shell .corner.tr {
+    top: 16px;
+    right: 16px;
+    transform: scaleX(-1);
+}
+
+.mission-failed-shell .corner.bl {
+    bottom: 16px;
+    left: 16px;
+    transform: scaleY(-1);
+}
+
+.mission-failed-shell .corner.br {
+    bottom: 16px;
+    right: 16px;
+    transform: scale(-1);
+}
+
+.mission-failed-shell .status-tag {
+    position: absolute;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    z-index: 62;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.mission-failed-shell .st-tl {
+    top: 20px;
+    left: 100px;
+    color: var(--neon-red);
+}
+
+.mission-failed-shell .st-tr {
+    top: 20px;
+    right: 100px;
+    color: var(--neon-cyan);
+    text-align: right;
+}
+
+.mission-failed-shell .st-bl {
+    bottom: 20px;
+    left: 100px;
+    color: var(--neon-red);
+}
+
+.mission-failed-shell .st-br {
+    bottom: 20px;
+    right: 100px;
+    color: var(--neon-cyan);
+}
+
+.mission-failed-shell .card {
+    position: relative;
+    z-index: 10;
+    width: min(520px, 92vw);
+    background: linear-gradient(160deg, rgba(20, 5, 5, 0.97), rgba(7, 5, 20, 0.98));
+    border: 1px solid rgba(255, 45, 45, 0.15);
+    border-radius: 6px;
+    padding: 44px 40px 36px;
+    overflow: hidden;
+    animation: missionFailedCardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes missionFailedCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.mission-failed-shell .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-red) 40%, var(--neon-orange) 60%, transparent);
+    box-shadow: 0 0 20px var(--neon-red);
+}
+
+.mission-failed-shell .card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--neon-red), var(--neon-orange) 50%, transparent);
+    box-shadow: var(--glow-red);
+}
+
+.mission-failed-shell .header {
+    margin-bottom: 34px;
+    opacity: 0;
+    animation: missionFailedFadeUp 0.5s 0.2s ease forwards;
+}
+
+.mission-failed-shell .mission-tag {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--neon-red);
+    text-shadow: var(--glow-red);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mission-failed-shell .mission-tag::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--neon-red);
+    box-shadow: var(--glow-red);
+}
+
+.mission-failed-shell .title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 6.5vw, 46px);
+    font-weight: 900;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(255, 45, 45, 0.6)) drop-shadow(0 0 40px rgba(255, 107, 0, 0.3));
+    position: relative;
+}
+
+.mission-failed-shell .title::before,
+.mission-failed-shell .title::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    background: inherit;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0;
+}
+
+.mission-failed-shell .title::before {
+    animation: missionFailedGlitchA 5s infinite;
+}
+
+.mission-failed-shell .title::after {
+    animation: missionFailedGlitchB 5s infinite;
+}
+
+@keyframes missionFailedGlitchA {
+    0%, 90%, 94%, 100% {
+        opacity: 0;
+        transform: translate(0);
+    }
+    91% {
+        opacity: 0.7;
+        transform: translate(-4px, 2px);
+        clip-path: polygon(0 15%, 100% 15%, 100% 45%, 0 45%);
+    }
+}
+
+@keyframes missionFailedGlitchB {
+    0%, 90%, 94%, 100% {
+        opacity: 0;
+        transform: translate(0);
+    }
+    92% {
+        opacity: 0.6;
+        transform: translate(4px, -2px);
+        clip-path: polygon(0 55%, 100% 55%, 100% 85%, 0 85%);
+    }
+}
+
+@keyframes missionFailedFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mission-failed-shell .warn-stripe {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    overflow: hidden;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.mission-failed-shell .stripe-seg {
+    flex: 1;
+    height: 100%;
+    border-radius: 1px;
+    animation: missionFailedStripeFade 1.2s ease-in-out infinite;
+}
+
+.mission-failed-shell .stripe-seg:nth-child(odd) {
+    background: var(--neon-red);
+    box-shadow: 0 0 6px var(--neon-red);
+}
+
+.mission-failed-shell .stripe-seg:nth-child(even) {
+    background: var(--neon-orange);
+    box-shadow: 0 0 6px var(--neon-orange);
+}
+
+.mission-failed-shell .stripe-seg:nth-child(1) { animation-delay: 0s; }
+.mission-failed-shell .stripe-seg:nth-child(2) { animation-delay: 0.1s; }
+.mission-failed-shell .stripe-seg:nth-child(3) { animation-delay: 0.2s; }
+.mission-failed-shell .stripe-seg:nth-child(4) { animation-delay: 0.3s; }
+.mission-failed-shell .stripe-seg:nth-child(5) { animation-delay: 0.4s; }
+.mission-failed-shell .stripe-seg:nth-child(6) { animation-delay: 0.5s; }
+.mission-failed-shell .stripe-seg:nth-child(7) { animation-delay: 0.6s; }
+.mission-failed-shell .stripe-seg:nth-child(8) { animation-delay: 0.7s; }
+
+@keyframes missionFailedStripeFade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+.mission-failed-shell .stats {
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.mission-failed-shell .stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 17px 0;
+    border-bottom: 1px solid rgba(255, 45, 45, 0.07);
+    opacity: 0;
+    animation: missionFailedFadeUp 0.4s ease forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.mission-failed-shell .stat-row:last-child {
+    border-bottom: none;
+}
+
+.mission-failed-shell .stat-row:nth-child(1) { animation-delay: 0.35s; }
+.mission-failed-shell .stat-row:nth-child(2) { animation-delay: 0.48s; }
+.mission-failed-shell .stat-row:nth-child(3) { animation-delay: 0.61s; }
+
+.mission-failed-shell .stat-row::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 45, 45, 0.04), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+.mission-failed-shell .stat-row:hover::after {
+    transform: translateX(100%);
+}
+
+.mission-failed-shell .stat-label {
+    font-size: 13px;
+    color: var(--text-mid);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mission-failed-shell .stat-icon {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 45, 45, 0.25);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--neon-red);
+    flex-shrink: 0;
+}
+
+.mission-failed-shell .stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.mission-failed-shell .val-red {
+    color: var(--neon-red);
+    text-shadow: var(--glow-red);
+}
+
+.mission-failed-shell .val-orange {
+    color: var(--neon-orange);
+    text-shadow: 0 0 8px #ff6b0088;
+}
+
+.mission-failed-shell .val-cyan {
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+}
+
+.mission-failed-shell .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 45, 45, 0.2), transparent);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: missionFailedFadeUp 0.4s 0.72s ease forwards;
+}
+
+.mission-failed-shell .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    opacity: 0;
+    animation: missionFailedFadeUp 0.4s 0.82s ease forwards;
+}
+
+.mission-failed-shell .btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 20px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.22s ease;
+    overflow: hidden;
+}
+
+.mission-failed-shell .btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+    transition: left 0.45s ease;
+}
+
+.mission-failed-shell .btn:hover::after {
+    left: 150%;
+}
+
+.mission-failed-shell .btn:hover {
+    transform: translateY(-2px);
+}
+
+.mission-failed-shell .btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.mission-failed-shell .btn:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+}
+
+.mission-failed-shell .btn:disabled:hover {
+    transform: none;
+}
+
+.mission-failed-shell .btn-back {
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    color: var(--neon-cyan);
+}
+
+.mission-failed-shell .btn-back:hover {
+    background: rgba(0, 229, 255, 0.09);
+    border-color: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.mission-failed-shell .btn-retry {
+    background: linear-gradient(135deg, rgba(255, 45, 45, 0.12), rgba(255, 107, 0, 0.08));
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    box-shadow: inset 0 0 20px rgba(255, 45, 45, 0.05);
+}
+
+.mission-failed-shell .btn-retry:hover {
+    background: linear-gradient(135deg, rgba(255, 45, 45, 0.18), rgba(255, 107, 0, 0.12));
+    border-color: var(--neon-red);
+    box-shadow: var(--glow-red), inset 0 0 20px rgba(255, 45, 45, 0.08);
+}
+
+.mission-failed-shell .btn-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
+@media (max-width: 640px) {
+    .mission-failed-shell {
+        min-height: calc(100vh - 20px);
+        padding: 16px;
+    }
+
+    .mission-failed-shell .status-tag {
+        display: none;
+    }
+
+    .mission-failed-shell .corner {
+        width: 46px;
+        height: 46px;
+    }
+
+    .mission-failed-shell .card {
+        padding: 34px 24px 24px;
+    }
+
+    .mission-failed-shell .buttons {
+        grid-template-columns: 1fr;
+    }
 }
 
 

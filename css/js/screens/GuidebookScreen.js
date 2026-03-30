@@ -10,11 +10,12 @@ export class GuidebookScreen {
         const container = document.getElementById('guidebook-screen');
         if (!container) return;
 
-        const missions = this.game.passwordMissions || [];
+        const sections = this.getGuideSections();
         const user = this.auth.getCurrentUser();
         const operatorName = user?.name || 'Guest Operator';
-        const completed = missions.filter((mission) => mission.completed).length;
-        const unlocked = missions.filter((mission) => !mission.locked).length;
+        const totalMissions = sections.reduce((sum, section) => sum + section.missions.length, 0);
+        const completed = sections.reduce((sum, section) => sum + section.missions.filter((mission) => mission.completed).length, 0);
+        const unlocked = sections.reduce((sum, section) => sum + section.missions.filter((mission) => !mission.locked).length, 0);
 
         container.innerHTML = `
             <div class="guidebook-shell">
@@ -28,12 +29,12 @@ export class GuidebookScreen {
                         <div class="guidebook-title-block">
                             <div class="guidebook-kicker">// OPERATOR GUIDEBOOK</div>
                             <h2 class="guidebook-title">MISSION INSTRUCTIONS</h2>
-                            <p class="guidebook-subtitle">Step-by-step play guidance for every current password mission, plus the core rules for progression, timing, hints, and mission success.</p>
+                            <p class="guidebook-subtitle">Step-by-step play guidance for every current mission track, plus the core rules for progression, timing, hints, and mission success.</p>
                         </div>
 
                         <div class="guidebook-status">
-                            <span class="guidebook-chip is-live">${completed}/${missions.length} CLEARED</span>
-                            <span class="guidebook-chip">${unlocked}/${missions.length} UNLOCKED</span>
+                            <span class="guidebook-chip is-live">${completed}/${totalMissions} CLEARED</span>
+                            <span class="guidebook-chip">${unlocked}/${totalMissions} UNLOCKED</span>
                         </div>
                     </div>
 
@@ -49,17 +50,9 @@ export class GuidebookScreen {
 
                             <div class="guidebook-panel">
                                 <div class="guidebook-panel-kicker">LEVEL INDEX</div>
-                                <h3 class="guidebook-panel-title">Password Route</h3>
-                                <div class="guidebook-level-index">
-                                    ${missions.map((mission) => `
-                                        <button class="guidebook-index-btn ${mission.locked ? 'is-locked' : ''}" type="button" data-guidebook-target="mission-${mission.level}">
-                                            <span class="guidebook-index-level">L${mission.level}</span>
-                                            <span class="guidebook-index-copy">
-                                                <strong>${this.escapeHtml(this.cleanLevelTitle(mission.title))}</strong>
-                                                <span>${mission.locked ? 'LOCKED' : mission.completed ? 'COMPLETE' : 'READY'}</span>
-                                            </span>
-                                        </button>
-                                    `).join('')}
+                                <h3 class="guidebook-panel-title">Mission Routes</h3>
+                                <div class="guidebook-index-stack">
+                                    ${sections.map((section) => this.renderSectionIndexGroup(section)).join('')}
                                 </div>
                             </div>
 
@@ -81,8 +74,8 @@ export class GuidebookScreen {
                                 </div>
                             </div>
 
-                            <div class="guidebook-mission-list">
-                                ${missions.map((mission) => this.renderMissionCard(mission)).join('')}
+                            <div class="guidebook-section-stack">
+                                ${sections.map((section) => this.renderSectionBlock(section)).join('')}
                             </div>
                         </section>
                     </div>
@@ -93,9 +86,30 @@ export class GuidebookScreen {
         this.bindEvents(container);
     }
 
+    getGuideSections() {
+        const sections = [
+            {
+                key: 'password',
+                kicker: 'PASSWORD TRACK',
+                title: 'Password Cracking',
+                summary: 'Analyze human behavior, audit weak credentials, and clear password missions in sequence.',
+                missions: this.game.passwordMissions || []
+            },
+            {
+                key: 'malware',
+                kicker: 'ZERO-DAY TRACK',
+                title: 'Zero-Day Countdown',
+                summary: 'Decode hostile payloads, classify attack patterns, and stop the exploit chain mission by mission.',
+                missions: this.game.malwareMissions || []
+            }
+        ];
+
+        return sections.filter((section) => section.missions.length > 0);
+    }
+
     renderOverviewItems() {
         const items = [
-            'Levels unlock in order. Clear the current mission to open the next one.',
+            'Levels unlock in order inside each track. Clear the current mission to open the next one.',
             'Hints are limited per mission, so save them for moments where the pattern is unclear.',
             'Some levels are timed or pressure-based. Speed and recognition matter, not just correctness.',
             'The AI progress bar represents hostile pressure. If it finishes first, the mission fails.',
@@ -105,13 +119,52 @@ export class GuidebookScreen {
         return items.map((item) => `<div class="guidebook-overview-item">${this.escapeHtml(item)}</div>`).join('');
     }
 
-    renderMissionCard(mission) {
+    getMissionAnchor(sectionKey, mission) {
+        return `${sectionKey}-mission-${mission.level}`;
+    }
+
+    renderSectionIndexGroup(section) {
+        return `
+            <div class="guidebook-index-group">
+                <div class="guidebook-index-group-label">${this.escapeHtml(section.title)}</div>
+                <div class="guidebook-level-index">
+                    ${section.missions.map((mission) => `
+                        <button class="guidebook-index-btn ${mission.locked ? 'is-locked' : ''}" type="button" data-guidebook-target="${this.getMissionAnchor(section.key, mission)}">
+                            <span class="guidebook-index-level">L${mission.level}</span>
+                            <span class="guidebook-index-copy">
+                                <strong>${this.escapeHtml(this.cleanLevelTitle(mission.title))}</strong>
+                                <span>${mission.locked ? 'LOCKED' : mission.completed ? 'COMPLETE' : 'READY'}</span>
+                            </span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderSectionBlock(section) {
+        return `
+            <section class="guidebook-section-block">
+                <div class="guidebook-panel guidebook-section-overview">
+                    <div class="guidebook-panel-kicker">${this.escapeHtml(section.kicker)}</div>
+                    <h3 class="guidebook-panel-title">${this.escapeHtml(section.title)}</h3>
+                    <div class="guidebook-panel-copy guidebook-section-summary">${this.escapeHtml(section.summary)}</div>
+                </div>
+
+                <div class="guidebook-mission-list">
+                    ${section.missions.map((mission) => this.renderMissionCard(section.key, mission)).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    renderMissionCard(sectionKey, mission) {
         const hints = mission.hintSystem ? Object.values(mission.hintSystem).filter(Boolean) : [];
         const howToPlay = this.getHowToPlaySteps(mission);
         const statusLabel = mission.locked ? 'LOCKED' : mission.completed ? 'COMPLETE' : 'ACTIVE';
 
         return `
-            <article class="guidebook-mission-card ${mission.locked ? 'is-locked' : ''}" id="mission-${mission.level}">
+            <article class="guidebook-mission-card ${mission.locked ? 'is-locked' : ''}" id="${this.getMissionAnchor(sectionKey, mission)}">
                 <div class="guidebook-mission-topline">
                     <span class="guidebook-mission-level">LEVEL ${mission.level}</span>
                     <span class="guidebook-mission-badge">${statusLabel}</span>
