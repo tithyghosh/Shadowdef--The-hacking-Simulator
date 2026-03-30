@@ -378,9 +378,7 @@ export class ProfileScreen {
             { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
             { cls: 'ya', icon: '&#127942;', value: this.formatNumber(stats.highScore || 0), label: 'HIGH SCORE' },
             { cls: 'ga', icon: '&#10003;', value: completedMissionCount, label: 'MISSIONS DONE' },
-            { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' },
-            { cls: 'ca', icon: '&#128202;', value: this.calculateSuccessRate(stats), label: 'SUCCESS RATE' },
-            { cls: 'ra', icon: '&#128640;', value: this.calculateRank(stats), label: 'RANK' }
+            { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' }
         ];
 
         return rows.map((item) => `
@@ -589,9 +587,7 @@ export class ProfileScreen {
             { cls: 'ra', icon: '&#127919;', value: this.formatNumber(stats.totalScore || 0), label: 'TOTAL SCORE' },
             { cls: 'ya', icon: '&#127942;', value: this.formatNumber(stats.highScore || 0), label: 'HIGH SCORE' },
             { cls: 'ga', icon: '&#10003;', value: completedMissionCount, label: 'MISSIONS' },
-            { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' },
-            { cls: 'ca', icon: '&#128202;', value: this.calculateSuccessRate(stats), label: 'SUCCESS' },
-            { cls: 'ra', icon: '&#128640;', value: this.calculateRank(stats), label: 'RANK' }
+            { cls: 'ca', icon: '&#9201;', value: this.formatPlayTime(stats.totalPlayTime || 0), label: 'PLAY TIME' }
         ];
 
         return `

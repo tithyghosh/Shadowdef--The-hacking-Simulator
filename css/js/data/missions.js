@@ -450,7 +450,7 @@ const level1 = {
     maxAttempts: 3,
     requiredSelection: "all_weak_only",
     revealAnswerOnFail: false,
-    timeLimit: 180,
+    timeLimit: 60,
     visualProfile: "human-pattern",
     riskSystem: {
       start: 0, wrongAdd: 20, max: 100,
@@ -526,7 +526,7 @@ const level2 = {
     /* FIXED: was 1 — now 2 so a wrong guess costs vault, not instant death */
     maxAttempts: 2,
     revealAnswerOnFail: false,
-    timeLimit: 55,
+    timeLimit: 60,
     timerLabel: "Attack Window",
     breachOnTimeout: true,
     vaultIntegrity: {
@@ -676,7 +676,7 @@ const level3 = {
     interactionMode: "predictionChoice",
     maxAttempts: 1,
     revealAnswerOnFail: true,
-    timeLimit: 75,
+    timeLimit: 60,
     options: [],
     correctAnswer: "",
     simpleExplanation: "",
@@ -774,8 +774,8 @@ const level4 = {
   puzzle: {
     interactionMode: "investigation",
     maxAttempts: 3,
-    timeLimit: 0,
-    noTimerPressure: true,
+    timeLimit: 60,
+    disableAIOpponent: true,
     evidenceLogs: [
       "02:12:58 - Failed login: admin",
       "02:13:00 - Failed login: admin",
@@ -882,8 +882,8 @@ const level5 = {
   puzzle: {
     interactionMode: "inspection",
     maxAttempts: 3,
-    timeLimit: 0,
-    noTimerPressure: true,
+    timeLimit: 60,
+    disableAIOpponent: true,
     inspectionRequiredActionsPerSystem: 3,
     systems: [
       {
