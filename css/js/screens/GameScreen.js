@@ -516,6 +516,7 @@ export class GameScreen {
 
     handleMissionCompleteAction(button, callback) {
         if (!(button instanceof HTMLElement)) {
+            this.ui.closeModal();
             callback();
             return;
         }
@@ -523,7 +524,8 @@ export class GameScreen {
         button.style.transform = 'scale(0.96)';
         window.setTimeout(() => {
             button.style.transform = '';
-            callback();
+            this.ui.closeModal();
+            setTimeout(() => callback(), 300);
         }, 150);
     }
 
