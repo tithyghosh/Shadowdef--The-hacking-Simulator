@@ -2327,7 +2327,7 @@ export class PasswordCrack {
             @keyframes labSharedScan{0%{top:-4px}100%{top:100%}}
             @keyframes labSharedBlink{0%,100%{opacity:1}50%{opacity:0}}
             @keyframes labSharedPulse{0%,100%{opacity:1}50%{opacity:.45}}
-            .lab-shared-shell{position:relative;cursor:crosshair}
+            .lab-shared-shell{position:relative;cursor:default}
             .lab-shared-matrix{position:absolute;inset:0;z-index:0;width:100%;height:100%;opacity:.2}
             .lab-shared-crt{position:absolute;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
             .lab-shared-crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(1,3,12,.78) 100%)}
@@ -2396,7 +2396,7 @@ export class PasswordCrack {
 
     renderHumanPsychologyLabStyles() {
         return `<style>
-            .l1-shell{--l1-black:#030a14;--l1-deep:#020814;--l1-panel:rgba(3,14,32,.92);--l1-panel-2:rgba(3,10,24,.96);--l1-rim:rgba(0,229,255,.13);--l1-rim2:rgba(0,229,255,.24);--l1-cyan:#00e5ff;--l1-red:#ff355e;--l1-green:#00ff88;--l1-gold:#ffd700;--l1-white:#f3fbff;--l1-text:#c8e8f0;--l1-text-mid:rgba(200,232,240,.56);--l1-text-low:rgba(200,232,240,.3);position:relative;display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:100%;max-height:100%;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(180deg,#030a14 0%,#020814 100%);color:var(--l1-text);font-family:'Rajdhani',sans-serif;cursor:crosshair}
+            .l1-shell{--l1-black:#030a14;--l1-deep:#020814;--l1-panel:rgba(3,14,32,.92);--l1-panel-2:rgba(3,10,24,.96);--l1-rim:rgba(0,229,255,.13);--l1-rim2:rgba(0,229,255,.24);--l1-cyan:#00e5ff;--l1-red:#ff355e;--l1-green:#00ff88;--l1-gold:#ffd700;--l1-white:#f3fbff;--l1-text:#c8e8f0;--l1-text-mid:rgba(200,232,240,.56);--l1-text-low:rgba(200,232,240,.3);position:relative;display:flex;flex:1 1 auto;flex-direction:column;width:100%;height:100%;max-height:100%;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(180deg,#030a14 0%,#020814 100%);color:var(--l1-text);font-family:'Rajdhani',sans-serif;cursor:default}
             .l1-shell,.l1-shell *,.l1-shell *::before,.l1-shell *::after{box-sizing:border-box}
             @keyframes l1ScanDown{0%{top:-4px}100%{top:100%}}
             @keyframes l1Blink{0%,100%{opacity:1}50%{opacity:0}}
