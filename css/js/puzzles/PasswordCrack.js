@@ -3762,13 +3762,13 @@ export class PasswordCrack {
         if (entries.length > 0) {
             this.appendNextLogEntry();
             this.singleChoiceLogTimerId = setInterval(() => {
-                if (this.isComplete) return;
+                if (this.isComplete || this.gameScreen?.isPaused) return;
                 this.appendNextLogEntry();
             }, tickMs);
         }
 
         this.singleChoiceTimerId = setInterval(() => {
-            if (this.isComplete) return;
+            if (this.isComplete || this.gameScreen?.isPaused) return;
             this.singleChoiceRemaining = Math.max(0, this.singleChoiceRemaining - 1);
             this.vaultIntegrity = Math.max(this.vaultConfig?.min || 0, this.vaultIntegrity - passiveDrop);
             this.updateSingleChoiceTimerUI();
@@ -4292,7 +4292,7 @@ export class PasswordCrack {
     startPredictionTimer() {
         this.updatePredictionTimerUI();
         this.predictionTimerId = setInterval(() => {
-            if (this.isComplete) return;
+            if (this.isComplete || this.gameScreen?.isPaused) return;
             this.predictionRemaining = Math.max(0, this.predictionRemaining - 1);
             this.updatePredictionTimerUI();
             if (this.predictionRemaining <= 0) this.onPredictionChoiceFailure('Time is up. The weaker password broke first.');
@@ -5921,13 +5921,13 @@ export class PasswordCrack {
         }
 
         this.liveEnergyTimerId = setInterval(() => {
-            if (this.isComplete) return;
+            if (this.isComplete || this.gameScreen?.isPaused) return;
             this.liveEnergy = Math.min(100, this.liveEnergy + regenAmount);
             this.updateLiveSimulationUI();
         }, regenEvery * 1000);
 
         this.liveCooldownTimerId = setInterval(() => {
-            if (this.isComplete) return;
+            if (this.isComplete || this.gameScreen?.isPaused) return;
             Object.keys(this.liveDefenseCooldowns).forEach(id => {
                 this.liveDefenseCooldowns[id] = Math.max(0, Number(this.liveDefenseCooldowns[id] || 0) - 1);
             });
@@ -5935,7 +5935,7 @@ export class PasswordCrack {
         }, 1000);
 
         this.liveDurationTimerId = setInterval(() => {
-            if (this.isComplete) return;
+            if (this.isComplete || this.gameScreen?.isPaused) return;
             this.liveRemainingTime = Math.max(0, this.liveRemainingTime - 1);
             this.liveSimulationElapsed++;
             this.updateLiveSimulationUI();

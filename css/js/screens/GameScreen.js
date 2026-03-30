@@ -77,6 +77,10 @@ export class GameScreen {
         return !!this.currentMission?.puzzle?.noTimerPressure;
     }
 
+    hasDisabledAIOpponent() {
+        return !!this.currentMission?.puzzle?.disableAIOpponent || this.hasNoTimerPressure();
+    }
+
     getMissionTargetTime() {
         if (this.hasNoTimerPressure()) return 0;
         const configuredTime = Number(this.currentMission?.puzzle?.timeLimit);
@@ -118,7 +122,17 @@ export class GameScreen {
     }
 
     startTimer() {
-        const targetTime = this.currentMission.puzzle?.timeLimit || CONFIG.TIMING.DEFAULT_MISSION_TIME;
+        if (this.timer) {
+            this.timer.stop();
+            this.timer = null;
+        }
+
+        const targetTime = this.getMissionTargetTime();
+        if (targetTime <= 0) {
+            this.setTimerDisplay('FREE');
+            return;
+        }
+
         this.timer = new Timer(targetTime, {
             onTick: (time) => this.updateTimerDisplay(time),
             onWarning: () => { this.ui.showNotification('Time running low!', 'warning'); this.audio.playTimerWarning(); },
@@ -142,7 +156,7 @@ export class GameScreen {
     }
 
     startAIOpponent() {
-        if (this.hasNoTimerPressure()) {
+        if (this.hasDisabledAIOpponent()) {
             this.aiOpponent = null;
             this.setAIDisplay({ name: 'TRAINING MODE', progressText: 'LAB', progressWidth: 0 });
             return;
@@ -285,7 +299,7 @@ export class GameScreen {
 
             if (this.aiOpponent) {
                 this.updateAIProgress(this.aiOpponent.getProgress());
-            } else if (this.hasNoTimerPressure()) {
+            } else if (this.hasDisabledAIOpponent()) {
                 this.setAIDisplay({ name: 'TRAINING MODE', progressText: 'LAB', progressWidth: 0 });
             }
         }
