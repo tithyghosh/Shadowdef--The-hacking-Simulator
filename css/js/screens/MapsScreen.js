@@ -15,26 +15,26 @@ export class MapsScreen {
                 fullTitle: 'PASSWORD SECTOR',
                 code: 'SECTOR 01',
                 badge: 'ACTIVE',
-                icon: 'PK',
-                description: 'Primary live campaign route for credential defense training.',
+                icon: '🔐',
+                description: 'Credential defense training. Crack ciphers and decode hostile transmissions.',
                 toneClass: 'active'
             },
             malware: {
-                title: 'MALWARE',
-                fullTitle: 'MALWARE SECTOR',
+                title: 'ZERO-DAY',
+                fullTitle: 'ZERO-DAY SECTOR',
                 code: 'SECTOR 02',
-                badge: 'LOCKED',
-                icon: 'MW',
-                description: 'Dormant infection route. Mission packets not yet loaded.',
-                toneClass: 'locked'
+                badge: 'ACTIVE',
+                icon: '⚠️',
+                description: 'Zero-Day countdown missions. Decode transmissions before the payload deploys.',
+                toneClass: 'active'
             },
             network: {
                 title: 'NETWORK',
                 fullTitle: 'NETWORK SECTOR',
                 code: 'SECTOR 03',
                 badge: 'LOCKED',
-                icon: 'NW',
-                description: 'Dormant traffic route. Mission packets not yet loaded.',
+                icon: '🌐',
+                description: 'Network operations route. Mission packets not yet loaded.',
                 toneClass: 'locked'
             }
         };
@@ -175,7 +175,7 @@ export class MapsScreen {
     }
 
     buildSectors() {
-        return Object.keys(this.sectionMeta).map((id) => {
+        return Object.keys(this.sectionMeta).filter((id) => id !== 'network').map((id) => {
             const missions = this.getSectionMissions(id);
             const completed = missions.filter((mission) => mission.completed).length;
             const liveCount = missions.filter((mission) => !mission.locked && !mission.completed).length;
@@ -190,7 +190,7 @@ export class MapsScreen {
                 liveCount,
                 lockedCount: missions.length ? lockedCount : 10,
                 progress: missions.length ? (completed / missions.length) * 100 : 0,
-                isAccessible: id === 'password'
+                isAccessible: id === 'password' || id === 'malware'
             };
         });
     }
@@ -224,20 +224,22 @@ export class MapsScreen {
 
     renderSectorTab(sector, activeId) {
         const isActive = sector.id === activeId;
-        const state = sector.isAccessible ? (isActive ? 'ACTIVE' : 'READY') : 'LOCKED';
+        const isAccessible = sector.isAccessible;
+        const state = isAccessible ? (isActive ? 'ACTIVE' : 'READY') : 'LOCKED';
 
         return `
             <button
-                class="sector-map-tab ${isActive ? 'is-active' : ''} ${sector.isAccessible ? '' : 'is-locked'}"
+                class="sector-map-tab ${isActive ? 'is-active' : ''} ${isAccessible ? '' : 'is-locked'}"
                 type="button"
                 data-map-section="${sector.id}"
-                ${sector.isAccessible ? '' : 'disabled'}>
+                ${isAccessible ? '' : 'disabled'}>
                 <span class="sm-tab-icon">${this.escapeHtml(sector.meta.icon)}</span>
                 <span class="sm-tab-info">
                     <span class="sm-tab-name">${this.escapeHtml(sector.meta.title)}</span>
+                    <span class="sm-tab-desc">${this.escapeHtml(sector.meta.description)}</span>
                     <span class="sm-tab-meta">${sector.completed} / ${sector.total} CLEARED</span>
                 </span>
-                <span class="sm-tab-badge ${state.toLowerCase()}">${state}</span>
+                <span class="sm-tab-state ${state.toLowerCase()}">${state}</span>
             </button>
         `;
     }
