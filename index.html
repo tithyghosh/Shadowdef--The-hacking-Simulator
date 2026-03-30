@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="css/puzzles.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/achievements.css">
 </head>
 
 <body>
@@ -222,10 +223,10 @@
                             <div class="anode-inner"></div>
                             <div class="anode-arc"></div>
                             <span class="anode-emoji" id="login-emoji" aria-hidden="true">
-                                <svg viewBox="0 0 24 24"><path d="M7 5.5h10v13H7z"></path><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"></path></svg>
+                                <svg viewBox="0 0 24 24"><path d="M15 12H3m0 0l4-4m-4 4l4 4"></path><path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2"></path></svg>
                             </span>
                         </button>
-                        <span class="anode-lbl" id="login-label">GUIDE</span>
+                        <span class="anode-lbl" id="login-label">LOGIN</span>
                     </div>
 
                     <div class="holo-center">
@@ -281,7 +282,7 @@
 
         <!-- Profile Screen -->
         <div id="profile-screen" class="screen">
-            <button class="back-btn" data-action="back">â† BACK</button>
+            <button class="back-btn" data-action="back">← BACK</button>
             <!-- Profile content will be rendered by ProfileScreen.js -->
         </div>
 
@@ -303,7 +304,7 @@
 
         <!-- Mission Categories Screen -->
         <div id="mission-select" class="screen">
-            <button class="back-btn" data-action="back">â† BACK</button>
+            <button class="back-btn" data-action="back">← BACK</button>
             <div class="mission-select-shell">
                 <div class="mission-select-gridbg"></div>
 
@@ -416,7 +417,7 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
-            <button class="back-btn" data-action="back">â† BACK</button>
+            <button class="back-btn" data-action="back">← BACK</button>
             <div class="game-header">
                 <div class="game-stats">
                     <div class="stat">
@@ -661,7 +662,6 @@
 
         function revealMainMenu() {
             const loadingScreen = document.getElementById('loading-screen');
-            const mainMenu = document.getElementById('main-menu');
             if (!loadingScreen) return;
 
             stopLoadingCanvas();
@@ -673,22 +673,33 @@
                 loadingScreen.style.display = 'none';
                 loadingScreen.classList.remove('active');
 
-                if (mainMenu) {
-                    mainMenu.style.display = 'flex';
-                    mainMenu.classList.add('active');
-                    mainMenu.style.opacity = '0';
-                    mainMenu.style.transition = 'opacity 1s ease';
-
-                    setTimeout(() => {
-                        mainMenu.style.opacity = '1';
-                    }, 50);
+                // Wait for game modules to be ready, then check auth
+                function tryShowCorrectScreen(attempts) {
+                    if (window.game && window.authManager && window.loginScreen) {
+                        const isAuth = window.authManager.isUserAuthenticated() || !!window.authManager.getCurrentUser();
+                        if (isAuth) {
+                            window.game.screens.showScreen('main-menu');
+                            if (window.game.screens.onScreenShow) window.game.screens.onScreenShow('main-menu');
+                        } else {
+                            window.game.screens.showScreen('login-screen');
+                            window.loginScreen.render();
+                        }
+                    } else if (attempts > 0) {
+                        setTimeout(() => tryShowCorrectScreen(attempts - 1), 200);
+                    } else {
+                        // Fallback: show main menu if game never loaded
+                        const mainMenu = document.getElementById('main-menu');
+                        if (mainMenu) {
+                            mainMenu.style.display = 'flex';
+                            mainMenu.classList.add('active');
+                            mainMenu.style.opacity = '0';
+                            mainMenu.style.transition = 'opacity 1s ease';
+                            setTimeout(() => { mainMenu.style.opacity = '1'; }, 50);
+                        }
+                    }
                 }
 
-                if (window.game?.screens) {
-                    window.game.screens.onScreenShow('main-menu');
-                } else if (window.AudioManager?.getInstance) {
-                    window.AudioManager.getInstance().playMusic('menu');
-                }
+                tryShowCorrectScreen(20); // retry up to 20 × 200ms = 4 seconds
             }, 800);
         }
 

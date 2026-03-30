@@ -15,166 +15,138 @@ export class AchievementsScreen {
         const user = this.auth.getCurrentUser();
         const stats = user?.gameStats || this.auth.getDefaultStats();
         const achievements = this.getAchievementDefinitions(stats);
-        const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
+        const unlockedCount = achievements.filter((a) => a.unlocked).length;
         const totalCount = achievements.length;
         const completion = totalCount ? (unlockedCount / totalCount) * 100 : 0;
         const activeAchievement = this.getLatestUnlocked(achievements);
-        const nextAchievement = this.getNextAchievement(achievements);
+
+        const badgeIconMap = {
+            'first_mission':  { icon: '⚡', color: 'gold',   label: 'FIRST\nBREACH' },
+            'speed_demon':    { icon: '🔓', color: 'cyan',   label: 'CIPHER\nBREAKER' },
+            'perfectionist':  { icon: '🔥', color: 'red',    label: 'PHANTOM\nSTRIKE' },
+            'high_scorer':    { icon: '🛡',  color: 'green',  label: 'GHOST\nPROTOCOL' },
+            'dedicated':      { icon: '💀', color: 'purple', label: 'DARK NET\nLEGEND' },
+            'collector':      { icon: '👑', color: 'silver', label: 'SHADOW\nMASTER' },
+        };
 
         container.innerHTML = `
-            <div class="achievements-screen-shell">
-                <div class="achievements-screen-grid" aria-hidden="true"></div>
-                <div class="achievements-screen-scanlines" aria-hidden="true"></div>
+            <div class="ach-shell">
+                <canvas class="ach-canvas" id="ach-canvas"></canvas>
+                <div class="ach-scanlines" aria-hidden="true"></div>
+                <div class="ach-vignette" aria-hidden="true"></div>
+                <div class="ach-hud-top" aria-hidden="true"></div>
 
-                <div class="achievements-screen-frame">
-                    <div class="achievements-screen-header">
-                        <button class="back-btn achievements-back-btn" data-action="back" type="button">BACK</button>
-
-                        <div class="achievements-screen-title-wrap">
-                            <div class="achievements-screen-kicker">// OPERATIONS VAULT</div>
-                            <h2 class="achievements-screen-title">BADGES</h2>
-                            <p class="achievements-screen-subtitle">Live achievement vault for the current game build. Every badge on this screen is tied to a real unlock rule already enforced by mission completion, score, speed, playtime, or credit milestones.</p>
+                <div class="ach-page">
+                    <!-- HEADER -->
+                    <div class="ach-hdr">
+                        <div>
+                            <button class="ach-back-btn" data-action="back" type="button">BACK</button>
+                            <div class="ach-eyebrow">OPERATIONS VAULT</div>
+                            <div class="ach-title">BADGES</div>
+                            <div class="ach-sub">Live achievement vault. Every badge is tied to a real unlock rule enforced by mission completion, score, speed, playtime, or credit milestones.</div>
                         </div>
-
-                        <div class="achievements-screen-status">
-                            <span class="achievements-status-chip ${user ? 'is-online' : 'is-guest'}">${user ? 'AUTH LINKED' : 'GUEST MODE'}</span>
-                            <span class="achievements-status-chip is-live">${unlockedCount}/${totalCount} SECURED</span>
-                        </div>
-                    </div>
-
-                    <div class="achievements-hero">
-                        <div class="achievements-hero-panel">
-                            <div class="achievements-hero-ring" aria-hidden="true"></div>
-                            <div class="achievements-hero-core">
-                                <div class="achievements-hero-value">${unlockedCount}<span>/${totalCount}</span></div>
-                                <div class="achievements-hero-label">BADGES SECURED</div>
-                            </div>
-                            <div class="achievements-hero-progress">
-                                <div class="achievements-hero-progress-bar" style="width:${completion.toFixed(1)}%"></div>
-                            </div>
-                        </div>
-
-                        <div class="achievements-summary-grid">
-                            <div class="achievements-summary-card">
-                                <div class="achievements-summary-label">MISSIONS</div>
-                                <div class="achievements-summary-value">${stats.missionsCompleted || 0}</div>
-                            </div>
-                            <div class="achievements-summary-card">
-                                <div class="achievements-summary-label">HIGH SCORE</div>
-                                <div class="achievements-summary-value achievements-summary-value--tight">${this.formatNumber(stats.highScore || 0)}</div>
-                            </div>
-                            <div class="achievements-summary-card">
-                                <div class="achievements-summary-label">FIELD TIME</div>
-                                <div class="achievements-summary-value achievements-summary-value--tight">${this.formatPlaytime(stats.totalPlayTime || 0)}</div>
-                            </div>
-                            <div class="achievements-summary-card">
-                                <div class="achievements-summary-label">CREDITS</div>
-                                <div class="achievements-summary-value achievements-summary-value--tight">${this.formatNumber(stats.credits || 0)}</div>
-                            </div>
+                        <div class="ach-hdr-right">
+                            <div class="ach-pill c">${user ? 'AUTH LINKED' : 'GUEST MODE'}</div>
+                            <div class="ach-pill g">${unlockedCount}/${totalCount} SECURED</div>
                         </div>
                     </div>
 
-                    <div class="achievements-content">
-                        <section class="achievements-panel">
-                            <div class="achievements-panel-head">
-                                <div>
-                                    <div class="achievements-panel-kicker">BADGE VAULT</div>
-                                    <h3 class="achievements-panel-title">Current Unlock Set</h3>
+                    <!-- BODY -->
+                    <div class="ach-body">
+                        <!-- TOP ROW -->
+                        <div class="ach-top-row">
+                            <!-- Badge Counter -->
+                            <div class="ach-counter">
+                                <div class="ach-ring">
+                                    <div class="ach-ring-num">${unlockedCount}<span>/${totalCount}</span></div>
                                 </div>
-                                <div class="achievements-panel-copy">${unlockedCount} unlocked | ${totalCount - unlockedCount} remaining</div>
+                                <div class="ach-ring-label">BADGES SECURED</div>
                             </div>
-
-                            <div class="achievements-grid">
-                                ${achievements.map((achievement) => this.renderAchievementCard(achievement)).join('')}
+                            <!-- Stat Grid -->
+                            <div class="ach-stat-grid">
+                                <div class="ach-stat-box">
+                                    <div class="ach-stat-lbl">MISSIONS</div>
+                                    <div class="ach-stat-val ${stats.missionsCompleted ? '' : 'muted'}">${stats.missionsCompleted || '—'}</div>
+                                </div>
+                                <div class="ach-stat-box">
+                                    <div class="ach-stat-lbl">HIGH SCORE</div>
+                                    <div class="ach-stat-val ${stats.highScore ? '' : 'muted'}">${stats.highScore ? this.formatNumber(stats.highScore) : '—'}</div>
+                                </div>
+                                <div class="ach-stat-box">
+                                    <div class="ach-stat-lbl">FIELD TIME</div>
+                                    <div class="ach-stat-val">${this.formatPlaytime(stats.totalPlayTime || 0)}</div>
+                                </div>
+                                <div class="ach-stat-box">
+                                    <div class="ach-stat-lbl">CREDITS</div>
+                                    <div class="ach-stat-val gold">${this.formatNumber(stats.credits || 1000)}</div>
+                                </div>
                             </div>
-                        </section>
+                        </div>
 
-                        <section class="achievements-side">
-                            <div class="achievements-panel">
-                                <div class="achievements-panel-head">
+                        <!-- VAULT ROW -->
+                        <div class="ach-vault-row">
+                            <!-- Badge Vault -->
+                            <div class="ach-vault-panel">
+                                <div class="ach-vault-head">
                                     <div>
-                                        <div class="achievements-panel-kicker">ACTIVE BADGE</div>
-                                        <h3 class="achievements-panel-title">Current Status</h3>
+                                        <div class="ach-vault-tag">BADGE VAULT</div>
+                                        <div class="ach-vault-title">Current Unlock Set</div>
                                     </div>
+                                    <div class="ach-vault-count"><span>${unlockedCount}</span> unlocked | ${totalCount - unlockedCount} remaining</div>
                                 </div>
-
-                                ${activeAchievement ? `
-                                    <div class="achievements-next-item">
-                                        <div class="achievements-next-icon ${activeAchievement.tone}">${activeAchievement.icon}</div>
-                                        <div class="achievements-next-copy">
-                                            <div class="achievements-next-name">${activeAchievement.name}</div>
-                                            <div class="achievements-next-desc">${activeAchievement.description}</div>
-                                        </div>
-                                    </div>
-                                ` : `
-                                    <div class="achievements-empty-note">No badge unlocked yet. Clear your first mission to open the vault.</div>
-                                `}
-                            </div>
-
-                            <div class="achievements-panel achievements-next-panel">
-                                <div class="achievements-panel-head">
-                                    <div>
-                                        <div class="achievements-panel-kicker">NEXT TARGET</div>
-                                        <h3 class="achievements-panel-title">Recommended Push</h3>
-                                    </div>
+                                <div class="ach-vault-progress">
+                                    <div class="ach-vp-top"><span>VAULT PROGRESS</span><span>${Math.round(completion)}%</span></div>
+                                    <div class="ach-vp-bar"><div class="ach-vp-fill" style="width:${completion.toFixed(1)}%"></div></div>
                                 </div>
-
-                                ${nextAchievement ? `
-                                    <div class="achievements-next-item achievements-next-item--stack">
-                                        <div class="achievements-next-icon ${nextAchievement.tone}">${nextAchievement.icon}</div>
-                                        <div class="achievements-next-copy">
-                                            <div class="achievements-next-name">${nextAchievement.name}</div>
-                                            <div class="achievements-next-desc">${nextAchievement.description}</div>
-                                        </div>
-                                        <div class="achievement-card-progress-label">${nextAchievement.requirement}</div>
-                                        <div class="achievement-card-progress-track">
-                                            <div class="achievement-card-progress-bar" style="width:${nextAchievement.progress.toFixed(1)}%"></div>
-                                        </div>
-                                        <div class="achievements-next-meta">${nextAchievement.progressText}</div>
-                                    </div>
-                                ` : `
-                                    <div class="achievements-empty-note">All current game achievements are unlocked.</div>
-                                `}
-                            </div>
-
-                            <div class="achievements-panel achievements-rewards-panel">
-                                <div class="achievements-panel-head">
-                                    <div>
-                                        <div class="achievements-panel-kicker">UNLOCK ORDER</div>
-                                        <h3 class="achievements-panel-title">Progression Chain</h3>
-                                    </div>
-                                </div>
-
-                                <div class="achievements-roadmap">
-                                    ${achievements.map((achievement, index) => `
-                                        <div class="achievements-roadmap-step ${achievement.unlocked ? 'is-unlocked' : ''}">
-                                            <div class="achievements-roadmap-node ${achievement.tone}">${index + 1}</div>
-                                            <div class="achievements-roadmap-copy">
-                                                <div class="achievements-roadmap-name">${achievement.name}</div>
-                                                <div class="achievements-roadmap-desc">${achievement.requirement}</div>
+                                <div class="ach-badge-grid">
+                                    ${achievements.map((a) => {
+                                        const map = badgeIconMap[a.id] || { icon: '🏅', color: 'cyan', label: a.shortName || a.name };
+                                        return `
+                                        <div class="ach-badge-item ${a.unlocked ? '' : 'locked'}" title="${a.requirement}">
+                                            <div class="ach-badge-icon ${map.color}">
+                                                ${map.icon}
+                                                ${a.unlocked ? '' : '<div class="ach-lock-ov">🔒</div>'}
                                             </div>
-                                        </div>
-                                    `).join('')}
+                                            <div class="ach-badge-name">${map.label.replace('\n', '<br>')}</div>
+                                            ${a.unlocked ? '' : `<div class="ach-badge-prog-track"><div class="ach-badge-prog-fill" style="width:${a.progress.toFixed(0)}%"></div></div>`}
+                                        </div>`;
+                                    }).join('')}
                                 </div>
                             </div>
 
-                            ${user ? '' : `
-                                <div class="achievements-panel achievements-guest-panel">
-                                    <div class="achievements-panel-head">
-                                        <div>
-                                            <div class="achievements-panel-kicker">SYNC REQUIRED</div>
-                                            <h3 class="achievements-panel-title">Save Badge Progress</h3>
-                                        </div>
-                                    </div>
-                                    <p class="achievements-guest-copy">Login is required to persist achievement unlocks, credits, and long-session progress across devices.</p>
-                                    <button class="btn btn-primary achievements-auth-btn" data-action="login" type="button">OPEN LOGIN</button>
+                            <!-- Active Badge -->
+                            <div class="ach-active-panel">
+                                <div class="ach-active-head">
+                                    <div class="ach-active-tag">ACTIVE BADGE</div>
+                                    <div class="ach-active-title">Current Status</div>
                                 </div>
-                            `}
-                        </section>
+                                <div class="ach-active-body">
+                                    ${activeAchievement ? (() => {
+                                        const map = badgeIconMap[activeAchievement.id] || { icon: '🏅', color: 'cyan' };
+                                        return `
+                                        <div class="ach-active-icon ${map.color}">${map.icon}</div>
+                                        <div class="ach-active-name">${activeAchievement.name}</div>
+                                        <div class="ach-active-desc">${activeAchievement.description}</div>`;
+                                    })() : `
+                                        <div class="ach-empty">
+                                            <div class="ach-empty-icon">🏅</div>
+                                            <div class="ach-empty-text">NO BADGE SECURED YET<br>COMPLETE MISSIONS<br>TO UNLOCK BADGES</div>
+                                        </div>`}
+                                </div>
+
+                                ${!user ? `
+                                <div class="ach-guest-note">
+                                    <div class="ach-guest-text">Login to save badge progress across sessions.</div>
+                                    <button class="ach-login-btn" data-action="login" type="button">OPEN LOGIN</button>
+                                </div>` : ''}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
+
+        this.initCanvas(container);
     }
 
     getAchievementDefinitions(stats) {
@@ -294,6 +266,61 @@ export class AchievementsScreen {
                 </div>
             </article>
         `;
+    }
+
+    initCanvas(container) {
+        const cv = container.querySelector('#ach-canvas');
+        if (!cv) return;
+        const cx = cv.getContext('2d');
+
+        const resize = () => { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; };
+        resize();
+
+        const bins = Array.from({ length: 22 }, () => ({
+            x: Math.random() * cv.width, y: Math.random() * cv.height,
+            v: Math.floor(Math.random() * 1048576).toString(2).slice(0, 6),
+            o: Math.random() * 0.06 + 0.02, s: Math.random() * 0.1 + 0.03
+        }));
+        const pts = Array.from({ length: 40 }, () => ({
+            x: Math.random() * cv.width, y: Math.random() * cv.height,
+            vx: (Math.random() - 0.5) * 0.22, vy: (Math.random() - 0.5) * 0.22,
+            r: Math.random() * 1.3 + 0.3, o: Math.random() * 0.16 + 0.04
+        }));
+
+        let running = true;
+        const draw = () => {
+            if (!running || !cv.isConnected) return;
+            requestAnimationFrame(draw);
+            cx.clearRect(0, 0, cv.width, cv.height);
+            const g = cx.createRadialGradient(cv.width * 0.5, cv.height * 0.5, 0, cv.width * 0.5, cv.height * 0.5, cv.width * 0.8);
+            g.addColorStop(0, 'rgba(6,18,48,1)'); g.addColorStop(0.5, 'rgba(4,9,24,1)'); g.addColorStop(1, 'rgba(2,4,14,1)');
+            cx.fillStyle = g; cx.fillRect(0, 0, cv.width, cv.height);
+            bins.forEach((b) => {
+                b.y -= b.s; if (b.y < -20) { b.y = cv.height + 10; b.x = Math.random() * cv.width; }
+                cx.font = '10px Share Tech Mono'; cx.fillStyle = `rgba(0,200,230,${b.o})`; cx.fillText(b.v, b.x, b.y);
+            });
+            pts.forEach((p) => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0) p.x = cv.width; if (p.x > cv.width) p.x = 0;
+                if (p.y < 0) p.y = cv.height; if (p.y > cv.height) p.y = 0;
+                cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                cx.fillStyle = `rgba(0,200,230,${p.o})`; cx.fill();
+            });
+            for (let i = 0; i < pts.length; i++) {
+                for (let j = i + 1; j < pts.length; j++) {
+                    const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < 88) {
+                        cx.beginPath(); cx.moveTo(pts[i].x, pts[i].y); cx.lineTo(pts[j].x, pts[j].y);
+                        cx.strokeStyle = `rgba(0,180,220,${0.06 * (1 - d / 88)})`; cx.lineWidth = 0.5; cx.stroke();
+                    }
+                }
+            }
+        };
+        draw();
+        window.addEventListener('resize', resize);
+        // Stop when screen is hidden
+        const obs = new MutationObserver(() => { if (!container.classList.contains('active')) running = false; });
+        obs.observe(container, { attributes: true, attributeFilter: ['class'] });
     }
 
     setupEventListeners() {

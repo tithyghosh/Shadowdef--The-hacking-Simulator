@@ -14860,3 +14860,125 @@
 
 
 
+
+
+/* ============================================================
+   ACHIEVEMENTS SCREEN
+   ============================================================ */
+#achievements-screen {
+    position: relative;
+    overflow: hidden;
+}
+
+#achievements-screen .ach-shell {
+    --ach-cyan: #00e5ff;
+    --ach-green: #00ff88;
+    --ach-gold: #ffd700;
+    --ach-red: #ff2244;
+    --ach-purple: #b833ff;
+    --ach-silver: #c0c8d8;
+    --ach-bg: #050810;
+    --ach-border: rgba(0, 229, 255, 0.13);
+    --ach-dim: rgba(200, 232, 240, 0.3);
+    --ach-mono: 'Share Tech Mono', monospace;
+    --ach-orb: 'Orbitron', sans-serif;
+    position: absolute;
+    inset: 0;
+    background: var(--ach-bg);
+    color: var(--ach-dim);
+    font-family: var(--ach-mono);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#achievements-screen .ach-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+}
+
+#achievements-screen .ach-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: repeating-linear-gradient(
+        180deg,
+        transparent, transparent 2px,
+        rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px
+    );
+}
+
+#achievements-screen .ach-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+#achievements-screen .ach-hud-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ach-cyan), transparent);
+    z-index: 2;
+    opacity: 0.5;
+}
+
+#achievements-screen .ach-page {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 28px 32px 24px;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+/* HEADER */
+#achievements-screen .ach-hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+#achievements-screen .ach-back-btn {
+    background: transparent;
+    border: 1px solid var(--ach-border);
+    color: var(--ach-dim);
+    font-family: var(--ach-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    padding: 6px 14px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+#achievements-screen .ach-back-btn:hover {
+    border-color: var(--ach-cyan);
+    color: var(--ach-cyan);
+}
+
+#achievements-screen .ach-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: rgba(0, 229, 255, 0.5);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+#achievements-screen .ach-title {
+    font-family: var(--ach-orb);
+    font-size: 2.4rem;
+    font-weight: 900;
+    c

@@ -24,8 +24,8 @@ export function updateMainMenuAuthState({ isAuthenticated = false, user = null }
             loginLogoutBtn.dataset.tooltip = 'Login Module';
             loginLogoutBtn.setAttribute('aria-label', 'Login');
             loginLogoutBtn.classList.remove('is-logout');
-            setLoginButtonIcon(loginLogoutBtn, '<svg viewBox="0 0 24 24"><path d="M7 5.5h10v13H7z"></path><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"></path></svg>');
-            if (loginLabel) loginLabel.textContent = 'GUIDE';
+            setLoginButtonIcon(loginLogoutBtn, '<svg viewBox="0 0 24 24"><path d="M15 12H3m0 0l4-4m-4 4l4 4"></path><path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2"></path></svg>');
+            if (loginLabel) loginLabel.textContent = 'LOGIN';
         }
     }
 
