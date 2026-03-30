@@ -542,10 +542,42 @@ export class GameScreen {
         this.isPaused = true;
         if (this.timer) this.timer.pause();
         if (this.aiOpponent) this.aiOpponent.pause();
-        this.ui.showModal('GAME PAUSED', '<p style="text-align:center;color:var(--text-secondary);">Game is paused</p>', {
+        const levelLabel = `L${this.currentMission?.level ?? '-'}`;
+        const timeLabel = this.timer ? this.formatTime(this.timer.getRemaining()) : '--:--';
+        const scoreLabel = this.game.score.getScore();
+        this.ui.showModal('GAME <span>PAUSED</span>', `
+            <div class="pause-game-shell">
+                <div class="pause-game-shell__eyebrow"><span class="pause-game-shell__dot"></span>MISSION SUSPENDED</div>
+                <div class="pause-game-shell__divider">
+                    <span class="pause-game-shell__line"></span>
+                    <span class="pause-game-shell__node"></span>
+                    <span class="pause-game-shell__line"></span>
+                </div>
+                <div class="pause-game-shell__stats">
+                    <div class="pause-game-shell__stat">
+                        <div class="pause-game-shell__value pause-game-shell__value--green">${levelLabel}</div>
+                        <div class="pause-game-shell__label">LEVEL</div>
+                    </div>
+                    <div class="pause-game-shell__vdiv"></div>
+                    <div class="pause-game-shell__stat">
+                        <div class="pause-game-shell__value pause-game-shell__value--cyan">${timeLabel}</div>
+                        <div class="pause-game-shell__label">TIME</div>
+                    </div>
+                    <div class="pause-game-shell__vdiv"></div>
+                    <div class="pause-game-shell__stat">
+                        <div class="pause-game-shell__value pause-game-shell__value--gold">${scoreLabel}</div>
+                        <div class="pause-game-shell__label">SCORE</div>
+                    </div>
+                </div>
+            </div>
+        `, {
+            width: 'min(640px, 92vw)',
+            modalClass: 'pause-game-modal',
+            contentClass: 'pause-game-modal__content',
             buttons: [
-                { text: 'RESUME', class: 'btn-primary', onClick: () => this.resume() },
-                { text: 'QUIT MISSION', class: 'btn', onClick: () => this.game.backToCurrentCategoryLevels() }
+                { text: '▶ RESUME', class: 'btn pause-game-modal__btn pause-game-modal__btn--primary', onClick: () => this.resume() },
+                { text: '↺ RESTART', class: 'btn pause-game-modal__btn pause-game-modal__btn--muted', onClick: () => this.game.startMission(this.currentMission) },
+                { text: '⊘ QUIT MISSION', class: 'btn pause-game-modal__btn pause-game-modal__btn--secondary', onClick: () => this.game.backToCurrentCategoryLevels() }
             ]
         });
     }
